@@ -19,6 +19,8 @@ function ForgotPasswordPage() {
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
+    // Garante que não há sessão antiga interferindo com o link de recuperação
+    await supabase.auth.signOut().catch(() => {});
     const { error } = await supabase.auth.resetPasswordForEmail(email, {
       redirectTo: `${window.location.origin}/reset-password`,
     });
