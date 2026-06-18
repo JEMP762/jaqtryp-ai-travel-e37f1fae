@@ -1,20 +1,24 @@
-# Corrigir recuperação de senha
+## Plano
 
-## Problema
-Ao clicar no link do e-mail, o usuário é levado para `/reset-password?code=...`. A página atual não troca esse `code` por uma sessão, então sempre exibe "Link inválido ou expirado".
+1. **Corrigir a página de redefinição**
+   - Ajustar `/reset-password` para aceitar os dois formatos de link de recuperação que podem chegar no e-mail:
+     - `?code=...` no endereço
+     - `#access_token=...&type=recovery` no final do endereço
+   - Validar o link antes de mostrar o formulário e exibir uma mensagem clara enquanto carrega.
 
-## Mudanças em `src/routes/reset-password.tsx`
+2. **Melhorar o envio do e-mail de recuperação**
+   - Garantir que o link enviado sempre aponte para `/reset-password` no domínio atual.
+   - Evitar que o usuário fique preso em uma sessão antiga antes de usar o link de recuperação.
 
-1. Adicionar um estado `status: "checking" | "ready" | "invalid"` (em vez do booleano `ready`).
-2. No `useEffect` inicial:
-   - Ler `code` da query string (`window.location.search`).
-   - Se houver `code`, chamar `await supabase.auth.exchangeCodeForSession(code)`. Em sucesso → `status="ready"`; em erro → `status="invalid"` com mensagem clara.
-   - Se não houver `code`, manter o fallback atual: checar `getSession()` e o listener `onAuthStateChange` para `PASSWORD_RECOVERY`/`SIGNED_IN` (compatível com links antigos em hash `#access_token`).
-   - Se nada disso resolver após a checagem, `status="invalid"`.
-3. Renderizar:
-   - `checking` → um pequeno "Validando link..." (evita o flash de "inválido").
-   - `ready` → formulário de nova senha (igual hoje).
-   - `invalid` → mensagem atual com link para `/forgot-password`.
-4. Limpar o `code` da URL após o exchange com `window.history.replaceState` (evita reuso se o usuário recarregar).
+3. **Melhorar mensagens de erro**
+   - Trocar mensagens técnicas/ambíguas por instruções em português, por exemplo: “Esse link já foi usado ou expirou. Solicite um novo link.”
 
-Sem mudanças no `/forgot-password`, nas configurações de auth, nem em outros arquivos.
+4. **Validar o fluxo**
+   - Conferir no app que a tela de recuperação envia o e-mail corretamente.
+   - Conferir que a tela de redefinição não mostra “link inválido” antes de tentar processar o link.
+
+## Detalhes técnicos
+
+- A correção principal será em `src/routes/reset-password.tsx`.
+- Se necessário, também ajustarei `src/routes/forgot-password.tsx` para limpar sessão anterior antes de solicitar o link.
+- Não vou alterar login/cadastro nem mexer nas configurações gerais de autenticação.
