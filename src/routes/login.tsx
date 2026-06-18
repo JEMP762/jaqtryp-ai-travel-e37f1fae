@@ -5,6 +5,7 @@ import { AuthShell } from "@/components/auth/AuthShell";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { PasswordInput } from "@/components/auth/PasswordInput";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useI18n } from "@/lib/i18n/I18nProvider";
@@ -73,10 +74,17 @@ function LoginPage() {
           />
         </div>
         <div className="space-y-1.5">
-          <Label htmlFor="password">{t("auth.password")}</Label>
-          <Input
+          <div className="flex items-center justify-between">
+            <Label htmlFor="password">{t("auth.password")}</Label>
+            <Link
+              to="/forgot-password"
+              className="text-xs text-muted-foreground hover:text-primary hover:underline"
+            >
+              Esqueci a senha
+            </Link>
+          </div>
+          <PasswordInput
             id="password"
-            type="password"
             required
             value={password}
             onChange={(e) => setPassword(e.target.value)}
