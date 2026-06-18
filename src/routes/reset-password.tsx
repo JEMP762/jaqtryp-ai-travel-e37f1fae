@@ -13,6 +13,18 @@ export const Route = createFileRoute("/reset-password")({
 
 type Status = "checking" | "ready" | "invalid";
 
+function readUrlError(): string | null {
+  if (typeof window === "undefined") return null;
+  const qs = new URLSearchParams(window.location.search);
+  const hs = new URLSearchParams(window.location.hash.replace(/^#/, ""));
+  const desc =
+    qs.get("error_description") ||
+    hs.get("error_description") ||
+    qs.get("error") ||
+    hs.get("error");
+  return desc ? decodeURIComponent(desc).replace(/\+/g, " ") : null;
+}
+
 function ResetPasswordPage() {
   const nav = useNavigate();
   const [password, setPassword] = React.useState("");
@@ -21,73 +33,52 @@ function ResetPasswordPage() {
   const [error, setError] = React.useState<string | null>(null);
   const [status, setStatus] = React.useState<Status>("checking");
   const [invalidMsg, setInvalidMsg] = React.useState<string>(
-    "Link inválido ou expirado.",
+    "Esse link de recuperação é inválido ou já foi usado. Solicite um novo.",
   );
 
   React.useEffect(() => {
     let cancelled = false;
+    let timer: ReturnType<typeof setTimeout> | undefined;
 
-    const sub = supabase.auth.onAuthStateChange((event) => {
-      if (event === "PASSWORD_RECOVERY" || event === "SIGNED_IN") {
-        if (!cancelled) setStatus("ready");
+    // Erro vindo do Supabase (ex.: otp_expired) no query/hash
+    const urlErr = readUrlError();
+    if (urlErr) {
+      setInvalidMsg(urlErr);
+      setStatus("invalid");
+      return;
+    }
+
+    // O cliente Supabase tem detectSessionInUrl=true e processa
+    // automaticamente ?code=... (PKCE) e #access_token=... (hash).
+    // Aqui só ouvimos o resultado para liberar o formulário.
+    const sub = supabase.auth.onAuthStateChange((event, session) => {
+      if (cancelled) return;
+      if (event === "PASSWORD_RECOVERY" || (event === "SIGNED_IN" && session)) {
+        setStatus("ready");
+        // Limpa a URL para evitar reuso ao recarregar
+        if (window.location.search || window.location.hash) {
+          window.history.replaceState({}, "", window.location.pathname);
+        }
       }
     });
 
-    (async () => {
-      try {
-        const url = new URL(window.location.href);
-        const code = url.searchParams.get("code");
-        const errDesc =
-          url.searchParams.get("error_description") ||
-          new URLSearchParams(window.location.hash.replace(/^#/, "")).get(
-            "error_description",
-          );
-
-        if (errDesc) {
-          if (!cancelled) {
-            setInvalidMsg(decodeURIComponent(errDesc));
-            setStatus("invalid");
-          }
-          return;
-        }
-
-        if (code) {
-          const { error } = await supabase.auth.exchangeCodeForSession(code);
-          // Limpa o code da URL (evita reuso ao recarregar)
-          url.searchParams.delete("code");
-          window.history.replaceState({}, "", url.pathname + url.search);
-          if (cancelled) return;
-          if (error) {
-            setInvalidMsg(error.message || "Link inválido ou expirado.");
-            setStatus("invalid");
-          } else {
-            setStatus("ready");
-          }
-          return;
-        }
-
-        // Fallback: link antigo via hash (#access_token=...) ou sessão já ativa
-        const { data } = await supabase.auth.getSession();
-        if (cancelled) return;
-        if (data.session) {
-          setStatus("ready");
-        } else {
-          // Pequena janela para o onAuthStateChange disparar (hash flow)
-          setTimeout(() => {
-            if (cancelled) return;
-            setStatus((s) => (s === "checking" ? "invalid" : s));
-          }, 1500);
-        }
-      } catch (e: any) {
-        if (!cancelled) {
-          setInvalidMsg(e?.message || "Link inválido ou expirado.");
-          setStatus("invalid");
-        }
+    // Se já existe sessão (usuário voltou para a aba), libera direto.
+    supabase.auth.getSession().then(({ data }) => {
+      if (cancelled) return;
+      if (data.session) {
+        setStatus("ready");
       }
-    })();
+    });
+
+    // Janela maior para o detectSessionInUrl concluir o exchange
+    timer = setTimeout(() => {
+      if (cancelled) return;
+      setStatus((s) => (s === "checking" ? "invalid" : s));
+    }, 4000);
 
     return () => {
       cancelled = true;
+      if (timer) clearTimeout(timer);
       sub.data.subscription.unsubscribe();
     };
   }, []);
