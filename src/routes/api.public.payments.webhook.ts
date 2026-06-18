@@ -144,7 +144,11 @@ export const Route = createFileRoute("/api/public/payments/webhook")({
           request.headers.get("lovable-signature") ||
           request.headers.get("x-webhook-signature");
 
-        if (secret && !verifySig(body, sig, secret)) {
+        if (!secret) {
+          console.error("[payments/webhook] missing PAYMENTS_WEBHOOK_SECRET for env", env);
+          return new Response("Webhook not configured", { status: 500 });
+        }
+        if (!verifySig(body, sig, secret)) {
           console.warn("[payments/webhook] invalid signature");
           return new Response("Invalid signature", { status: 401 });
         }

@@ -65,6 +65,7 @@ const SearchSchema = z.object({
 });
 
 export const searchFlights = createServerFn({ method: "POST" })
+  .middleware([withSupabaseAuthHeader, requireSupabaseAuth])
   .inputValidator((input: unknown) => SearchSchema.parse(input))
   .handler(async ({ data }) => {
     const slices: any[] = [
