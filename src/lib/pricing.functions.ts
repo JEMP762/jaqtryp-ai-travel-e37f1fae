@@ -3,7 +3,12 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { z } from "zod";
 import { applyPricing, DEFAULT_COMMISSION_SETTINGS, type CommissionSettings } from "./pricing";
 
+// Auth-gated so anonymous callers cannot exfiltrate sensitive business
+// configuration. Authenticated users (any role) need the operational fields
+// to render accurate prices for their bookings, so we still read via the
+// service-role client after verifying the session.
 export const getCommissionSettings = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
   .handler(async () => {
     try {
       const { supabaseAdmin } = await import("@/integrations/supabase/client.server");

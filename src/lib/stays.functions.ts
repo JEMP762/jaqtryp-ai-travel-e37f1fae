@@ -58,6 +58,7 @@ const SearchSchema = z.object({
 });
 
 export const searchStays = createServerFn({ method: "POST" })
+  .middleware([withSupabaseAuthHeader, requireSupabaseAuth])
   .inputValidator((input: unknown) => SearchSchema.parse(input))
   .handler(async ({ data }) => {
     // Resolve location via Duffel suggestions
@@ -117,6 +118,7 @@ export const searchStays = createServerFn({ method: "POST" })
 const RatesSchema = z.object({ search_result_id: z.string() });
 
 export const getStayRates = createServerFn({ method: "POST" })
+  .middleware([withSupabaseAuthHeader, requireSupabaseAuth])
   .inputValidator((input: unknown) => RatesSchema.parse(input))
   .handler(async ({ data }) => {
     const res = await duffelFetch(

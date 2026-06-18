@@ -3,6 +3,7 @@ import { Download, Loader2, Sparkles, Lock } from "lucide-react";
 import * as React from "react";
 import ReactMarkdown from "react-markdown";
 import { toast } from "sonner";
+import { authedJsonHeaders } from "@/lib/authed-fetch";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -180,7 +181,7 @@ function PlannerPage() {
         const system = `You are a professional translator. Translate the following travel itinerary markdown to ${targetLang}. Preserve ALL markdown formatting (##, ###, -, **bold**), numbers, prices, currency symbols, and proper nouns (city/place names). Output ONLY the translated markdown, no extra commentary.`;
         const resp = await fetch("/api/ai", {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: await authedJsonHeaders(),
           body: JSON.stringify({ system, prompt: plan }),
         });
         const data = await resp.json();
@@ -224,7 +225,7 @@ function PlannerPage() {
 
       const resp = await fetch("/api/ai", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: await authedJsonHeaders(),
         body: JSON.stringify({ system, prompt }),
       });
       const data = await resp.json();

@@ -1,9 +1,13 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { requireAuthFromRequest } from "@/lib/auth-route.server";
 
 export const Route = createFileRoute("/api/ai")({
   server: {
     handlers: {
       POST: async ({ request }) => {
+        const auth = await requireAuthFromRequest(request);
+        if (!auth.ok) return auth.response;
+
         const apiKey = process.env.LOVABLE_API_KEY;
         if (!apiKey)
           return new Response(JSON.stringify({ error: "AI not configured" }), { status: 500 });
