@@ -3,6 +3,7 @@ import { Send, Sparkles, User2 } from "lucide-react";
 import * as React from "react";
 import ReactMarkdown from "react-markdown";
 import { toast } from "sonner";
+import { authedJsonHeaders } from "@/lib/authed-fetch";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { useI18n } from "@/lib/i18n/I18nProvider";
@@ -63,7 +64,7 @@ function ChatPage() {
     try {
       const resp = await fetch("/api/chat", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: await authedJsonHeaders(),
         body: JSON.stringify({ messages: payloadMessages, lang }),
       });
 

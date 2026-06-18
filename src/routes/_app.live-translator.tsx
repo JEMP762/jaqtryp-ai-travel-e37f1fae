@@ -21,6 +21,7 @@ import {
   Smartphone,
 } from "lucide-react";
 import { toast } from "sonner";
+import { authedJsonHeaders } from "@/lib/authed-fetch";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import {
@@ -139,7 +140,7 @@ async function translateText(
   const system = `You are a professional simultaneous interpreter. Translate the user's text from ${from} to ${to}. Output ONLY the translation, with no quotes, no explanations, no transliteration. Preserve names, numbers and punctuation. Use natural, conversational tone suitable for spoken delivery.`;
   const resp = await fetch("/api/ai", {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: await authedJsonHeaders(),
     body: JSON.stringify({ system, prompt: text }),
   });
   const data = await resp.json();
@@ -157,7 +158,7 @@ async function ocrAndTranslate(
   const system = `You read text from images (signs, menus, documents, billboards). Return a JSON object with two fields: "original" (the text exactly as it appears, preserving line breaks) and "translated" (the same text translated to ${to}, natural and idiomatic). Output ONLY valid JSON, no markdown fences.`;
   const resp = await fetch("/api/ai", {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: await authedJsonHeaders(),
     body: JSON.stringify({
       system,
       prompt: "Extract and translate all visible text.",
@@ -802,7 +803,7 @@ function LiveTranslatorPage() {
       const system = `You are a travel concierge. Return ONLY a JSON array of 8 short, highly useful phrases a tourist would say in ${langLabel(to)} when visiting ${destination}. No numbering, no commentary, no markdown fences. Example: ["...","..."].`;
       const resp = await fetch("/api/ai", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: await authedJsonHeaders(),
         body: JSON.stringify({ system, prompt: `Destination: ${destination}` }),
       });
       const data = await resp.json();
