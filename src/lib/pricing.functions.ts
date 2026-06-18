@@ -4,10 +4,12 @@ import { z } from "zod";
 import { applyPricing, DEFAULT_COMMISSION_SETTINGS, type CommissionSettings } from "./pricing";
 
 export const getCommissionSettings = createServerFn({ method: "GET" })
-  .handler(async () => {
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
     try {
-      const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-      const { data } = await supabaseAdmin
+      // Use the caller's RLS-scoped client so the
+      // `commission_settings_read_admin` policy gates access.
+      const { data } = await context.supabase
         .from("commission_settings")
         .select("markup_type, markup_value, service_fee_type, service_fee_value, default_currency, upsells_enabled")
         .limit(1)
