@@ -13,16 +13,25 @@ export const Route = createFileRoute("/reset-password")({
 
 type Status = "checking" | "ready" | "invalid";
 
-function readUrlError(): string | null {
+function authParams() {
   if (typeof window === "undefined") return null;
   const qs = new URLSearchParams(window.location.search);
   const hs = new URLSearchParams(window.location.hash.replace(/^#/, ""));
-  const desc =
-    qs.get("error_description") ||
-    hs.get("error_description") ||
-    qs.get("error") ||
-    hs.get("error");
-  return desc ? decodeURIComponent(desc).replace(/\+/g, " ") : null;
+  return {
+    error: qs.get("error_description") || hs.get("error_description") || qs.get("error") || hs.get("error"),
+    code: qs.get("code"),
+    accessToken: hs.get("access_token") || qs.get("access_token"),
+    refreshToken: hs.get("refresh_token") || qs.get("refresh_token"),
+    type: hs.get("type") || qs.get("type"),
+  };
+}
+
+function recoveryErrorMessage(message?: string | null) {
+  const normalized = (message || "").toLowerCase();
+  if (normalized.includes("expired") || normalized.includes("invalid") || normalized.includes("otp")) {
+    return "Esse link de recuperação expirou, já foi usado ou é inválido. Solicite um novo link.";
+  }
+  return "Não foi possível validar esse link de recuperação. Solicite um novo link.";
 }
 
 function ResetPasswordPage() {
@@ -40,41 +49,74 @@ function ResetPasswordPage() {
     let cancelled = false;
     let timer: ReturnType<typeof setTimeout> | undefined;
 
-    // Erro vindo do Supabase (ex.: otp_expired) no query/hash
-    const urlErr = readUrlError();
-    if (urlErr) {
-      setInvalidMsg(urlErr);
-      setStatus("invalid");
-      return;
-    }
+    const markReady = () => {
+      if (cancelled) return;
+      setStatus("ready");
+      if (window.location.search || window.location.hash) {
+        window.history.replaceState({}, "", window.location.pathname);
+      }
+    };
 
-    // O cliente Supabase tem detectSessionInUrl=true e processa
-    // automaticamente ?code=... (PKCE) e #access_token=... (hash).
-    // Aqui só ouvimos o resultado para liberar o formulário.
+    const markInvalid = (message?: string | null) => {
+      if (cancelled) return;
+      setInvalidMsg(recoveryErrorMessage(message));
+      setStatus("invalid");
+    };
+
     const sub = supabase.auth.onAuthStateChange((event, session) => {
       if (cancelled) return;
       if (event === "PASSWORD_RECOVERY" || (event === "SIGNED_IN" && session)) {
-        setStatus("ready");
-        // Limpa a URL para evitar reuso ao recarregar
-        if (window.location.search || window.location.hash) {
-          window.history.replaceState({}, "", window.location.pathname);
-        }
+        markReady();
       }
     });
 
-    // Se já existe sessão (usuário voltou para a aba), libera direto.
-    supabase.auth.getSession().then(({ data }) => {
+    const validateRecoveryLink = async () => {
       if (cancelled) return;
-      if (data.session) {
-        setStatus("ready");
+      const params = authParams();
+      if (params?.error) {
+        markInvalid(params.error);
+        return;
       }
-    });
 
-    // Janela maior para o detectSessionInUrl concluir o exchange
+      if (params?.accessToken && params.refreshToken) {
+        const { error: sessionError } = await supabase.auth.setSession({
+          access_token: params.accessToken,
+          refresh_token: params.refreshToken,
+        });
+        if (sessionError) {
+          markInvalid(sessionError.message);
+          return;
+        }
+        markReady();
+        return;
+      }
+
+      if (params?.code) {
+        const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(params.code);
+        if (exchangeError) {
+          const { data } = await supabase.auth.getSession();
+          if (data.session) markReady();
+          else markInvalid(exchangeError.message);
+          return;
+        }
+        markReady();
+        return;
+      }
+
+      const { data } = await supabase.auth.getSession();
+      if (data.session) markReady();
+    };
+
+    validateRecoveryLink().catch((err) => markInvalid(err instanceof Error ? err.message : null));
+
     timer = setTimeout(() => {
       if (cancelled) return;
-      setStatus((s) => (s === "checking" ? "invalid" : s));
-    }, 4000);
+      setStatus((s) => {
+        if (s !== "checking") return s;
+        setInvalidMsg("Esse link de recuperação não contém uma sessão válida. Solicite um novo link.");
+        return "invalid";
+      });
+    }, 8000);
 
     return () => {
       cancelled = true;
