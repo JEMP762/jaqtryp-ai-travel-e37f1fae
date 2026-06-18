@@ -93,12 +93,11 @@ function ResetPasswordPage() {
         return;
       }
 
-      if ((params?.tokenHash || params?.token) && params.type === "recovery") {
-        const { error: verifyError } = await supabase.auth.verifyOtp(
-          params.tokenHash
-            ? { token_hash: params.tokenHash, type: "recovery" }
-            : { token: params.token!, type: "recovery" },
-        );
+      if (params?.tokenHash && params.type === "recovery") {
+        const { error: verifyError } = await supabase.auth.verifyOtp({
+          token_hash: params.tokenHash,
+          type: "recovery",
+        });
         if (verifyError) {
           markInvalid(verifyError.message);
           return;
