@@ -20,6 +20,8 @@ function authParams() {
   return {
     error: qs.get("error_description") || hs.get("error_description") || qs.get("error") || hs.get("error"),
     code: qs.get("code"),
+    tokenHash: qs.get("token_hash") || hs.get("token_hash"),
+    token: qs.get("token") || hs.get("token"),
     accessToken: hs.get("access_token") || qs.get("access_token"),
     refreshToken: hs.get("refresh_token") || qs.get("refresh_token"),
     type: hs.get("type") || qs.get("type"),
@@ -85,6 +87,20 @@ function ResetPasswordPage() {
         });
         if (sessionError) {
           markInvalid(sessionError.message);
+          return;
+        }
+        markReady();
+        return;
+      }
+
+      if ((params?.tokenHash || params?.token) && params.type === "recovery") {
+        const { error: verifyError } = await supabase.auth.verifyOtp(
+          params.tokenHash
+            ? { token_hash: params.tokenHash, type: "recovery" }
+            : { token: params.token!, type: "recovery" },
+        );
+        if (verifyError) {
+          markInvalid(verifyError.message);
           return;
         }
         markReady();
