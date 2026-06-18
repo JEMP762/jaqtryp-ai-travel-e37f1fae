@@ -1,24 +1,25 @@
-## Plano
+Vou corrigir a recuperação de senha como prioridade, sem mexer em outras áreas do app.
 
-1. **Corrigir a página de redefinição**
-   - Ajustar `/reset-password` para aceitar os dois formatos de link de recuperação que podem chegar no e-mail:
-     - `?code=...` no endereço
-     - `#access_token=...&type=recovery` no final do endereço
-   - Validar o link antes de mostrar o formulário e exibir uma mensagem clara enquanto carrega.
+1. Ajustar a configuração de autenticação
+- Ativar o processamento correto de sessão no link de recuperação para o cliente aceitar `?code=...` e `#access_token=...`.
+- Garantir que o link enviado pelo e-mail volte para `/reset-password` no domínio correto.
 
-2. **Melhorar o envio do e-mail de recuperação**
-   - Garantir que o link enviado sempre aponte para `/reset-password` no domínio atual.
-   - Evitar que o usuário fique preso em uma sessão antiga antes de usar o link de recuperação.
+2. Corrigir `/reset-password`
+- Processar o link de recuperação de forma explícita e segura, sem marcar como inválido antes da autenticação terminar.
+- Tratar os dois formatos possíveis de link: código PKCE e token no hash.
+- Mostrar o formulário somente depois que a sessão de recuperação estiver válida.
+- Exibir mensagem clara em português quando o link estiver expirado, já usado ou inválido.
 
-3. **Melhorar mensagens de erro**
-   - Trocar mensagens técnicas/ambíguas por instruções em português, por exemplo: “Esse link já foi usado ou expirou. Solicite um novo link.”
+3. Corrigir `/forgot-password`
+- Enviar o e-mail com redirecionamento correto.
+- Evitar sessão antiga atrapalhando o fluxo, mas sem quebrar o link de recuperação.
+- Melhorar o feedback para o usuário após solicitar o e-mail.
 
-4. **Validar o fluxo**
-   - Conferir no app que a tela de recuperação envia o e-mail corretamente.
-   - Conferir que a tela de redefinição não mostra “link inválido” antes de tentar processar o link.
+4. Validar o fluxo no preview
+- Testar a tela de solicitar recuperação.
+- Testar a tela de redefinição simulando link sem token, token inválido e estado de carregamento.
+- Confirmar que a página não cai mais direto em “link inválido” quando ainda está processando.
 
-## Detalhes técnicos
-
-- A correção principal será em `src/routes/reset-password.tsx`.
-- Se necessário, também ajustarei `src/routes/forgot-password.tsx` para limpar sessão anterior antes de solicitar o link.
-- Não vou alterar login/cadastro nem mexer nas configurações gerais de autenticação.
+Detalhes técnicos:
+- A causa provável é que o cliente de autenticação atual não está com `detectSessionInUrl` configurado explicitamente, e o código anterior passou a depender desse comportamento automático.
+- A correção vai deixar o fluxo resiliente: se vier `code`, troca por sessão; se vier `access_token`/`refresh_token`, seta a sessão; se vier erro do provedor, mostra a mensagem correta.
