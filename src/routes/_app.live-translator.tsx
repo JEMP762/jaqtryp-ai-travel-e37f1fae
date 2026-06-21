@@ -1549,7 +1549,7 @@ function SpeakerCard({
         )}
       </Button>
       <div className="mt-3 min-h-[40px] rounded-lg bg-background/40 p-2 text-xs italic text-muted-foreground">
-        {listening ? interim || "Ouvindo..." : "Toque em Falar e comece a conversar."}
+        {listening ? interim || "Ouvindo… pode falar" : "Toque em Falar — paro sozinho quando você terminar."}
       </div>
     </div>
   );
