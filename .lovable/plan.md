@@ -1,80 +1,59 @@
-# Live Translator — Gravação por VAD + Sessão pareada entre dispositivos
+## Diagnóstico
 
-Duas melhorias no dashboard `/live-translator`, mantendo intacto o `/translator`.
+O erro `Erro 400: redirect_uri_mismatch` **não é um bug no código do seu projeto**. O Google compara o `redirect_uri` enviado na requisição OAuth com a lista exata de URIs autorizadas no seu projeto do Google Cloud Console — se faltar **uma** URI, ele bloqueia.
 
-## 1) Tap-to-talk com auto-stop por silêncio (VAD)
+No Lovable Cloud com Google manual (BYOK), o `redirect_uri` que precisa estar autorizado **não é o domínio do seu site** (`jaqtryp.com`). É o **callback do Lovable Cloud Auth**, que é fixo por projeto e tem o formato:
 
-**Hoje:** o usuário toca para começar e precisa tocar de novo para encerrar; com fone Bluetooth isso é desconfortável.
-
-**Novo:** toca uma vez → app grava → ao detectar silêncio prolongado, encerra sozinho e dispara a transcrição/tradução já existente (ElevenLabs Scribe via `/api/public/stt`).
-
-**Onde mexer:** `src/routes/_app.live-translator.tsx`, hook `useSpeechRecognition`:
-- Criar `AudioContext` + `AnalyserNode` sobre o `MediaStream` capturado.
-- Loop com `requestAnimationFrame` medindo RMS.
-- Estados internos `speechStarted` / `lastVoiceAt`. Auto-stop se `speechStarted && now - lastVoiceAt > 1200ms`.
-- Timeout máximo de 20 s para evitar gravação infinita.
-- Cleanup do AudioContext em `onstop`, `onerror` e parada manual.
-- Tocar de novo no botão continua cancelando manualmente.
-
-Parâmetros (ajustáveis): `SILENCE_MS=1200`, `MIN_SPEECH_MS=350`, `RMS_THRESHOLD≈0.015`, `MAX_RECORDING_MS=20000`.
-
-## 2) Sessão pareada entre dois dispositivos
-
-**Cenário:** Usuário A (óculos/fone Bluetooth no celular dele) fala português; Usuário B (no celular dele, fone próprio) fala inglês. Cada um vê e ouve no idioma dele.
-
-**Modelo:** uma **sala** identificada por código curto (ex.: `PT-9F4K`). Cada participante entra na sala escolhendo seu idioma. O que A fala é transcrito no celular de A, traduzido para o idioma de B e reproduzido + exibido no celular de B (e vice-versa).
-
-### UX (nova aba "Remoto" em Conversação)
-- Botão **Criar sala** → gera código de 6 caracteres, mostra QR + link `/live-translator?room=XYZ123`.
-- Botão **Entrar em sala** → input do código.
-- Ao entrar: escolher idioma falado + idioma para ouvir (padrão: idioma do dispositivo).
-- Tela mostra os 2 participantes, status de conexão e botão **Falar** (com o VAD do item 1).
-- Cada mensagem recebida: bolha com texto traduzido + reprodução TTS automática no fone Bluetooth do receptor (usa o caminho de áudio do sistema que já funciona).
-- "Sair da sala" libera o slot.
-
-### Backend (Lovable Cloud)
-Tabelas novas (migração com `GRANT` + RLS):
-
-```text
-translator_rooms
-  id uuid pk, code text unique, created_at, created_by uuid null,
-  expires_at timestamptz (default now()+24h)
-
-translator_participants
-  id uuid pk, room_id fk, user_id uuid null, display_name text,
-  spoken_lang text, listen_lang text, joined_at, last_seen_at
-
-translator_messages
-  id uuid pk, room_id fk, sender_participant_id fk,
-  source_lang text, source_text text,
-  target_lang text, target_text text,
-  created_at
+```
+https://<project-ref>.supabase.co/auth/v1/callback
 ```
 
-- RLS: leitura/escrita permitidas a `anon` **apenas** para linhas cujo `room_id` corresponde a um `code` válido e não expirado (via função `security definer` `is_room_member(code, participant_id)` armazenando token do participante em `localStorage`). Sem PII além de display name.
-- Realtime habilitado em `translator_messages` e `translator_participants`.
+Esse é o valor que aparece na seção **Google** das configurações de autenticação do Lovable Cloud (campo "Callback URL" / "URL de redirecionamento"). É **esse** valor — e só ele — que precisa estar na lista de "Authorized redirect URIs" do Client OAuth no Google Cloud.
 
-### Server functions / rotas
-- `createRoom()` — server fn: cria sala, devolve `code`.
-- `joinRoom({ code, spokenLang, listenLang, displayName })` — server fn: cria participante, devolve `participantId` + token assinado p/ RLS.
-- `postMessage({ roomId, participantId, audioBlob | text, spokenLang })` — server fn que:
-  1. Se vier áudio: transcreve com Scribe.
-  2. Para cada outro participante na sala, traduz `source_text` → `listen_lang` deles (Lovable AI Gateway, mesma cadeia já usada na tradução por texto).
-  3. Insere `translator_messages` com o par `target_lang`/`target_text` do destinatário (1 linha por destinatário) — assim cada cliente filtra pelas suas linhas.
-- Cliente assina canal Realtime da sala, recebe novas mensagens onde `target_lang === minhaListenLang` e dispara TTS no caminho de áudio do sistema atual.
+Como dá erro tanto no preview quanto em produção, é praticamente certo que o callback do Lovable Cloud ainda não foi adicionado (ou foi adicionado errado, por ex. colando `https://jaqtryp.com` em vez do callback).
 
-### Fora de escopo
-- Sem chamadas WebRTC P2P (latência adicional aceitável, evita NAT/STUN).
-- Sem mais de 2 participantes nesta fase (esquema já suporta, UI só mostra 2 slots).
-- Sem autenticação obrigatória para entrar em sala (usa código + token de participante).
+## O que vamos fazer
+
+Nenhuma alteração de código é necessária. É só configuração no Google Cloud + Lovable Cloud. Passo a passo:
+
+### 1. Pegar a Callback URL correta do Lovable Cloud
+- Abrir **Cloud → Users → Authentication Settings → Sign In Methods → Google**.
+- Copiar o valor do campo **Callback URL** (algo como `https://xxxxxxxx.supabase.co/auth/v1/callback`).
+
+### 2. Adicionar essa URL no Google Cloud Console
+- Ir em https://console.cloud.google.com/apis/credentials
+- Abrir o seu **OAuth 2.0 Client ID** (tipo "Web application").
+- Em **Authorized redirect URIs**, adicionar **exatamente** a Callback URL copiada no passo 1 (sem barra no final, sem espaços).
+- Em **Authorized JavaScript origins**, adicionar:
+  - `https://jaqtryp.com`
+  - `https://www.jaqtryp.com`
+  - `https://jaqtryp-com.lovable.app`
+  - `https://id-preview--6d4b0769-d635-4330-aa35-732b66d1a0d8.lovable.app`
+- Salvar. A propagação no Google leva de poucos segundos a ~5 minutos.
+
+### 3. Conferir consent screen (OAuth consent screen)
+- Em **Authorized domains** adicionar: `lovable.app`, `supabase.co` e `jaqtryp.com`.
+- Scopes habilitados: `openid`, `.../auth/userinfo.email`, `.../auth/userinfo.profile`.
+- Se o app estiver em modo **Testing**, adicionar seu email em **Test users** (ou publicar o app).
+
+### 4. Conferir credenciais no Lovable Cloud
+- Em **Cloud → Users → Authentication Settings → Google**, garantir que o **Client ID** e **Client Secret** colados são os do **mesmo** OAuth Client que você editou no passo 2 (é comum ter mais de um Client cadastrado no Google Cloud e colar o errado).
+
+### 5. Testar
+- Abrir aba anônima.
+- Testar primeiro em `https://jaqtryp.com` (produção).
+- Depois testar no preview.
+
+## Por que não mexer no código
+
+O fluxo já usa `lovable.auth.signInWithOAuth("google", { redirect_uri: window.location.origin })`, que é o padrão correto. O `redirect_uri` enviado ao Google é sempre o callback do Lovable Cloud Auth — o `window.location.origin` é só pra onde o Cloud devolve o usuário **depois** do callback. Mudar isso no código não resolve o `redirect_uri_mismatch`.
+
+## Alternativa (se quiser desistir do manual)
+
+Se em algum momento preferir, dá pra voltar pro **Google gerenciado pelo Lovable Cloud** (mesmas telas de Authentication Settings → Google → desativar credenciais customizadas). Aí não precisa de Google Cloud Console nem dessa configuração. Mas como você quer manter o seu próprio Client ID, seguimos o plano acima.
 
 ## Validação
-- VAD: gravar uma frase curta → para sozinho em ~1 s, tradução aparece. Tocar no botão durante gravação ainda interrompe.
-- Pareamento: abrir `/live-translator` em duas janelas/navegadores, criar sala em uma, entrar com o código na outra, escolher PT↔EN; falar em uma janela e confirmar que aparece e toca em inglês na outra (e vice-versa) com áudio indo pelo Bluetooth do dispositivo receptor.
 
-## Ordem de entrega sugerida
-1. Migrações + RLS + Realtime + server fns mínimas.
-2. UI da aba "Remoto" (criar/entrar/listar participantes).
-3. Integração de envio (texto primeiro, áudio depois reaproveitando VAD do item 1).
-4. Recebimento + TTS automático.
-5. VAD aplicado também aos modos Conversação/Guia já existentes.
+- Em produção: clique em "Entrar com Google" → tela de consentimento aparece → redireciona de volta logado, sem erro 400.
+- No preview: mesmo comportamento.
+- Se ainda der `redirect_uri_mismatch`, me mande a Callback URL exata do Lovable Cloud + um print da lista "Authorized redirect URIs" do Google Cloud, que eu confiro a diferença caractere por caractere.
