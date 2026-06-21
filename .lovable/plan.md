@@ -1,56 +1,48 @@
-## Diagnóstico
+## Esclarecimento importante
 
-O `redirect_uri_mismatch` continua porque as URLs que você adicionou em **Authorized redirect URIs** no Google Cloud apontam para o seu app:
+A URL `https://etmuritswjialcycfgvw.supabase.co/auth/v1/callback` **NÃO é para ser adicionada no código do projeto**. Ela é o endpoint do backend (Lovable Cloud) e precisa ser cadastrada **no Google Cloud Console**, no painel das suas credenciais OAuth.
 
-```
-❌ https://jaqtryp.com/~oauth/callback
-❌ https://www.jaqtryp.com/~oauth/callback
-```
+## Por que não está no projeto?
 
-O Google **nunca** redireciona para o seu domínio diretamente. O fluxo é:
+Essa URL é uma rota interna do backend gerenciado pelo Lovable Cloud — ela existe automaticamente, não como arquivo do seu código. O fluxo OAuth funciona assim:
 
 ```text
-Usuário → Google → Backend (Supabase) → Seu app (jaqtryp.com)
-                        ↑
-              é AQUI que o Google precisa
-              de permissão para redirecionar
+Usuário clica "Entrar com Google"
+        ↓
+Vai para google.com
+        ↓
+Google redireciona para → https://etmuritswjialcycfgvw.supabase.co/auth/v1/callback
+        ↓
+Backend processa e devolve para → https://jaqtryp.com
 ```
 
-Portanto, a URL autorizada no Google Cloud tem que ser a do **backend**, não a do seu app.
+O Google precisa ter **a URL do meio** autorizada — não a do seu site.
 
-## O que fazer (sem mexer em código)
+## O que fazer (passo a passo no Google Cloud Console)
 
-### 1. No Google Cloud Console
-**APIs & Services → Credentials → seu OAuth 2.0 Client ID → Authorized redirect URIs**
+1. Acesse: https://console.cloud.google.com/apis/credentials
+2. Selecione o projeto correto (o mesmo de onde veio o Client ID configurado no Lovable Cloud)
+3. Clique no **OAuth 2.0 Client ID** que você está usando
+4. Na seção **"Authorized redirect URIs"**:
+   - **Remova** estas duas linhas erradas:
+     - `https://jaqtryp.com/~oauth/callback`
+     - `https://www.jaqtryp.com/~oauth/callback`
+   - **Adicione** esta linha (copie exatamente, sem espaços, sem barra no final):
+     ```
+     https://etmuritswjialcycfgvw.supabase.co/auth/v1/callback
+     ```
+5. Na seção **"Authorized JavaScript origins"**, adicione:
+   ```
+   https://jaqtryp.com
+   https://www.jaqtryp.com
+   ```
+6. Clique em **SAVE**
+7. Aguarde 1–2 minutos (Google demora a propagar) e teste novamente
 
-- **Remova** as duas URLs erradas:
-  - `https://jaqtryp.com/~oauth/callback`
-  - `https://www.jaqtryp.com/~oauth/callback`
+## Como confirmar que está no projeto certo do Google
 
-- **Adicione esta URL exata** (única que o Google precisa):
-  ```
-  https://etmuritswjialcycfgvw.supabase.co/auth/v1/callback
-  ```
-  Sem barra no final. Sem `http`. Sem espaços.
+Abra o painel Lovable Cloud → Users → Auth Settings → Google. O **Client ID** mostrado lá tem que ser o mesmo do OAuth Client que você está editando no Google Cloud. Se forem diferentes, você está editando o projeto errado no Google — esse é o erro mais comum quando "já adicionei e continua errado".
 
-- Clique em **Save**. Pode levar 1–2 minutos para propagar.
+## Nenhuma alteração de código será feita
 
-### 2. Authorized JavaScript origins (na mesma tela)
-Adicione (essas sim usam o seu domínio):
-```
-https://jaqtryp.com
-https://www.jaqtryp.com
-https://jaqtryp-com.lovable.app
-https://id-preview--6d4b0769-d635-4330-aa35-732b66d1a0d8.lovable.app
-```
-
-### 3. Confirme que o Client ID e Secret do Google estão colados no painel do Lovable Cloud
-**Cloud → Users → Auth Settings → Google** — Client ID e Client Secret devem ser **do mesmo OAuth Client** que você acabou de editar no Google Cloud (não de outro projeto Google).
-
-## Por que `/~oauth/callback` parece certo mas não é
-
-Esse caminho `/~oauth/callback` é interno do Lovable e funciona apenas porque o broker do Lovable intercepta. Mas como você está usando **suas próprias credenciais Google manuais**, o fluxo padrão do Supabase é usado — e o Supabase espera receber o callback na URL `*.supabase.co/auth/v1/callback`.
-
-## Nenhuma mudança de código é necessária
-
-Toda correção é no Google Cloud Console. Posso confirmar depois que você fizer a alteração.
+Esse problema é 100% de configuração externa (Google Cloud). O código do projeto está correto.
