@@ -1,48 +1,23 @@
-## Esclarecimento importante
+O problema agora não parece estar mais no código: o projeto já usa o broker correto (`lovable.auth.signInWithOAuth`) nas telas de login e cadastro. As URLs que você listou indicam que a etapa que ainda está bloqueando é a configuração do OAuth/Google ou a publicação da versão corrigida.
 
-A URL `https://etmuritswjialcycfgvw.supabase.co/auth/v1/callback` **NÃO é para ser adicionada no código do projeto**. Ela é o endpoint do backend (Lovable Cloud) e precisa ser cadastrada **no Google Cloud Console**, no painel das suas credenciais OAuth.
+Plano:
+1. Validar que a versão publicada contém a correção de OAuth feita no código.
+   - Se ainda não foi publicado depois da alteração, publicar/atualizar o app é obrigatório; caso contrário o domínio `jaqtryp.com` continua rodando a versão antiga.
 
-## Por que não está no projeto?
+2. Manter no Google Cloud apenas a URL exigida pelo broker:
+   - `https://oauth.lovable.app/callback`
+   - Remover as URLs `https://jaqtryp-com.lovable.app/~oauth/callback`, `https://jaqtryp.com/~oauth/callback` e `https://www.jaqtryp.com/~oauth/callback` dos “Authorized redirect URIs”, porque elas são caminhos internos do app/proxy, não o callback final que o Google deve chamar quando se usa o broker Lovable.
 
-Essa URL é uma rota interna do backend gerenciado pelo Lovable Cloud — ela existe automaticamente, não como arquivo do seu código. O fluxo OAuth funciona assim:
+3. Conferir se o Client ID/Secret configurado no painel de Auth do backend é exatamente o mesmo OAuth Client editado no Google Cloud.
+   - Se houver dois OAuth Clients no Google, editar o errado mantém o mesmo erro mesmo com as URLs certas.
 
-```text
-Usuário clica "Entrar com Google"
-        ↓
-Vai para google.com
-        ↓
-Google redireciona para → https://etmuritswjialcycfgvw.supabase.co/auth/v1/callback
-        ↓
-Backend processa e devolve para → https://jaqtryp.com
-```
+4. Testar primeiro no domínio publicado Lovable:
+   - `https://jaqtryp-com.lovable.app`
+   - Depois testar no domínio customizado:
+   - `https://jaqtryp.com`
 
-O Google precisa ter **a URL do meio** autorizada — não a do seu site.
+5. Se ainda bloquear, capturar o erro exato mostrado pelo Google ou pela página de callback.
+   - Se for `redirect_uri_mismatch`, o OAuth Client ainda não contém `https://oauth.lovable.app/callback` no lugar correto.
+   - Se for outro erro, o próximo ajuste depende da mensagem exata.
 
-## O que fazer (passo a passo no Google Cloud Console)
-
-1. Acesse: https://console.cloud.google.com/apis/credentials
-2. Selecione o projeto correto (o mesmo de onde veio o Client ID configurado no Lovable Cloud)
-3. Clique no **OAuth 2.0 Client ID** que você está usando
-4. Na seção **"Authorized redirect URIs"**:
-   - **Remova** estas duas linhas erradas:
-     - `https://jaqtryp.com/~oauth/callback`
-     - `https://www.jaqtryp.com/~oauth/callback`
-   - **Adicione** esta linha (copie exatamente, sem espaços, sem barra no final):
-     ```
-     https://etmuritswjialcycfgvw.supabase.co/auth/v1/callback
-     ```
-5. Na seção **"Authorized JavaScript origins"**, adicione:
-   ```
-   https://jaqtryp.com
-   https://www.jaqtryp.com
-   ```
-6. Clique em **SAVE**
-7. Aguarde 1–2 minutos (Google demora a propagar) e teste novamente
-
-## Como confirmar que está no projeto certo do Google
-
-Abra o painel Lovable Cloud → Users → Auth Settings → Google. O **Client ID** mostrado lá tem que ser o mesmo do OAuth Client que você está editando no Google Cloud. Se forem diferentes, você está editando o projeto errado no Google — esse é o erro mais comum quando "já adicionei e continua errado".
-
-## Nenhuma alteração de código será feita
-
-Esse problema é 100% de configuração externa (Google Cloud). O código do projeto está correto.
+Não vou mexer em código agora, porque a chamada OAuth já está correta no projeto e continuar alterando arquivos provavelmente só consumiria créditos sem resolver a configuração externa.
