@@ -383,6 +383,12 @@ function speak(
 // We record the user's voice with MediaRecorder and POST it to /api/public/stt,
 // which calls ElevenLabs scribe_v2 server-side and returns the transcript.
 // This is far more precise than the browser's native SpeechRecognition.
+// VAD tuning. Adjust SILENCE_MS or RMS_THRESHOLD if mic gain varies.
+const VAD_SILENCE_MS = 1200;
+const VAD_MIN_SPEECH_MS = 350;
+const VAD_RMS_THRESHOLD = 0.015;
+const VAD_MAX_RECORDING_MS = 20000;
+
 function useSpeechRecognition(lang: string, onFinal: (text: string) => void) {
   const [listening, setListening] = React.useState(false);
   const [interim, setInterim] = React.useState("");
@@ -391,16 +397,127 @@ function useSpeechRecognition(lang: string, onFinal: (text: string) => void) {
   const chunksRef = React.useRef<Blob[]>([]);
   const cancelledRef = React.useRef(false);
   const mimeRef = React.useRef("");
+  // VAD state
+  const audioCtxRef = React.useRef<AudioContext | null>(null);
+  const analyserRef = React.useRef<AnalyserNode | null>(null);
+  const sourceRef = React.useRef<MediaStreamAudioSourceNode | null>(null);
+  const rafRef = React.useRef<number | null>(null);
+  const maxTimeoutRef = React.useRef<number | null>(null);
+  const speechStartedAtRef = React.useRef<number | null>(null);
+  const lastVoiceAtRef = React.useRef<number>(0);
+  const stoppingRef = React.useRef(false);
   const supported =
     typeof window !== "undefined" &&
     typeof navigator !== "undefined" &&
     !!navigator.mediaDevices?.getUserMedia &&
     typeof window.MediaRecorder !== "undefined";
 
+  const teardownVad = React.useCallback(() => {
+    if (rafRef.current !== null) {
+      cancelAnimationFrame(rafRef.current);
+      rafRef.current = null;
+    }
+    if (maxTimeoutRef.current !== null) {
+      clearTimeout(maxTimeoutRef.current);
+      maxTimeoutRef.current = null;
+    }
+    try {
+      sourceRef.current?.disconnect();
+    } catch {
+      /* noop */
+    }
+    try {
+      analyserRef.current?.disconnect();
+    } catch {
+      /* noop */
+    }
+    if (audioCtxRef.current && audioCtxRef.current.state !== "closed") {
+      audioCtxRef.current.close().catch(() => {});
+    }
+    sourceRef.current = null;
+    analyserRef.current = null;
+    audioCtxRef.current = null;
+    speechStartedAtRef.current = null;
+    lastVoiceAtRef.current = 0;
+  }, []);
+
   const stopTracks = React.useCallback(() => {
     streamRef.current?.getTracks().forEach((t) => t.stop());
     streamRef.current = null;
   }, []);
+
+  const autoStop = React.useCallback((reason: "vad" | "timeout") => {
+    if (stoppingRef.current) return;
+    const rec = recRef.current;
+    if (!rec || rec.state === "inactive") return;
+    stoppingRef.current = true;
+    try {
+      setInterim(reason === "timeout" ? "Tempo máximo atingido…" : "Processando…");
+      rec.requestData();
+      rec.stop();
+    } catch {
+      /* noop */
+    }
+  }, []);
+
+  const setupVad = React.useCallback(
+    (stream: MediaStream) => {
+      try {
+        const Ctor: typeof AudioContext =
+          window.AudioContext ||
+          (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
+        if (!Ctor) return;
+        const ctx = new Ctor();
+        const source = ctx.createMediaStreamSource(stream);
+        const analyser = ctx.createAnalyser();
+        analyser.fftSize = 1024;
+        analyser.smoothingTimeConstant = 0.4;
+        source.connect(analyser);
+        audioCtxRef.current = ctx;
+        sourceRef.current = source;
+        analyserRef.current = analyser;
+        const buf = new Float32Array(analyser.fftSize);
+
+        const startedAt = performance.now();
+        lastVoiceAtRef.current = startedAt;
+        speechStartedAtRef.current = null;
+
+        maxTimeoutRef.current = window.setTimeout(() => {
+          autoStop("timeout");
+        }, VAD_MAX_RECORDING_MS);
+
+        const tick = () => {
+          const a = analyserRef.current;
+          if (!a) return;
+          a.getFloatTimeDomainData(buf);
+          // RMS
+          let sum = 0;
+          for (let i = 0; i < buf.length; i++) sum += buf[i] * buf[i];
+          const rms = Math.sqrt(sum / buf.length);
+          const now = performance.now();
+          if (rms > VAD_RMS_THRESHOLD) {
+            lastVoiceAtRef.current = now;
+            if (speechStartedAtRef.current === null) {
+              speechStartedAtRef.current = now;
+              setInterim("Gravando… solte que paro sozinho");
+            }
+          } else if (
+            speechStartedAtRef.current !== null &&
+            now - speechStartedAtRef.current > VAD_MIN_SPEECH_MS &&
+            now - lastVoiceAtRef.current > VAD_SILENCE_MS
+          ) {
+            autoStop("vad");
+            return;
+          }
+          rafRef.current = requestAnimationFrame(tick);
+        };
+        rafRef.current = requestAnimationFrame(tick);
+      } catch {
+        // VAD opcional — sem ele, o usuário ainda pode tocar para parar.
+      }
+    },
+    [autoStop],
+  );
 
   const start = React.useCallback(async () => {
     if (!supported) {
@@ -410,6 +527,7 @@ function useSpeechRecognition(lang: string, onFinal: (text: string) => void) {
     if (recRef.current && recRef.current.state !== "inactive") return;
     try {
       cancelledRef.current = false;
+      stoppingRef.current = false;
       chunksRef.current = [];
       const stream = await navigator.mediaDevices.getUserMedia({
         audio: {
@@ -420,7 +538,6 @@ function useSpeechRecognition(lang: string, onFinal: (text: string) => void) {
       });
       streamRef.current = stream;
 
-      // Pick the best MIME the browser supports.
       const candidates = [
         "audio/webm;codecs=opus",
         "audio/webm",
@@ -446,6 +563,7 @@ function useSpeechRecognition(lang: string, onFinal: (text: string) => void) {
       rec.onerror = () => {
         toast.error("Falha ao gravar áudio do microfone.");
         cancelledRef.current = true;
+        teardownVad();
         stopTracks();
         setListening(false);
         setInterim("");
@@ -453,7 +571,9 @@ function useSpeechRecognition(lang: string, onFinal: (text: string) => void) {
 
       rec.onstop = async () => {
         setListening(false);
-        setInterim("Preparando áudio completo…");
+        teardownVad();
+        const hadSpeech = speechStartedAtRef.current !== null;
+        setInterim(hadSpeech ? "Preparando áudio completo…" : "");
         stopTracks();
         recRef.current = null;
 
@@ -468,7 +588,6 @@ function useSpeechRecognition(lang: string, onFinal: (text: string) => void) {
         chunksRef.current = [];
 
         if (blob.size < 1200) {
-          // ~too short to be useful
           setInterim("");
           return;
         }
@@ -495,12 +614,10 @@ function useSpeechRecognition(lang: string, onFinal: (text: string) => void) {
         }
       };
 
-      // Do not pass a timeslice here. Some mobile browsers create chunked WebM
-      // files that STT providers decode only up to the first chunk, which makes
-      // long dialogue look like it was cut. A single blob is safer and complete.
       rec.start();
       setListening(true);
-      setInterim("Gravando diálogo…");
+      setInterim("Ouvindo… pode falar");
+      setupVad(stream);
     } catch (err) {
       const error = err as DOMException;
       const msg =
@@ -512,12 +629,13 @@ function useSpeechRecognition(lang: string, onFinal: (text: string) => void) {
               ? "Microfone em uso por outro app."
               : error.message || "Permissão de microfone negada";
       toast.error(`Microfone: ${msg}`);
+      teardownVad();
       stopTracks();
       recRef.current = null;
       setListening(false);
       setInterim("");
     }
-  }, [lang, onFinal, supported, stopTracks]);
+  }, [lang, onFinal, supported, stopTracks, setupVad, teardownVad]);
 
   const stop = React.useCallback(() => {
     const rec = recRef.current;
@@ -532,9 +650,10 @@ function useSpeechRecognition(lang: string, onFinal: (text: string) => void) {
     } else {
       setListening(false);
       setInterim("");
+      teardownVad();
       stopTracks();
     }
-  }, [stopTracks]);
+  }, [stopTracks, teardownVad]);
 
   React.useEffect(
     () => () => {
@@ -548,9 +667,10 @@ function useSpeechRecognition(lang: string, onFinal: (text: string) => void) {
           /* noop */
         }
       }
+      teardownVad();
       stopTracks();
     },
-    [stopTracks],
+    [stopTracks, teardownVad],
   );
 
   return { listening, interim, start, stop, supported };
@@ -1429,7 +1549,7 @@ function SpeakerCard({
         )}
       </Button>
       <div className="mt-3 min-h-[40px] rounded-lg bg-background/40 p-2 text-xs italic text-muted-foreground">
-        {listening ? interim || "Ouvindo..." : "Toque em Falar e comece a conversar."}
+        {listening ? interim || "Ouvindo… pode falar" : "Toque em Falar — paro sozinho quando você terminar."}
       </div>
     </div>
   );
