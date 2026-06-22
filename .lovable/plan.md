@@ -1,23 +1,40 @@
-O problema agora não parece estar mais no código: o projeto já usa o broker correto (`lovable.auth.signInWithOAuth`) nas telas de login e cadastro. As URLs que você listou indicam que a etapa que ainda está bloqueando é a configuração do OAuth/Google ou a publicação da versão corrigida.
+# Plano: corrigir tradutor + liberar acesso
 
-Plano:
-1. Validar que a versão publicada contém a correção de OAuth feita no código.
-   - Se ainda não foi publicado depois da alteração, publicar/atualizar o app é obrigatório; caso contrário o domínio `jaqtryp.com` continua rodando a versão antiga.
+## Causa do problema
 
-2. Manter no Google Cloud apenas a URL exigida pelo broker:
-   - `https://oauth.lovable.app/callback`
-   - Remover as URLs `https://jaqtryp-com.lovable.app/~oauth/callback`, `https://jaqtryp.com/~oauth/callback` e `https://www.jaqtryp.com/~oauth/callback` dos “Authorized redirect URIs”, porque elas são caminhos internos do app/proxy, não o callback final que o Google deve chamar quando se usa o broker Lovable.
+O `/api/ai` (rota servidor) exige `Authorization: Bearer <jwt>` da sessão do usuário (Supabase). 
 
-3. Conferir se o Client ID/Secret configurado no painel de Auth do backend é exatamente o mesmo OAuth Client editado no Google Cloud.
-   - Se houver dois OAuth Clients no Google, editar o errado mantém o mesmo erro mesmo com as URLs certas.
+- `src/routes/_app.live-translator.tsx` já envia o token via `authedJsonHeaders()` — funciona quando há sessão.
+- `src/routes/_app.translator.tsx` chama `fetch("/api/ai", ...)` **sem** o header de autorização — todas as chamadas (texto, imagem/OCR, microfone) retornam **401 Unauthorized**, por isso "nada funciona" na página do tradutor.
 
-4. Testar primeiro no domínio publicado Lovable:
-   - `https://jaqtryp-com.lovable.app`
-   - Depois testar no domínio customizado:
-   - `https://jaqtryp.com`
+Como o live-translator usa o mesmo endpoint corretamente, o problema dele provavelmente é colateral (sessão expirada ou a mesma confusão do usuário ao testar). A correção do header e uma verificação garantem ambos.
 
-5. Se ainda bloquear, capturar o erro exato mostrado pelo Google ou pela página de callback.
-   - Se for `redirect_uri_mismatch`, o OAuth Client ainda não contém `https://oauth.lovable.app/callback` no lugar correto.
-   - Se for outro erro, o próximo ajuste depende da mensagem exata.
+## Mudanças
 
-Não vou mexer em código agora, porque a chamada OAuth já está correta no projeto e continuar alterando arquivos provavelmente só consumiria créditos sem resolver a configuração externa.
+### 1. `src/routes/_app.translator.tsx`
+- Importar `authedJsonHeaders` de `@/lib/authed-fetch`.
+- Trocar os dois `headers: { "Content-Type": "application/json" }` (em `handleImageOcr` e em `translateText`) por `headers: await authedJsonHeaders()`.
+- Se `resp.status === 401`, mostrar toast claro: "Sessão expirada, faça login novamente."
+
+### 2. Liberar acesso premium para `messiaspassosj@gmail.com`
+Migração SQL que promove o usuário (id `344ef7ea-5a7b-4cd7-afdf-b14c0b291b89`, role atual `free`) para `ultra` (nível mais alto disponível: `free | premium | ultra | admin`):
+
+```sql
+UPDATE public.user_roles
+   SET role = 'ultra'
+ WHERE user_id = '344ef7ea-5a7b-4cd7-afdf-b14c0b291b89';
+
+INSERT INTO public.user_roles (user_id, role)
+SELECT '344ef7ea-5a7b-4cd7-afdf-b14c0b291b89', 'ultra'
+ WHERE NOT EXISTS (
+   SELECT 1 FROM public.user_roles
+    WHERE user_id = '344ef7ea-5a7b-4cd7-afdf-b14c0b291b89'
+ );
+```
+
+(Se preferir `premium` em vez de `ultra`, me avise antes de implementar.)
+
+## Verificação
+- Após o build, abrir `/translator` logado e testar texto, foto e microfone.
+- Abrir `/live-translator` e confirmar que a tradução retorna.
+- Confirmar a role do usuário no banco.
