@@ -12,6 +12,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useI18n } from "@/lib/i18n/I18nProvider";
+import { authedJsonHeaders } from "@/lib/authed-fetch";
 
 export const Route = createFileRoute("/_app/translator")({
   component: TranslatorPage,
