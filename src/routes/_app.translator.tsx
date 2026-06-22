@@ -116,13 +116,14 @@ function TranslatorPage() {
     const toName = LANGS.find((l) => l.code === toCode)?.name ?? toCode;
     const resp = await fetch("/api/ai", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: await authedJsonHeaders(),
       body: JSON.stringify({
         system: `You are a professional translator. Translate from ${fromName} to ${toName}. Return ONLY the translation, no explanations, no quotes.`,
         prompt: text,
       }),
     });
     const data = await resp.json();
+    if (resp.status === 401) throw new Error("Sessão expirada, faça login novamente.");
     if (!resp.ok) throw new Error(data.error || "Erro");
     return (data.text as string) ?? "";
   };
