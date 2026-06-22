@@ -71,7 +71,7 @@ function TranslatorPage() {
       const toName = LANGS.find((l) => l.code === to)?.name ?? to;
       const resp = await fetch("/api/ai", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: await authedJsonHeaders(),
         body: JSON.stringify({
           system:
             "You are an OCR + translation assistant. Extract ALL readable text from the image, then translate it. Return ONLY a JSON object with two fields: {\"original\": string, \"translation\": string}. No markdown, no code fences.",
@@ -80,6 +80,7 @@ function TranslatorPage() {
         }),
       });
       const data = await resp.json();
+      if (resp.status === 401) throw new Error("Sessão expirada, faça login novamente.");
       if (!resp.ok) throw new Error(data.error || "Erro");
       const raw = (data.text as string) ?? "";
       const cleaned = raw.replace(/```json|```/g, "").trim();
