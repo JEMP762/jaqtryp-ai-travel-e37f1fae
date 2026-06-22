@@ -171,6 +171,36 @@ export type Database = {
         }
         Relationships: []
       }
+      credit_ledger: {
+        Row: {
+          created_at: string
+          delta: number
+          id: string
+          metadata: Json
+          reason: string
+          stripe_session_id: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          delta: number
+          id?: string
+          metadata?: Json
+          reason: string
+          stripe_session_id?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          delta?: number
+          id?: string
+          metadata?: Json
+          reason?: string
+          stripe_session_id?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       favorites: {
         Row: {
           created_at: string
@@ -623,6 +653,33 @@ export type Database = {
         }
         Relationships: []
       }
+      user_credits: {
+        Row: {
+          balance: number
+          created_at: string
+          lifetime_purchased: number
+          lifetime_spent: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          balance?: number
+          created_at?: string
+          lifetime_purchased?: number
+          lifetime_spent?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          balance?: number
+          created_at?: string
+          lifetime_purchased?: number
+          lifetime_spent?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           created_at: string
@@ -847,6 +904,16 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      add_credits: {
+        Args: {
+          _amount: number
+          _meta?: Json
+          _reason: string
+          _session?: string
+          _user: string
+        }
+        Returns: undefined
+      }
       has_active_subscription: {
         Args: { check_env?: string; user_uuid: string }
         Returns: boolean
@@ -856,6 +923,10 @@ export type Database = {
           _role: Database["public"]["Enums"]["app_role"]
           _user_id: string
         }
+        Returns: boolean
+      }
+      spend_credits: {
+        Args: { _amount: number; _meta?: Json; _reason: string; _user: string }
         Returns: boolean
       }
     }
