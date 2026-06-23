@@ -251,6 +251,41 @@ async function handleSubscriptionEvent(event: any, env: "sandbox" | "live") {
     if (role && (obj.status === "active" || obj.status === "trialing")) {
       await supabaseAdmin.from("user_roles").upsert({ user_id: userId, role }, { onConflict: "user_id,role" });
     }
+
+    // === Créditos mensais por plano ===
+    // Pro/Premium = 600 cr/mês · Ultra = 1500 cr/mês
+    if (obj.status === "active" || obj.status === "trialing") {
+      const monthlyGrant = role === "ultra" ? 1500 : role === "premium" ? 600 : 0;
+      if (monthlyGrant > 0) {
+        // Marca o grant atual e credita imediatamente o saldo do ciclo corrente.
+        // Idempotente via stripe_session_id = "sub_grant:<sub_id>:<period_start>"
+        const grantKey = `sub_grant:${obj.id}:${periodStart ?? "now"}`;
+        const { data: alreadyGranted } = await supabaseAdmin
+          .from("credit_ledger")
+          .select("id")
+          .eq("stripe_session_id", grantKey)
+          .maybeSingle();
+        if (!alreadyGranted) {
+          // Atualiza o monthly_grant e a próxima data de reset = period_end
+          await supabaseAdmin
+            .from("user_credits")
+            .upsert({
+              user_id: userId,
+              monthly_grant: monthlyGrant,
+              monthly_balance: monthlyGrant,
+              monthly_reset_at: periodEnd ? new Date(periodEnd * 1000).toISOString() : null,
+              updated_at: new Date().toISOString(),
+            }, { onConflict: "user_id" });
+          await supabaseAdmin.from("credit_ledger").insert({
+            user_id: userId,
+            delta: monthlyGrant,
+            reason: "monthly_grant",
+            stripe_session_id: grantKey,
+            metadata: { bucket: "monthly", subscription_id: obj.id, price_id: priceId } as any,
+          });
+        }
+      }
+    }
   } else if (type === "customer.subscription.deleted") {
     await supabaseAdmin.from("subscriptions").update({
       status: "canceled",
@@ -258,4 +293,39 @@ async function handleSubscriptionEvent(event: any, env: "sandbox" | "live") {
     }).eq("stripe_subscription_id", obj.id).eq("environment", env);
   }
 }
+
+// =====================================================================
+// Compra de pacote avulso de créditos (mode=payment, metadata.kind=credit_pack)
+// =====================================================================
+async function handleCreditPackEvent(event: any) {
+  const type = event?.type;
+  if (type !== "checkout.session.completed") return;
+  const obj = event?.data?.object;
+  if (!obj) return;
+  if (obj.mode !== "payment") return;
+  const meta = obj.metadata || {};
+  if (meta.kind !== "credit_pack") return;
+
+  const userId = meta.userId;
+  const credits = parseInt(meta.credits, 10);
+  const sessionId = obj.id;
+  if (!userId || !credits || credits <= 0) {
+    console.warn("[credit_pack] missing data", { userId, credits, sessionId });
+    return;
+  }
+
+  const { error } = await supabaseAdmin.rpc("add_credits", {
+    _user: userId,
+    _amount: credits,
+    _reason: "purchase",
+    _bucket: "topup",
+    _session: sessionId,
+    _meta: { lookup_key: meta.lookup_key, amount_paid: obj.amount_total } as any,
+  });
+  if (error) {
+    console.error("[credit_pack] add_credits error", error.message);
+    throw new Error(error.message);
+  }
+}
+
 
