@@ -30,6 +30,7 @@ import { Route as AppLiveTranslatorRouteImport } from './routes/_app.live-transl
 import { Route as AppFlightsRouteImport } from './routes/_app.flights'
 import { Route as AppDealsRouteImport } from './routes/_app.deals'
 import { Route as AppDashboardRouteImport } from './routes/_app.dashboard'
+import { Route as AppCreditsRouteImport } from './routes/_app.credits'
 import { Route as AppChatRouteImport } from './routes/_app.chat'
 import { Route as AppBillingRouteImport } from './routes/_app.billing'
 import { Route as ApiPublicTtsRouteImport } from './routes/api.public.tts'
@@ -143,6 +144,11 @@ const AppDashboardRoute = AppDashboardRouteImport.update({
   path: '/dashboard',
   getParentRoute: () => AppRoute,
 } as any)
+const AppCreditsRoute = AppCreditsRouteImport.update({
+  id: '/credits',
+  path: '/credits',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppChatRoute = AppChatRouteImport.update({
   id: '/chat',
   path: '/chat',
@@ -195,6 +201,7 @@ export interface FileRoutesByFullPath {
   '/signup': typeof SignupRoute
   '/billing': typeof AppBillingRoute
   '/chat': typeof AppChatRoute
+  '/credits': typeof AppCreditsRoute
   '/dashboard': typeof AppDashboardRoute
   '/deals': typeof AppDealsRoute
   '/flights': typeof AppFlightsRoute
@@ -225,6 +232,7 @@ export interface FileRoutesByTo {
   '/signup': typeof SignupRoute
   '/billing': typeof AppBillingRoute
   '/chat': typeof AppChatRoute
+  '/credits': typeof AppCreditsRoute
   '/dashboard': typeof AppDashboardRoute
   '/deals': typeof AppDealsRoute
   '/flights': typeof AppFlightsRoute
@@ -257,6 +265,7 @@ export interface FileRoutesById {
   '/signup': typeof SignupRoute
   '/_app/billing': typeof AppBillingRoute
   '/_app/chat': typeof AppChatRoute
+  '/_app/credits': typeof AppCreditsRoute
   '/_app/dashboard': typeof AppDashboardRoute
   '/_app/deals': typeof AppDealsRoute
   '/_app/flights': typeof AppFlightsRoute
@@ -289,6 +298,7 @@ export interface FileRouteTypes {
     | '/signup'
     | '/billing'
     | '/chat'
+    | '/credits'
     | '/dashboard'
     | '/deals'
     | '/flights'
@@ -319,6 +329,7 @@ export interface FileRouteTypes {
     | '/signup'
     | '/billing'
     | '/chat'
+    | '/credits'
     | '/dashboard'
     | '/deals'
     | '/flights'
@@ -350,6 +361,7 @@ export interface FileRouteTypes {
     | '/signup'
     | '/_app/billing'
     | '/_app/chat'
+    | '/_app/credits'
     | '/_app/dashboard'
     | '/_app/deals'
     | '/_app/flights'
@@ -540,6 +552,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppDashboardRouteImport
       parentRoute: typeof AppRoute
     }
+    '/_app/credits': {
+      id: '/_app/credits'
+      path: '/credits'
+      fullPath: '/credits'
+      preLoaderRoute: typeof AppCreditsRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/_app/chat': {
       id: '/_app/chat'
       path: '/chat'
@@ -602,6 +621,7 @@ declare module '@tanstack/react-router' {
 interface AppRouteChildren {
   AppBillingRoute: typeof AppBillingRoute
   AppChatRoute: typeof AppChatRoute
+  AppCreditsRoute: typeof AppCreditsRoute
   AppDashboardRoute: typeof AppDashboardRoute
   AppDealsRoute: typeof AppDealsRoute
   AppFlightsRoute: typeof AppFlightsRoute
@@ -618,6 +638,7 @@ interface AppRouteChildren {
 const AppRouteChildren: AppRouteChildren = {
   AppBillingRoute: AppBillingRoute,
   AppChatRoute: AppChatRoute,
+  AppCreditsRoute: AppCreditsRoute,
   AppDashboardRoute: AppDashboardRoute,
   AppDealsRoute: AppDealsRoute,
   AppFlightsRoute: AppFlightsRoute,
@@ -654,13 +675,3 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}
