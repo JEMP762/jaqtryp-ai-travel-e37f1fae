@@ -20,6 +20,7 @@ import {
   Menu,
   Mic,
   Wallet,
+  Coins,
 } from "lucide-react";
 
 import * as React from "react";

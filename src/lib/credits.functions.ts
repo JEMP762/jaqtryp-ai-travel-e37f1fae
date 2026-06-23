@@ -71,10 +71,10 @@ export const spendForFeature = createServerFn({ method: "POST" })
     const { data: result, error } = await supabase.rpc("spend_for_feature", {
       _user: userId,
       _feature: data.featureKey,
-      _meta: data.metadata,
+      _meta: data.metadata as any,
     });
     if (error) throw new Error(error.message);
-    return result as
+    return result as unknown as
       | { ok: true; spent: number; balance: number }
       | { ok: false; reason: "insufficient"; needed: number; have: number }
       | { ok: false; reason: string };
