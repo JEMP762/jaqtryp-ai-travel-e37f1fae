@@ -71,6 +71,7 @@ function AppShell() {
 
     { to: "/stays", icon: BedDouble, label: "Hospedagem" },
     { to: "/wallet", icon: Wallet, label: "Carteira IA" },
+    { to: "/credits", icon: Coins, label: "Créditos" },
     { to: "/deals", icon: Tag, label: "Promoções" },
     { to: "/shield", icon: ShieldCheck, label: "JAQ Shield" },
     { to: "/billing", icon: CreditCard, label: "Minha Assinatura" },
