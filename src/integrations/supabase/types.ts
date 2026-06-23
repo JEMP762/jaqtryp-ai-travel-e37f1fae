@@ -171,6 +171,36 @@ export type Database = {
         }
         Relationships: []
       }
+      credit_costs: {
+        Row: {
+          active: boolean
+          cost: number
+          created_at: string
+          description: string | null
+          feature_key: string
+          label: string
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          cost: number
+          created_at?: string
+          description?: string | null
+          feature_key: string
+          label: string
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          cost?: number
+          created_at?: string
+          description?: string | null
+          feature_key?: string
+          label?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       credit_ledger: {
         Row: {
           created_at: string
@@ -655,26 +685,41 @@ export type Database = {
       }
       user_credits: {
         Row: {
-          balance: number
+          balance: number | null
           created_at: string
+          free_balance: number
           lifetime_purchased: number
           lifetime_spent: number
+          monthly_balance: number
+          monthly_grant: number
+          monthly_reset_at: string | null
+          topup_balance: number
           updated_at: string
           user_id: string
         }
         Insert: {
-          balance?: number
+          balance?: number | null
           created_at?: string
+          free_balance?: number
           lifetime_purchased?: number
           lifetime_spent?: number
+          monthly_balance?: number
+          monthly_grant?: number
+          monthly_reset_at?: string | null
+          topup_balance?: number
           updated_at?: string
           user_id: string
         }
         Update: {
-          balance?: number
+          balance?: number | null
           created_at?: string
+          free_balance?: number
           lifetime_purchased?: number
           lifetime_spent?: number
+          monthly_balance?: number
+          monthly_grant?: number
+          monthly_reset_at?: string | null
+          topup_balance?: number
           updated_at?: string
           user_id?: string
         }
@@ -907,11 +952,16 @@ export type Database = {
       add_credits: {
         Args: {
           _amount: number
+          _bucket?: string
           _meta?: Json
           _reason: string
           _session?: string
           _user: string
         }
+        Returns: undefined
+      }
+      grant_monthly_credits: {
+        Args: { _amount: number; _user: string }
         Returns: undefined
       }
       has_active_subscription: {
@@ -925,9 +975,14 @@ export type Database = {
         }
         Returns: boolean
       }
+      process_monthly_resets: { Args: never; Returns: number }
       spend_credits: {
         Args: { _amount: number; _meta?: Json; _reason: string; _user: string }
         Returns: boolean
+      }
+      spend_for_feature: {
+        Args: { _feature: string; _meta?: Json; _user: string }
+        Returns: Json
       }
     }
     Enums: {
