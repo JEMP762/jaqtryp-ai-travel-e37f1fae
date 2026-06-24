@@ -299,20 +299,27 @@ async function handleSubscriptionEvent(event: any, env: "sandbox" | "live") {
 // =====================================================================
 async function handleCreditPackEvent(event: any) {
   const type = event?.type;
-  if (type !== "checkout.session.completed") return;
+  if (type !== "checkout.session.completed" && type !== "payment_intent.succeeded") return;
   const obj = event?.data?.object;
   if (!obj) return;
-  if (obj.mode !== "payment") return;
+
+  // checkout.session.completed → obj is a Checkout Session (mode=payment)
+  // payment_intent.succeeded   → obj is a PaymentIntent
+  if (type === "checkout.session.completed" && obj.mode !== "payment") return;
+
   const meta = obj.metadata || {};
+  console.log("[credit_pack] event", { type, kind: meta.kind, id: obj.id });
   if (meta.kind !== "credit_pack") return;
 
   const userId = meta.userId;
   const credits = parseInt(meta.credits, 10);
-  const sessionId = obj.id;
+  const sessionId = obj.id; // session.id or payment_intent.id — both unique, used for idempotency
   if (!userId || !credits || credits <= 0) {
-    console.warn("[credit_pack] missing data", { userId, credits, sessionId });
+    console.warn("[credit_pack] missing data", { userId, credits, sessionId, type });
     return;
   }
+
+  const amountPaid = obj.amount_total ?? obj.amount_received ?? obj.amount ?? null;
 
   const { error } = await supabaseAdmin.rpc("add_credits", {
     _user: userId,
@@ -320,7 +327,7 @@ async function handleCreditPackEvent(event: any) {
     _reason: "purchase",
     _bucket: "topup",
     _session: sessionId,
-    _meta: { lookup_key: meta.lookup_key, amount_paid: obj.amount_total } as any,
+    _meta: { lookup_key: meta.lookup_key, amount_paid: amountPaid, source: type } as any,
   });
   if (error) {
     console.error("[credit_pack] add_credits error", error.message);
