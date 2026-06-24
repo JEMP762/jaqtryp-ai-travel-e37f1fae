@@ -134,7 +134,7 @@ export const Route = createFileRoute("/api/public/payments/webhook")({
           try { event = JSON.parse(body); } catch { return new Response("Invalid JSON", { status: 400 }); }
           try {
             await handleSubscriptionEvent(event, env);
-            await handleCreditPackEvent(event);
+            await handleCreditPackEvent(event, env);
           } catch (e: any) {
             console.error("[payments/webhook] subscription error", e?.message || e);
             return new Response(JSON.stringify({ ok: false, error: e?.message }), { status: 500 });
