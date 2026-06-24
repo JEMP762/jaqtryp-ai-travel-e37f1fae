@@ -138,10 +138,16 @@ function CreditsPage() {
               <ShoppingCart className="h-4 w-4 text-primary" />
               <h2 className="text-xl font-bold">Comprar créditos avulsos</h2>
             </div>
-            <p className="mb-6 text-sm text-muted-foreground">
+            <p className="mb-4 text-sm text-muted-foreground">
               Pague uma vez, use quando quiser. Sem assinatura, sem expiração.
             </p>
-            <div className="grid gap-4 md:grid-cols-4">
+            <ul className="mb-6 flex flex-wrap gap-x-5 gap-y-1 text-xs text-emerald-300">
+              <li>✅ Créditos não expiram</li>
+              <li>✅ Compra única</li>
+              <li>✅ Sem assinatura</li>
+              <li>✅ Use quando precisar</li>
+            </ul>
+            <div className="grid gap-4 md:grid-cols-3">
               {CREDIT_PACKS.map((p) => {
                 const perCredit = ((p.priceUsd / p.credits) * 100).toFixed(2);
                 return (
