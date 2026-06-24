@@ -957,9 +957,12 @@ function LiveTranslatorPage() {
             Crie uma sala, envie o link e cada um fala no seu idioma — o outro ouve traduzido.
           </p>
         </div>
-        <Button onClick={createLiveRoom} className="bg-gradient-primary shadow-glow">
-          <Users className="mr-2 h-4 w-4" /> Criar sala ao vivo
-        </Button>
+        <div className="flex flex-wrap gap-2">
+          <BluetoothTranslatorButton />
+          <Button onClick={createLiveRoom} className="bg-gradient-primary shadow-glow">
+            <Users className="mr-2 h-4 w-4" /> Criar sala ao vivo
+          </Button>
+        </div>
       </div>
       <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-3">
