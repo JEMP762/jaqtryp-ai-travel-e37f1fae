@@ -159,7 +159,6 @@ export const createCreditPackCheckout = createServerFn({ method: "POST" })
         customerId = created.id;
       }
 
-      const pack = CREDIT_PACKS.find((p) => p.lookupKey === data.lookupKey)!;
       const productId =
         typeof stripePrice.product === "string" ? stripePrice.product : stripePrice.product.id;
       const product = await stripe.products.retrieve(productId);
