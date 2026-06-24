@@ -2,7 +2,13 @@ import { createFileRoute } from "@tanstack/react-router";
 import { createHmac, timingSafeEqual } from "crypto";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { createStripeClient } from "@/lib/stripe.server";
-import { CREDIT_PACKS } from "@/lib/credits.functions";
+
+// Mirror of CREDIT_PACKS — inlined to avoid pulling createServerFn into route module
+const CREDIT_PACK_BY_CENTS: Record<number, { credits: number; lookupKey: string; label: string }> = {
+  999:  { credits: 700,  lookupKey: "credits_700",  label: "Starter" },
+  2499: { credits: 2000, lookupKey: "credits_2000", label: "Explorer" },
+  5999: { credits: 4000, lookupKey: "credits_4000", label: "Global" },
+};
 
 const DUFFEL_BASE = "https://api.duffel.com";
 
