@@ -116,9 +116,22 @@ export const createCreditPackCheckout = createServerFn({ method: "POST" })
       const email = claims?.email as string | undefined;
       const stripe = createStripeClient(data.environment);
 
-      const prices = await stripe.prices.list({ lookup_keys: [data.lookupKey] });
-      const stripePrice = prices.data[0];
-      if (!stripePrice) throw new Error(`Price '${data.lookupKey}' não encontrado`);
+      const pack = CREDIT_PACKS.find((p) => p.lookupKey === data.lookupKey)!;
+      const expectedAmount = Math.round(pack.priceUsd * 100);
+
+      // Prefer prices attached to the configured Stripe product
+      let stripePrice: any = null;
+      const byProduct = await stripe.prices.list({ product: pack.stripeProductId, active: true, limit: 100 });
+      stripePrice = byProduct.data.find(
+        (p) => p.currency === "usd" && p.unit_amount === expectedAmount && p.type === "one_time",
+      ) ?? null;
+
+      // Fallback: lookup_key
+      if (!stripePrice) {
+        const byLookup = await stripe.prices.list({ lookup_keys: [data.lookupKey] });
+        stripePrice = byLookup.data[0] ?? null;
+      }
+      if (!stripePrice) throw new Error(`Price para '${data.lookupKey}' não encontrado`);
 
       // Resolve/cria customer com metadata.userId
       let customerId: string;
