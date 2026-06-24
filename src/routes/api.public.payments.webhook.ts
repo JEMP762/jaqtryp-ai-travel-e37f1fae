@@ -1,6 +1,14 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { createHmac, timingSafeEqual } from "crypto";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
+import { createStripeClient } from "@/lib/stripe.server";
+
+// Mirror of CREDIT_PACKS — inlined to avoid pulling createServerFn into route module
+const CREDIT_PACK_BY_CENTS: Record<number, { credits: number; lookupKey: string; label: string }> = {
+  999:  { credits: 700,  lookupKey: "credits_700",  label: "Starter" },
+  2499: { credits: 2000, lookupKey: "credits_2000", label: "Explorer" },
+  5999: { credits: 4000, lookupKey: "credits_4000", label: "Global" },
+};
 
 const DUFFEL_BASE = "https://api.duffel.com";
 
@@ -126,7 +134,7 @@ export const Route = createFileRoute("/api/public/payments/webhook")({
           try { event = JSON.parse(body); } catch { return new Response("Invalid JSON", { status: 400 }); }
           try {
             await handleSubscriptionEvent(event, env);
-            await handleCreditPackEvent(event);
+            await handleCreditPackEvent(event, env);
           } catch (e: any) {
             console.error("[payments/webhook] subscription error", e?.message || e);
             return new Response(JSON.stringify({ ok: false, error: e?.message }), { status: 500 });
@@ -295,44 +303,132 @@ async function handleSubscriptionEvent(event: any, env: "sandbox" | "live") {
 }
 
 // =====================================================================
-// Compra de pacote avulso de créditos (mode=payment, metadata.kind=credit_pack)
+// Compra de pacote avulso de créditos
+// Suporta dois eventos: checkout.session.completed e payment_intent.succeeded
+// Idempotência sempre pelo PaymentIntent id (pi_…) → mesmo se Stripe enviar
+// ambos os eventos, só credita uma vez.
+// Fallback: se metadata estiver ausente, resolve via Customer.metadata.userId
+// e mapeia valor pago → pacote.
 // =====================================================================
-async function handleCreditPackEvent(event: any) {
+async function handleCreditPackEvent(event: any, env: "sandbox" | "live") {
   const type = event?.type;
   if (type !== "checkout.session.completed" && type !== "payment_intent.succeeded") return;
   const obj = event?.data?.object;
   if (!obj) return;
 
-  // checkout.session.completed → obj is a Checkout Session (mode=payment)
-  // payment_intent.succeeded   → obj is a PaymentIntent
+  // checkout.session.completed → obj is Checkout Session (mode=payment)
+  // payment_intent.succeeded   → obj is PaymentIntent
   if (type === "checkout.session.completed" && obj.mode !== "payment") return;
 
-  const meta = obj.metadata || {};
-  console.log("[credit_pack] event", { type, kind: meta.kind, id: obj.id });
-  if (meta.kind !== "credit_pack") return;
+  // Sempre usa pi_id como chave de idempotência
+  const paymentIntentId: string | null =
+    type === "payment_intent.succeeded"
+      ? obj.id
+      : (typeof obj.payment_intent === "string" ? obj.payment_intent : obj.payment_intent?.id) ?? null;
 
-  const userId = meta.userId;
-  const credits = parseInt(meta.credits, 10);
-  const sessionId = obj.id; // session.id or payment_intent.id — both unique, used for idempotency
-  if (!userId || !credits || credits <= 0) {
-    console.warn("[credit_pack] missing data", { userId, credits, sessionId, type });
+  if (!paymentIntentId) {
+    console.warn("[credit_pack] no payment_intent id on event", { type, id: obj.id });
     return;
   }
 
-  const amountPaid = obj.amount_total ?? obj.amount_received ?? obj.amount ?? null;
+  const meta = obj.metadata || {};
+  const amountPaid: number | null =
+    obj.amount_total ?? obj.amount_received ?? obj.amount ?? null;
+
+  console.log("[credit_pack] received", {
+    type,
+    id: obj.id,
+    pi: paymentIntentId,
+    kind: meta.kind ?? null,
+    hasUserId: Boolean(meta.userId),
+    amount: amountPaid,
+  });
+
+  let userId: string | null = null;
+  let credits: number | null = null;
+  let lookupKey: string | null = null;
+  let resolvedVia: "metadata" | "customer_fallback" = "metadata";
+
+  // Caminho 1: metadata direta
+  if (meta.kind === "credit_pack" && meta.userId && meta.credits) {
+    userId = String(meta.userId);
+    credits = parseInt(String(meta.credits), 10);
+    lookupKey = meta.lookup_key ?? null;
+  } else {
+    // Caminho 2: fallback via Customer + mapeamento por valor
+    const customerId: string | null =
+      typeof obj.customer === "string" ? obj.customer : obj.customer?.id ?? null;
+
+    if (!customerId || !amountPaid) {
+      console.warn("[credit_pack] skipped", {
+        reason: "no_metadata_and_no_customer_or_amount",
+        type,
+        pi: paymentIntentId,
+      });
+      return;
+    }
+
+    const pack = CREDIT_PACK_BY_CENTS[amountPaid];
+    if (!pack) {
+      console.warn("[credit_pack] skipped", {
+        reason: "unknown_amount",
+        amount: amountPaid,
+        pi: paymentIntentId,
+      });
+      return;
+    }
+
+    try {
+      const stripe = createStripeClient(env);
+      const customer = await stripe.customers.retrieve(customerId);
+      if (customer.deleted) {
+        console.warn("[credit_pack] skipped", { reason: "customer_deleted", customerId });
+        return;
+      }
+      const customerUserId = (customer as any).metadata?.userId;
+      if (!customerUserId) {
+        console.warn("[credit_pack] skipped", {
+          reason: "customer_missing_userId",
+          customerId,
+          pi: paymentIntentId,
+        });
+        return;
+      }
+      userId = String(customerUserId);
+      credits = pack.credits;
+      lookupKey = pack.lookupKey;
+      resolvedVia = "customer_fallback";
+      console.log("[credit_pack] fallback_used", { userId, pack: pack.label, pi: paymentIntentId });
+    } catch (e: any) {
+      console.error("[credit_pack] customer lookup failed", e?.message || e);
+      throw e;
+    }
+  }
+
+  if (!userId || !credits || credits <= 0) {
+    console.warn("[credit_pack] skipped", { reason: "invalid_resolved_data", userId, credits });
+    return;
+  }
 
   const { error } = await supabaseAdmin.rpc("add_credits", {
     _user: userId,
     _amount: credits,
     _reason: "purchase",
     _bucket: "topup",
-    _session: sessionId,
-    _meta: { lookup_key: meta.lookup_key, amount_paid: amountPaid, source: type } as any,
+    _session: paymentIntentId,
+    _meta: {
+      lookup_key: lookupKey,
+      amount_paid: amountPaid,
+      source: type,
+      resolved_via: resolvedVia,
+    } as any,
   });
   if (error) {
     console.error("[credit_pack] add_credits error", error.message);
     throw new Error(error.message);
   }
+  console.log("[credit_pack] credited", { userId, credits, pi: paymentIntentId, via: resolvedVia });
 }
+
 
 

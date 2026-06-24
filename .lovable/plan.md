@@ -1,35 +1,86 @@
-## Diagnóstico
+## Objetivo
+Garantir que toda compra de pacote avulso seja creditada automaticamente pelo webhook — sem intervenção manual — mesmo em casos de borda.
 
-A compra foi processada no Stripe e o webhook chegou ao servidor (3 chamadas POST `/api/public/payments/webhook?env=live` retornaram 200 logo após o pagamento), mas o `credit_ledger` não recebeu nenhuma linha de `purchase` e o `topup_balance` continua zero para todos os usuários.
+## Diagnóstico do que aconteceu
 
-Causa: o handler `handleCreditPackEvent` só atua em `checkout.session.completed`. O endpoint de webhook gerenciado pela Lovable encaminha eventos como `payment_intent.succeeded` e `charge.succeeded`, mas **não inclui `checkout.session.completed`** — por isso as 3 chamadas retornaram 200 sem creditar nada.
+A compra `pi_3TlqBzF2249riykh0lrbWM9g` falhou ao creditar porque:
 
-Além disso, a `metadata` que enviamos hoje vai apenas para o objeto `Checkout Session`. O `PaymentIntent` chega ao webhook sem `userId`/`credits`/`kind`, então mesmo escutando `payment_intent.succeeded` o handler atual não conseguiria identificar a compra.
+1. O Checkout Session foi criado **antes** do deploy que passou a espelhar `metadata` para o `PaymentIntent` (`payment_intent_data.metadata`).
+2. Quando o webhook recebeu `payment_intent.succeeded`, o `obj.metadata` estava vazio → handler descartou o evento (`meta.kind !== "credit_pack"`).
+3. O fix de espelhar metadata já está no código, mas só vale para **novas** compras. Precisa também estar publicado (produção).
 
-## Correções
+Para 100% de confiabilidade, vamos adicionar redundância para que **mesmo sem metadata** o webhook consiga creditar.
 
-1. **`src/lib/credits.functions.ts` — `createCreditPackCheckout`**
-   - Adicionar `payment_intent_data.metadata` espelhando a metadata da sessão:
-     ```ts
-     payment_intent_data: {
-       description: product.name,
-       metadata: { userId, kind: "credit_pack", lookup_key, credits: String(pack.credits) },
-     }
-     ```
-   - Mantém `metadata` no nível da Session (compatibilidade).
+## O que vou implementar
 
-2. **`src/routes/api.public.payments.webhook.ts` — `handleCreditPackEvent`**
-   - Aceitar dois tipos de evento:
-     - `checkout.session.completed` (caminho atual)
-     - `payment_intent.succeeded` (novo) → lê `obj.metadata` do PaymentIntent.
-   - Usar `obj.id` (PaymentIntent ID) como `_session` para preservar idempotência por `stripe_session_id` no ledger. O caminho de Session continua usando `session.id`. Cada evento gera no máximo uma linha de ledger porque o `add_credits` já filtra duplicidade por `stripe_session_id`, e PI.id ≠ Session.id (ambos são únicos por compra).
-   - Adicionar `console.log` curto no início do handler com `type` e `meta.kind` para facilitar diagnóstico futuro.
+### 1. Fallback robusto no webhook (`src/routes/api.public.payments.webhook.ts`)
 
-3. **Backfill manual da compra já realizada**
-   - Pedirei o **PaymentIntent ID** (ou e-mail do comprador + horário) para creditar manualmente os créditos via `add_credits` no banco. Sem isso essa compra específica não pode ser reconciliada automaticamente, pois a metadata não chegou ao PaymentIntent.
+Quando `payment_intent.succeeded` chegar **sem metadata** (ou sem `kind=credit_pack`), o handler vai:
 
-## Sem mudanças
-- UI de `/credits`, dashboard, banner de saldo baixo, RPCs `add_credits`/`spend_credits`, RLS e schema do banco permanecem inalterados.
+- Buscar o Customer no Stripe (`stripe.customers.retrieve(obj.customer)`).
+- Ler `customer.metadata.userId` (já populado no `createCreditPackCheckout`).
+- Mapear o valor pago (`obj.amount_received` em centavos) → pacote correspondente em `CREDIT_PACKS` (999→700, 2499→2000, 5999→4000).
+- Se casar usuário + valor, creditar com `add_credits` usando `pi_id` como `stripe_session_id` (idempotente).
+- Logar `[credit_pack] resolved via customer fallback` para auditoria.
 
-## Validação
-- Fazer nova compra de teste; confirmar nos logs do servidor o `console.log` do handler e ver linha no `credit_ledger` com `reason='purchase'` e `topup_balance` incrementado.
+Resultado: mesmo se a metadata sumir por qualquer motivo (race, edição de Checkout, integrações antigas), o crédito é aplicado.
+
+### 2. Tratamento dual de eventos sem duplicidade
+
+Stripe envia `checkout.session.completed` **e** `payment_intent.succeeded` para o mesmo pagamento. A idempotência atual usa `obj.id`, que é diferente entre os dois (`cs_…` vs `pi_…`) — isso permitiria créditos duplicados em teoria.
+
+Correção: usar sempre o **PaymentIntent id** como chave de idempotência.
+- Em `checkout.session.completed`: usar `obj.payment_intent` (string id do PI).
+- Em `payment_intent.succeeded`: usar `obj.id`.
+- Ambos gravam o mesmo `stripe_session_id = pi_…` no ledger → segunda inserção é ignorada pela função `add_credits`.
+
+### 3. Logs estruturados para monitoramento
+
+Adicionar logs claros em cada caminho para facilitar diagnóstico futuro via `server-function-logs`:
+- `[credit_pack] received` (com type, id, metadata keys)
+- `[credit_pack] credited` (com userId, credits, sessionId)
+- `[credit_pack] skipped` (com motivo: not_credit_pack | missing_user | unknown_amount)
+- `[credit_pack] fallback_used` (quando resolveu via customer)
+
+### 4. Publicação obrigatória
+
+O webhook só passa a usar o código novo após publicar o projeto. Vou lembrar de publicar ao final, e sugerir o botão de publish.
+
+## Detalhes técnicos
+
+**Mapeamento valor → pacote** (mesmo `CREDIT_PACKS` já existente):
+
+```text
+999 cents  → 700  créditos (Starter)
+2499 cents → 2000 créditos (Explorer)
+5999 cents → 4000 créditos (Global)
+```
+
+**Fluxo do handler (novo):**
+
+```text
+event.type in (checkout.session.completed, payment_intent.succeeded)
+  ↓
+extrair PI id (de obj.payment_intent ou obj.id)
+  ↓
+tentar metadata direta (kind=credit_pack)
+  ├─ sim → creditar
+  └─ não → fallback:
+            buscar customer
+            customer.metadata.userId existe?
+              └─ sim + valor casa pacote → creditar
+              └─ não → log skip + retornar 200
+```
+
+**Idempotência:** `add_credits` já retorna sem alterar quando `stripe_session_id` já existe no ledger → seguro chamar múltiplas vezes.
+
+**Arquivos alterados:**
+- `src/routes/api.public.payments.webhook.ts` — refatorar `handleCreditPackEvent`.
+
+Nenhuma migração de DB necessária — `add_credits` e `credit_ledger` já suportam o fluxo.
+
+## Após aprovação
+
+1. Aplico o código.
+2. Você publica o projeto (botão de publish) para o webhook em produção rodar a nova versão.
+3. Próximas compras são creditadas automaticamente, com fallback duplo de segurança.
