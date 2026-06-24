@@ -2,6 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { ArrowRight, Sparkles, MessageSquare, Languages, Plane, Mic } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useI18n } from "@/lib/i18n/I18nProvider";
+import { DashboardCreditsCard } from "@/components/DashboardCreditsCard";
 
 export const Route = createFileRoute("/_app/dashboard")({
   component: DashboardHome,
@@ -64,6 +65,7 @@ function DashboardHome() {
       </div>
 
       <div className="mt-8 grid gap-4 lg:grid-cols-2">
+        <DashboardCreditsCard />
         {cards.map((c) => {
           const Icon = c.icon;
           return (
