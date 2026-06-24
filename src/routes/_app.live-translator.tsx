@@ -39,6 +39,7 @@ import {
 } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
+import { BluetoothTranslatorButton } from "@/components/BluetoothTranslatorSession";
 
 export const Route = createFileRoute("/_app/live-translator")({
   component: LiveTranslatorPage,
