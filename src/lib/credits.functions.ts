@@ -6,9 +6,9 @@ import { type StripeEnv, createStripeClient, getStripeErrorMessage } from "@/lib
 // Catálogo de pacotes avulsos (lookup_keys já criados no Stripe)
 // =====================================================================
 export const CREDIT_PACKS = [
-  { lookupKey: "credits_700",  credits: 700,  priceUsd: 9.99,  label: "Starter" },
-  { lookupKey: "credits_2000", credits: 2000, priceUsd: 24.99, label: "Explorer", popular: true },
-  { lookupKey: "credits_4000", credits: 4000, priceUsd: 59.99, label: "Global", bonusPct: 14 },
+  { lookupKey: "credits_700",  credits: 700,  priceUsd: 9.99,  label: "Starter",  stripeProductId: "prod_UlMf0q6vvfA0He" },
+  { lookupKey: "credits_2000", credits: 2000, priceUsd: 24.99, label: "Explorer", stripeProductId: "prod_UlMgLGFHU8Vpbk", popular: true },
+  { lookupKey: "credits_4000", credits: 4000, priceUsd: 59.99, label: "Global",   stripeProductId: "prod_UlMhQaBJyIp1vg", bonusPct: 14 },
 ] as const;
 
 export function packCreditsFromLookup(lookup: string | null | undefined): number | null {
