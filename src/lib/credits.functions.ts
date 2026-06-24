@@ -169,7 +169,15 @@ export const createCreditPackCheckout = createServerFn({ method: "POST" })
         ui_mode: "embedded_page",
         return_url: data.returnUrl,
         customer: customerId,
-        payment_intent_data: { description: product.name },
+        payment_intent_data: {
+          description: product.name,
+          metadata: {
+            userId,
+            kind: "credit_pack",
+            lookup_key: data.lookupKey,
+            credits: String(pack.credits),
+          },
+        },
         metadata: {
           userId,
           kind: "credit_pack",
