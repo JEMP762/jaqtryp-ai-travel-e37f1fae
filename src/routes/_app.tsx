@@ -30,6 +30,7 @@ import { useI18n } from "@/lib/i18n/I18nProvider";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
+import { CreditLowBalanceBanner } from "@/components/CreditLowBalanceBanner";
 
 export const Route = createFileRoute("/_app")({
   component: AppShell,
@@ -167,6 +168,7 @@ function AppShell() {
       </header>
 
       <main className="flex-1 overflow-x-hidden pt-14 md:pt-0">
+        <CreditLowBalanceBanner />
         <Outlet />
       </main>
     </div>
