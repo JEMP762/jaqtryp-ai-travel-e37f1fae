@@ -1,6 +1,8 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { createHmac, timingSafeEqual } from "crypto";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
+import { createStripeClient } from "@/lib/stripe.server";
+import { CREDIT_PACKS } from "@/lib/credits.functions";
 
 const DUFFEL_BASE = "https://api.duffel.com";
 
