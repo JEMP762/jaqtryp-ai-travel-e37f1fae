@@ -165,9 +165,11 @@ async function ocrAndTranslate(
       system,
       prompt: "Extract and translate all visible text.",
       image: dataUrl,
+      featureKey: "translate_image",
     }),
   });
   const data = await resp.json();
+  if (resp.status === 402) throw new Error(data.error || "Créditos insuficientes.");
   if (!resp.ok) throw new Error(data.error || "Erro OCR");
   const raw = (data.text as string).trim().replace(/^```json\s*|\s*```$/g, "");
   try {
