@@ -2,6 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { z } from "zod";
 import { getFxRate } from "@/lib/fx.functions";
+import { chargeFeatureWith } from "@/lib/credit-charge.server";
 
 async function callLovableAI(opts: {
   system?: string;
@@ -50,6 +51,21 @@ async function requireProAccess(supabase: any, userId: string) {
   }
 }
 
+// Charge after a successful AI call; throws a user-facing error when the
+// user has no credits, so the handler does not appear to "succeed for free".
+async function chargeOrThrow(supabase: any, userId: string, feature: string, meta: Record<string, unknown> = {}) {
+  const res = await chargeFeatureWith(supabase, userId, feature, meta);
+  if (res.ok === false) {
+    if (res.reason === "insufficient") {
+      const needed = (res as any).needed;
+      const have = (res as any).have;
+      throw new Error(`Créditos insuficientes. Faltam ${needed - have} créditos.`);
+    }
+    throw new Error("Falha ao debitar créditos.");
+  }
+  return res;
+}
+
 // ---------- SCANNER OCR ----------
 export const scanReceipt = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
@@ -82,7 +98,7 @@ export const scanReceipt = createServerFn({ method: "POST" })
       const m = text.match(/\{[\s\S]*\}/);
       if (m) parsed = JSON.parse(m[0]);
     }
-    return {
+    const result = {
       suggestion: {
         amount: Number(parsed.amount) || 0,
         currency: String(parsed.currency || "BRL").toUpperCase().slice(0, 4),
@@ -97,6 +113,8 @@ export const scanReceipt = createServerFn({ method: "POST" })
       },
       raw: parsed,
     };
+    await chargeOrThrow(supabase, userId, "scanner_ocr", { wallet_id: data.wallet_id });
+    return result;
   });
 
 // ---------- CHAT FINANCEIRO ----------
@@ -146,6 +164,7 @@ export const askWalletAi = createServerFn({ method: "POST" })
     const ctx = await buildWalletContext(supabase, data.wallet_id);
     const system = `Você é o assistente financeiro de viagem do JAQTRYP AI. Responda em português brasileiro, curto e direto, com números formatados. Baseie-se nos dados a seguir:\n${ctx}`;
     const text = await callLovableAI({ system, prompt: data.prompt });
+    await chargeOrThrow(supabase, userId, "translate_text", { wallet_id: data.wallet_id, kind: "wallet_chat" });
     return { text };
   });
 
@@ -160,6 +179,7 @@ export const advisorReport = createServerFn({ method: "POST" })
     const system =
       "Você é um Consultor Financeiro de Viagem IA. Gere um relatório curto em markdown com seções: 1) Diagnóstico; 2) Gastos excessivos detectados; 3) Sugestões de economia; 4) Momento ideal para câmbio; 5) Previsão até o fim da viagem; 6) Recomendações personalizadas. Use bullets e seja prático.";
     const text = await callLovableAI({ system, prompt: `Dados da carteira:\n${ctx}` });
+    await chargeOrThrow(supabase, userId, "itinerary_ai", { wallet_id: data.wallet_id, kind: "advisor_report" });
     return { report: text };
   });
 
@@ -168,7 +188,8 @@ const FxAskSchema = z.object({ prompt: z.string().min(1).max(300) });
 export const fxAsk = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((i: unknown) => FxAskSchema.parse(i))
-  .handler(async ({ data }) => {
+  .handler(async ({ data, context }) => {
+    const { supabase, userId } = context as any;
     const system =
       'Você interpreta perguntas de conversão de moedas. Retorne JSON estrito {"amount": number, "from": "ISO", "to": "ISO"}. Use BRL como destino padrão quando não especificado. Apenas JSON.';
     const raw = await callLovableAI({ system, prompt: data.prompt, json: true });
@@ -190,5 +211,6 @@ export const fxAsk = createServerFn({ method: "POST" })
       rate = 1;
     }
     const result = +(amount * rate).toFixed(2);
+    await chargeOrThrow(supabase, userId, "translate_text", { kind: "fx_ask" });
     return { amount, from, to, rate, result };
   });

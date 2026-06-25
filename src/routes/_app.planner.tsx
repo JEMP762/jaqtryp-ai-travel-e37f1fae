@@ -171,9 +171,10 @@ function PlannerPage() {
         const resp = await fetch("/api/ai", {
           method: "POST",
           headers: await authedJsonHeaders(),
-          body: JSON.stringify({ system, prompt: plan }),
+          body: JSON.stringify({ system, prompt: plan, featureKey: "translate_text" }),
         });
         const data = await resp.json();
+        if (resp.status === 402) throw new Error(data.error || "Créditos insuficientes. Adicione créditos em /billing.");
         if (!resp.ok) throw new Error(data.error || "Erro ao traduzir");
         content = data.text as string;
       }
@@ -215,9 +216,10 @@ function PlannerPage() {
       const resp = await fetch("/api/ai", {
         method: "POST",
         headers: await authedJsonHeaders(),
-        body: JSON.stringify({ system, prompt }),
+        body: JSON.stringify({ system, prompt, featureKey: "trip_create_full" }),
       });
       const data = await resp.json();
+      if (resp.status === 402) throw new Error(data.error || "Créditos insuficientes. Adicione créditos em /billing.");
       if (!resp.ok) throw new Error(data.error || "Erro");
       setPlan(data.text as string);
     } catch (e) {
