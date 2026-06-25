@@ -7,16 +7,9 @@ const FREE_MONTHLY_LIMIT = 20;
 const FREE_WALLET_LIMIT = 1;
 
 async function isProUser(supabase: any, userId: string): Promise<boolean> {
-  const { data } = await supabase.rpc("has_active_subscription", {
-    user_uuid: userId,
-    check_env: "live",
-  });
-  if (data === true) return true;
-  const { data: d2 } = await supabase.rpc("has_active_subscription", {
-    user_uuid: userId,
-    check_env: "test",
-  });
-  return d2 === true;
+  // Premium se assinante ativo OU possui créditos avulsos (topup_balance > 0)
+  const { data } = await supabase.rpc("has_premium_access", { user_uuid: userId });
+  return data === true;
 }
 
 export const getWalletQuota = createServerFn({ method: "GET" })

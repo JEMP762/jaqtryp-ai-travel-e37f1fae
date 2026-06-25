@@ -25,7 +25,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { useI18n } from "@/lib/i18n/I18nProvider";
 import { supabase } from "@/integrations/supabase/client";
-import { getStripeEnvironment } from "@/lib/stripe";
+
 
 const EXPORT_LANGUAGES = [
   { code: "original", label: "Idioma original" },
@@ -135,31 +135,20 @@ function PlannerPage() {
   const [isPro, setIsPro] = React.useState<boolean | null>(null);
 
   React.useEffect(() => {
-    async function checkSubscription() {
+    async function checkPremium() {
       try {
-        const env = getStripeEnvironment();
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) { setIsPro(false); return; }
-        const { data } = await supabase
-          .from("subscriptions")
-          .select("*")
-          .eq("user_id", user.id)
-          .eq("environment", env)
-          .order("created_at", { ascending: false })
-          .limit(1)
-          .maybeSingle();
-        const active = data && (
-          (["active", "trialing", "past_due"].includes(data.status) &&
-            (!data.current_period_end || new Date(data.current_period_end) > new Date())) ||
-          (data.status === "canceled" && data.current_period_end && new Date(data.current_period_end) > new Date())
-        );
-        setIsPro(!!active);
+        // Libera para assinantes Pro/Ultra OU para quem possui créditos avulsos.
+        const { data } = await supabase.rpc("has_premium_access", { user_uuid: user.id });
+        setIsPro(data === true);
       } catch {
         setIsPro(false);
       }
     }
-    checkSubscription();
+    checkPremium();
   }, []);
+
 
   const handleExport = async (targetLang: string) => {
     if (!plan) return;
