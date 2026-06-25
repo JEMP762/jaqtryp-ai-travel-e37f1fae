@@ -453,9 +453,14 @@ function FileTranslatorPage() {
                     </td>
                     <td className="py-2 text-right">
                       {r.status === "success" && r.storage_path_translated && (
-                        <Button size="sm" variant="ghost" onClick={() => onDownloadRow(r.id)}>
-                          <Download className="h-4 w-4" />
-                        </Button>
+                        <HistoryExportButton
+                          id={r.id}
+                          fileName={r.file_name}
+                          fetchUrl={async () => {
+                            const res = await doGetUrl({ data: { id: r.id } });
+                            return res.url ?? null;
+                          }}
+                        />
                       )}
                     </td>
                   </tr>
@@ -466,6 +471,53 @@ function FileTranslatorPage() {
         )}
       </Card>
     </div>
+  );
+}
+
+function HistoryExportButton({
+  id,
+  fileName,
+  fetchUrl,
+}: {
+  id: string;
+  fileName: string;
+  fetchUrl: () => Promise<string | null>;
+}) {
+  const [url, setUrl] = React.useState<string | null>(null);
+  const [loading, setLoading] = React.useState(false);
+  React.useEffect(() => {
+    let cancelled = false;
+    setLoading(true);
+    fetchUrl()
+      .then((u) => {
+        if (!cancelled) setUrl(u);
+      })
+      .catch(() => {})
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [id]);
+  const base = fileName.replace(/\.[^.]+$/, "");
+  if (loading || !url) {
+    return (
+      <Button size="sm" variant="ghost" disabled>
+        {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
+      </Button>
+    );
+  }
+  return (
+    <TranslationExportMenu
+      title={base}
+      baseName={base}
+      markdownUrl={url}
+      size="sm"
+      variant="ghost"
+      label="Exportar"
+    />
   );
 }
 
