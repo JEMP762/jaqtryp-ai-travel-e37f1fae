@@ -358,12 +358,12 @@ function FileTranslatorPage() {
               {result.credits_spent} créditos
             </div>
             <div className="flex flex-wrap gap-2">
-              <Button
-                onClick={() => result.download_url && window.open(result.download_url, "_blank")}
-                disabled={!result.download_url}
-              >
-                <Download className="mr-2 h-4 w-4" /> Baixar Arquivo Traduzido
-              </Button>
+              <TranslationExportMenu
+                title={result.file_name.replace(/\.(md|pdf|docx|xlsx|pptx|txt|csv)$/i, "")}
+                baseName={result.file_name.replace(/\.[^.]+$/, "")}
+                markdownUrl={result.download_url ?? undefined}
+                label="Exportar Tradução"
+              />
               <Button
                 variant="outline"
                 onClick={() => result.download_url && window.open(result.download_url, "_blank")}
