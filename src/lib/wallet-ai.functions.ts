@@ -41,16 +41,13 @@ async function callLovableAI(opts: {
 }
 
 async function requireProAccess(supabase: any, userId: string) {
-  const { data: live } = await supabase.rpc("has_active_subscription", {
-    user_uuid: userId,
-    check_env: "live",
-  });
-  if (live === true) return;
-  const { data: test } = await supabase.rpc("has_active_subscription", {
-    user_uuid: userId,
-    check_env: "test",
-  });
-  if (test !== true) throw new Error("Recurso exclusivo do plano pago. Faça upgrade em /billing.");
+  // Libera para assinantes Pro/Ultra OU para quem possui créditos avulsos disponíveis.
+  const { data } = await supabase.rpc("has_premium_access", { user_uuid: userId });
+  if (data !== true) {
+    throw new Error(
+      "Recurso premium. Assine um plano ou adquira créditos avulsos em /billing para liberar.",
+    );
+  }
 }
 
 // ---------- SCANNER OCR ----------
