@@ -164,6 +164,7 @@ export const askWalletAi = createServerFn({ method: "POST" })
     const ctx = await buildWalletContext(supabase, data.wallet_id);
     const system = `Você é o assistente financeiro de viagem do JAQTRYP AI. Responda em português brasileiro, curto e direto, com números formatados. Baseie-se nos dados a seguir:\n${ctx}`;
     const text = await callLovableAI({ system, prompt: data.prompt });
+    await chargeOrThrow(supabase, userId, "translate_text", { wallet_id: data.wallet_id, kind: "wallet_chat" });
     return { text };
   });
 
