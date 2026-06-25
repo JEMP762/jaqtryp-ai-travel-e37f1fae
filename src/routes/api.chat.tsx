@@ -129,6 +129,10 @@ export const Route = createFileRoute("/api/chat")({
           });
         }
 
+        // Charge after upstream accepted the request (status 200).
+        // We can't wait for the full stream to finish, so we debit on accept.
+        await chargeFeature(userId, "translate_text", { route: "api.chat" });
+
         return new Response(resp.body, {
           headers: {
             "content-type": "text/event-stream",
