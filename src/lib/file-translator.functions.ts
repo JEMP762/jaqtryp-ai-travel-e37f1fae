@@ -148,7 +148,13 @@ async function callAI(opts: { system: string; prompt: string; pdfBase64?: string
   const userContent: any = opts.pdfBase64
     ? [
         { type: "text", text: opts.prompt },
-        { type: "image_url", image_url: { url: `data:application/pdf;base64,${opts.pdfBase64}` } },
+        {
+          type: "file",
+          file: {
+            filename: "document.pdf",
+            file_data: `data:application/pdf;base64,${opts.pdfBase64}`,
+          },
+        },
       ]
     : opts.prompt;
   const body: any = {
@@ -164,9 +170,11 @@ async function callAI(opts: { system: string; prompt: string; pdfBase64?: string
     body: JSON.stringify(body),
   });
   if (!resp.ok) {
+    const errBody = await resp.text().catch(() => "");
+    console.error("[file-translator] AI gateway error", resp.status, errBody.slice(0, 500));
     if (resp.status === 429) throw new Error("Limite de IA atingido. Tente novamente em instantes.");
     if (resp.status === 402) throw new Error("Créditos de IA esgotados.");
-    throw new Error("Falha ao consultar IA");
+    throw new Error(`Falha ao consultar IA (${resp.status}): ${errBody.slice(0, 200) || "sem detalhes"}`);
   }
   const json: any = await resp.json();
   return json?.choices?.[0]?.message?.content ?? "";
