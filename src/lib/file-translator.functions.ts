@@ -374,8 +374,18 @@ export const translateFile = createServerFn({ method: "POST" })
 
       // 8) Upload do resultado (sempre .md para preservar estrutura)
       const baseName = data.file_name.replace(/\.[^.]+$/, "");
-      const outName = `${baseName}__${data.target_lang}.md`;
-      const outPath = `${userId}/${recId}/${outName}`;
+      const friendlyName = `${baseName}__${data.target_lang}.md`;
+      // Sanitiza para chave de Storage (ASCII safe): sem acentos, sem símbolos,
+      // apenas [a-zA-Z0-9._-]. Evita "Invalid key" do bucket.
+      const safeBase = (baseName
+        .normalize("NFKD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .replace(/[^a-zA-Z0-9._-]+/g, "-")
+        .replace(/-+/g, "-")
+        .replace(/^[-.]+|[-.]+$/g, "")
+        .slice(0, 80)) || "arquivo";
+      const safeName = `${safeBase}__${data.target_lang}.md`;
+      const outPath = `${userId}/${recId}/${safeName}`;
       const outBytes = new TextEncoder().encode(translated);
       const { error: upErr } = await supabase.storage
         .from("file-translations")
@@ -383,7 +393,10 @@ export const translateFile = createServerFn({ method: "POST" })
           contentType: "text/markdown; charset=utf-8",
           upsert: true,
         });
-      if (upErr) throw new Error("Falha ao salvar arquivo traduzido: " + upErr.message);
+      if (upErr) {
+        console.error("[translateFile] storage upload failed", { outPath, message: upErr.message });
+        throw new Error("Falha ao salvar arquivo traduzido: " + upErr.message);
+      }
 
       // 9) Cobrar créditos (apenas após sucesso)
       const { data: spendRes, error: spendErr } = await supabase.rpc("spend_for_feature", {
