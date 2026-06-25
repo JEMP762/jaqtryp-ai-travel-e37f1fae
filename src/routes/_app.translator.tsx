@@ -122,10 +122,12 @@ function TranslatorPage() {
       body: JSON.stringify({
         system: `You are a professional translator. Translate from ${fromName} to ${toName}. Return ONLY the translation, no explanations, no quotes.`,
         prompt: text,
+        featureKey: "translate_text",
       }),
     });
     const data = await resp.json();
     if (resp.status === 401) throw new Error("Sessão expirada, faça login novamente.");
+    if (resp.status === 402) throw new Error(data.error || "Créditos insuficientes.");
     if (!resp.ok) throw new Error(data.error || "Erro");
     return (data.text as string) ?? "";
   };
