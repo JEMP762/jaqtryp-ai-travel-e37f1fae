@@ -422,6 +422,12 @@ export const translateFile = createServerFn({ method: "POST" })
         file_name: outName,
       };
     } catch (e: any) {
+      console.error("[translateFile] failure", {
+        recId,
+        kind,
+        size: bytes.length,
+        message: String(e?.message ?? e),
+      });
       await supabase
         .from("file_translations")
         .update({ status: "error", error_message: String(e?.message ?? e).slice(0, 500) })
