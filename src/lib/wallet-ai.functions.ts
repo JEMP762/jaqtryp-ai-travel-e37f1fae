@@ -179,6 +179,7 @@ export const advisorReport = createServerFn({ method: "POST" })
     const system =
       "Você é um Consultor Financeiro de Viagem IA. Gere um relatório curto em markdown com seções: 1) Diagnóstico; 2) Gastos excessivos detectados; 3) Sugestões de economia; 4) Momento ideal para câmbio; 5) Previsão até o fim da viagem; 6) Recomendações personalizadas. Use bullets e seja prático.";
     const text = await callLovableAI({ system, prompt: `Dados da carteira:\n${ctx}` });
+    await chargeOrThrow(supabase, userId, "itinerary_ai", { wallet_id: data.wallet_id, kind: "advisor_report" });
     return { report: text };
   });
 
