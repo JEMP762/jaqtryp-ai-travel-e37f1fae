@@ -2,6 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { z } from "zod";
 import { getFxRate } from "@/lib/fx.functions";
+import { chargeFeatureWith } from "@/lib/credit-charge.server";
 
 async function callLovableAI(opts: {
   system?: string;
