@@ -36,6 +36,7 @@ import {
 } from "@/lib/file-translator.functions";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
+import { TranslationExportMenu } from "@/components/TranslationExportMenu";
 
 export const Route = createFileRoute("/_app/file-translator")({
   component: FileTranslatorPage,
