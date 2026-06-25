@@ -112,6 +112,7 @@ function FileTranslatorPage() {
   const { data: balance } = useQuery({
     queryKey: ["user_credits_total", user?.id],
     enabled: !!user?.id,
+    retry: 1,
     queryFn: async () => {
       const { data } = await supabase
         .from("user_credits")
@@ -124,8 +125,10 @@ function FileTranslatorPage() {
     },
   });
 
-  const { data: history } = useQuery({
-    queryKey: ["file_translations", rangeFilter],
+  const { data: history, error: historyError } = useQuery({
+    queryKey: ["file_translations", rangeFilter, user?.id],
+    enabled: !!user?.id,
+    retry: 1,
     queryFn: () => doList({ data: { range: rangeFilter } }),
   });
 
