@@ -51,6 +51,21 @@ async function requireProAccess(supabase: any, userId: string) {
   }
 }
 
+// Charge after a successful AI call; throws a user-facing error when the
+// user has no credits, so the handler does not appear to "succeed for free".
+async function chargeOrThrow(supabase: any, userId: string, feature: string, meta: Record<string, unknown> = {}) {
+  const res = await chargeFeatureWith(supabase, userId, feature, meta);
+  if (res.ok === false) {
+    if (res.reason === "insufficient") {
+      const needed = (res as any).needed;
+      const have = (res as any).have;
+      throw new Error(`Créditos insuficientes. Faltam ${needed - have} créditos.`);
+    }
+    throw new Error("Falha ao debitar créditos.");
+  }
+  return res;
+}
+
 // ---------- SCANNER OCR ----------
 export const scanReceipt = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
