@@ -25,7 +25,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { useI18n } from "@/lib/i18n/I18nProvider";
 import { supabase } from "@/integrations/supabase/client";
-import { getStripeEnvironment } from "@/lib/stripe";
+
 
 const EXPORT_LANGUAGES = [
   { code: "original", label: "Idioma original" },
