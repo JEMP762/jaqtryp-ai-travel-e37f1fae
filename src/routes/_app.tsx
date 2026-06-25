@@ -21,7 +21,9 @@ import {
   Mic,
   Wallet,
   Coins,
+  FileText,
 } from "lucide-react";
+
 
 import * as React from "react";
 import { supabase } from "@/integrations/supabase/client";
