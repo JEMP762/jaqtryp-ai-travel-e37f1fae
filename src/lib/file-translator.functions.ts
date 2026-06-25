@@ -5,7 +5,10 @@ import { unzipSync, strFromU8 } from "fflate";
 
 // ---------- CONFIG ----------
 const MAX_BYTES = 10 * 1024 * 1024; // 10MB
-const CHUNK_CHARS = 9000;
+const MAX_PDF_INLINE_BYTES = 4 * 1024 * 1024; // 4MB para PDF sem texto extraível
+const MAX_TEXT_CHARS = 120_000;
+const CHUNK_CHARS = 6000;
+const CHUNK_CONCURRENCY = 3;
 const SUPPORTED_TYPES = ["pdf", "docx", "xlsx", "csv", "pptx", "txt", "md"] as const;
 type FileKind = (typeof SUPPORTED_TYPES)[number];
 
@@ -145,7 +148,13 @@ async function callAI(opts: { system: string; prompt: string; pdfBase64?: string
   const userContent: any = opts.pdfBase64
     ? [
         { type: "text", text: opts.prompt },
-        { type: "image_url", image_url: { url: `data:application/pdf;base64,${opts.pdfBase64}` } },
+        {
+          type: "file",
+          file: {
+            filename: "document.pdf",
+            file_data: `data:application/pdf;base64,${opts.pdfBase64}`,
+          },
+        },
       ]
     : opts.prompt;
   const body: any = {
@@ -161,9 +170,11 @@ async function callAI(opts: { system: string; prompt: string; pdfBase64?: string
     body: JSON.stringify(body),
   });
   if (!resp.ok) {
+    const errBody = await resp.text().catch(() => "");
+    console.error("[file-translator] AI gateway error", resp.status, errBody.slice(0, 500));
     if (resp.status === 429) throw new Error("Limite de IA atingido. Tente novamente em instantes.");
     if (resp.status === 402) throw new Error("Créditos de IA esgotados.");
-    throw new Error("Falha ao consultar IA");
+    throw new Error(`Falha ao consultar IA (${resp.status}): ${errBody.slice(0, 200) || "sem detalhes"}`);
   }
   const json: any = await resp.json();
   return json?.choices?.[0]?.message?.content ?? "";
@@ -221,10 +232,18 @@ Regras:
     chunks.push(text.slice(i, end));
     i = end;
   }
-  const out: string[] = [];
-  for (const c of chunks) {
-    out.push(await callAI({ system, prompt: c }));
+  // Processar com limite de concorrência para acelerar e evitar timeout do Worker
+  const out: string[] = new Array(chunks.length);
+  let next = 0;
+  async function worker() {
+    while (true) {
+      const idx = next++;
+      if (idx >= chunks.length) return;
+      out[idx] = await callAI({ system, prompt: chunks[idx] });
+    }
   }
+  const workers = Array.from({ length: Math.min(CHUNK_CONCURRENCY, chunks.length) }, () => worker());
+  await Promise.all(workers);
   return out.join("\n\n");
 }
 
@@ -323,13 +342,25 @@ export const translateFile = createServerFn({ method: "POST" })
         throw new Error("Não foi possível extrair conteúdo do arquivo.");
       }
 
+      // Guardas para evitar timeout do Worker
+      if (isPdfFallback && bytes.length > MAX_PDF_INLINE_BYTES) {
+        throw new Error(
+          "PDF muito grande sem texto extraível. Envie um PDF com texto selecionável ou um arquivo até 4MB.",
+        );
+      }
+      if (!isPdfFallback && extracted.length > MAX_TEXT_CHARS) {
+        throw new Error(
+          `Conteúdo muito extenso (${extracted.length.toLocaleString("pt-BR")} caracteres). Divida o arquivo e tente novamente (limite ${MAX_TEXT_CHARS.toLocaleString("pt-BR")}).`,
+        );
+      }
+
       // 6) Detectar idioma
       const sourceLang = isPdfFallback ? "auto" : await detectLanguage(extracted);
 
       // 7) Traduzir
       let translated: string;
       if (isPdfFallback) {
-        // PDF sem texto extraível: enviar como inline_data para Gemini
+        // PDF sem texto extraível: enviar como arquivo inline para Gemini
         translated = await callAI({
           system: `Você é um tradutor profissional. Extraia TODO o conteúdo do PDF anexo e traduza para ${LANG_NAME[data.target_lang] ?? data.target_lang}. Preserve a estrutura (títulos, listas, tabelas como markdown). Responda apenas com o conteúdo traduzido em markdown.`,
           prompt: "Traduza este documento.",
@@ -391,6 +422,12 @@ export const translateFile = createServerFn({ method: "POST" })
         file_name: outName,
       };
     } catch (e: any) {
+      console.error("[translateFile] failure", {
+        recId,
+        kind,
+        size: bytes.length,
+        message: String(e?.message ?? e),
+      });
       await supabase
         .from("file_translations")
         .update({ status: "error", error_message: String(e?.message ?? e).slice(0, 500) })
