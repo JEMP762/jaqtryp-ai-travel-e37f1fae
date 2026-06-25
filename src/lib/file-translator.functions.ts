@@ -232,10 +232,18 @@ Regras:
     chunks.push(text.slice(i, end));
     i = end;
   }
-  const out: string[] = [];
-  for (const c of chunks) {
-    out.push(await callAI({ system, prompt: c }));
+  // Processar com limite de concorrência para acelerar e evitar timeout do Worker
+  const out: string[] = new Array(chunks.length);
+  let next = 0;
+  async function worker() {
+    while (true) {
+      const idx = next++;
+      if (idx >= chunks.length) return;
+      out[idx] = await callAI({ system, prompt: chunks[idx] });
+    }
   }
+  const workers = Array.from({ length: Math.min(CHUNK_CONCURRENCY, chunks.length) }, () => worker());
+  await Promise.all(workers);
   return out.join("\n\n");
 }
 
