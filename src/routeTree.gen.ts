@@ -28,6 +28,7 @@ import { Route as AppShieldRouteImport } from './routes/_app.shield'
 import { Route as AppPlannerRouteImport } from './routes/_app.planner'
 import { Route as AppLiveTranslatorRouteImport } from './routes/_app.live-translator'
 import { Route as AppFlightsRouteImport } from './routes/_app.flights'
+import { Route as AppFileTranslatorRouteImport } from './routes/_app.file-translator'
 import { Route as AppDealsRouteImport } from './routes/_app.deals'
 import { Route as AppDashboardRouteImport } from './routes/_app.dashboard'
 import { Route as AppCreditsRouteImport } from './routes/_app.credits'
@@ -134,6 +135,11 @@ const AppFlightsRoute = AppFlightsRouteImport.update({
   path: '/flights',
   getParentRoute: () => AppRoute,
 } as any)
+const AppFileTranslatorRoute = AppFileTranslatorRouteImport.update({
+  id: '/file-translator',
+  path: '/file-translator',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppDealsRoute = AppDealsRouteImport.update({
   id: '/deals',
   path: '/deals',
@@ -204,6 +210,7 @@ export interface FileRoutesByFullPath {
   '/credits': typeof AppCreditsRoute
   '/dashboard': typeof AppDashboardRoute
   '/deals': typeof AppDealsRoute
+  '/file-translator': typeof AppFileTranslatorRoute
   '/flights': typeof AppFlightsRoute
   '/live-translator': typeof AppLiveTranslatorRoute
   '/planner': typeof AppPlannerRoute
@@ -235,6 +242,7 @@ export interface FileRoutesByTo {
   '/credits': typeof AppCreditsRoute
   '/dashboard': typeof AppDashboardRoute
   '/deals': typeof AppDealsRoute
+  '/file-translator': typeof AppFileTranslatorRoute
   '/flights': typeof AppFlightsRoute
   '/live-translator': typeof AppLiveTranslatorRoute
   '/planner': typeof AppPlannerRoute
@@ -268,6 +276,7 @@ export interface FileRoutesById {
   '/_app/credits': typeof AppCreditsRoute
   '/_app/dashboard': typeof AppDashboardRoute
   '/_app/deals': typeof AppDealsRoute
+  '/_app/file-translator': typeof AppFileTranslatorRoute
   '/_app/flights': typeof AppFlightsRoute
   '/_app/live-translator': typeof AppLiveTranslatorRoute
   '/_app/planner': typeof AppPlannerRoute
@@ -301,6 +310,7 @@ export interface FileRouteTypes {
     | '/credits'
     | '/dashboard'
     | '/deals'
+    | '/file-translator'
     | '/flights'
     | '/live-translator'
     | '/planner'
@@ -332,6 +342,7 @@ export interface FileRouteTypes {
     | '/credits'
     | '/dashboard'
     | '/deals'
+    | '/file-translator'
     | '/flights'
     | '/live-translator'
     | '/planner'
@@ -364,6 +375,7 @@ export interface FileRouteTypes {
     | '/_app/credits'
     | '/_app/dashboard'
     | '/_app/deals'
+    | '/_app/file-translator'
     | '/_app/flights'
     | '/_app/live-translator'
     | '/_app/planner'
@@ -538,6 +550,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppFlightsRouteImport
       parentRoute: typeof AppRoute
     }
+    '/_app/file-translator': {
+      id: '/_app/file-translator'
+      path: '/file-translator'
+      fullPath: '/file-translator'
+      preLoaderRoute: typeof AppFileTranslatorRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/_app/deals': {
       id: '/_app/deals'
       path: '/deals'
@@ -624,6 +643,7 @@ interface AppRouteChildren {
   AppCreditsRoute: typeof AppCreditsRoute
   AppDashboardRoute: typeof AppDashboardRoute
   AppDealsRoute: typeof AppDealsRoute
+  AppFileTranslatorRoute: typeof AppFileTranslatorRoute
   AppFlightsRoute: typeof AppFlightsRoute
   AppLiveTranslatorRoute: typeof AppLiveTranslatorRoute
   AppPlannerRoute: typeof AppPlannerRoute
@@ -641,6 +661,7 @@ const AppRouteChildren: AppRouteChildren = {
   AppCreditsRoute: AppCreditsRoute,
   AppDashboardRoute: AppDashboardRoute,
   AppDealsRoute: AppDealsRoute,
+  AppFileTranslatorRoute: AppFileTranslatorRoute,
   AppFlightsRoute: AppFlightsRoute,
   AppLiveTranslatorRoute: AppLiveTranslatorRoute,
   AppPlannerRoute: AppPlannerRoute,

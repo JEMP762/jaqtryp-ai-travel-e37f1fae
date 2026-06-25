@@ -21,7 +21,9 @@ import {
   Mic,
   Wallet,
   Coins,
+  FileText,
 } from "lucide-react";
+
 
 import * as React from "react";
 import { supabase } from "@/integrations/supabase/client";
@@ -68,7 +70,9 @@ function AppShell() {
     { to: "/planner", icon: Sparkles, label: t("dash.planner") },
     { to: "/chat", icon: MessageSquare, label: t("dash.chat") },
     { to: "/translator", icon: Languages, label: t("dash.translator") },
+    { to: "/file-translator", icon: FileText, label: "Tradutor de Arquivos IA" },
     { to: "/live-translator", icon: Mic, label: "Live Translator" },
+
     { to: "/flights", icon: Plane, label: "Voos" },
 
     { to: "/stays", icon: BedDouble, label: "Hospedagem" },

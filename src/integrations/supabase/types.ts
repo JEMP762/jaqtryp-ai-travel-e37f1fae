@@ -255,6 +255,57 @@ export type Database = {
         }
         Relationships: []
       }
+      file_translations: {
+        Row: {
+          created_at: string
+          credits_spent: number
+          error_message: string | null
+          file_name: string
+          file_size_bytes: number | null
+          file_type: string
+          id: string
+          source_lang: string | null
+          status: string
+          storage_path_original: string | null
+          storage_path_translated: string | null
+          target_lang: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          credits_spent?: number
+          error_message?: string | null
+          file_name: string
+          file_size_bytes?: number | null
+          file_type: string
+          id?: string
+          source_lang?: string | null
+          status?: string
+          storage_path_original?: string | null
+          storage_path_translated?: string | null
+          target_lang: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          credits_spent?: number
+          error_message?: string | null
+          file_name?: string
+          file_size_bytes?: number | null
+          file_type?: string
+          id?: string
+          source_lang?: string | null
+          status?: string
+          storage_path_original?: string | null
+          storage_path_translated?: string | null
+          target_lang?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       flight_alerts: {
         Row: {
           active: boolean
