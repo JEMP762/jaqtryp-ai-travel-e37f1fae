@@ -5,7 +5,10 @@ import { unzipSync, strFromU8 } from "fflate";
 
 // ---------- CONFIG ----------
 const MAX_BYTES = 10 * 1024 * 1024; // 10MB
-const CHUNK_CHARS = 9000;
+const MAX_PDF_INLINE_BYTES = 4 * 1024 * 1024; // 4MB para PDF sem texto extraível
+const MAX_TEXT_CHARS = 120_000;
+const CHUNK_CHARS = 6000;
+const CHUNK_CONCURRENCY = 3;
 const SUPPORTED_TYPES = ["pdf", "docx", "xlsx", "csv", "pptx", "txt", "md"] as const;
 type FileKind = (typeof SUPPORTED_TYPES)[number];
 

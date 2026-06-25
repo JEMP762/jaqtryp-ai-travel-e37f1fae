@@ -1,33 +1,21 @@
-Plano de correção:
+## Plano — Corrigir erro de processamento do Tradutor de Arquivos IA
 
-1. Corrigir o erro que impede o dashboard de abrir
-   - Remover dependências/uso problemático no carregamento inicial do dashboard.
-   - Trocar a leitura direta de saldo pelo frontend por uma função autenticada já existente, evitando falhas de permissão/RLS no carregamento.
-   - Adicionar estados de carregamento e erro para histórico e saldo, para a tela não quebrar quando uma chamada falhar.
+### Causa raiz
+Inspecionei `src/lib/file-translator.functions.ts` e identifiquei três problemas que fazem a tradução falhar logo após o upload:
 
-2. Tornar o processamento de tradução mais robusto
-   - Ajustar a função `translateFile` para validar acesso, saldo e custo com mensagens claras.
-   - Corrigir o envio de PDF para IA: em vez de tratar PDF como imagem, usar conteúdo textual/arquivo em formato aceito pelo gateway ou fallback seguro.
-   - Garantir que falhas de extração/tradução salvem histórico como `error`, sem cobrar créditos.
+1. **PDF enviado com formato multimodal incorreto.** O código manda PDFs como `image_url` com data URL `application/pdf`. O AI Gateway/Google rejeita — PDFs devem ir como `{ type: "file", file: { filename, file_data } }`.
+2. **Erros do Gateway são engolidos.** Qualquer falha vira `"Falha ao consultar IA"` sem status nem corpo, impossibilitando o diagnóstico.
+3. **Risco de timeout do Worker.** Tradução em chunks é totalmente sequencial; arquivos médios estouram o tempo do Worker e o usuário vê "erro ao processar".
 
-3. Garantir cobrança automática de créditos
-   - Manter a regra: cobrar somente após tradução concluída com sucesso.
-   - Usar a função central `spend_for_feature('file_translation')` para debitar automaticamente do saldo total, seguindo a ordem mensal, grátis e avulso.
-   - Após sucesso, atualizar o saldo e histórico imediatamente na interface.
+### Mudanças (apenas em `src/lib/file-translator.functions.ts`)
 
-4. Corrigir créditos Pro e Ultra
-   - Revisar o webhook de assinatura para mapear corretamente os preços/lookup keys dos planos Pro e Ultra.
-   - Garantir concessão automática de créditos mensais no ciclo atual quando a assinatura ficar ativa/trialing.
-   - Tornar a concessão idempotente para não duplicar créditos se o webhook for reenviado.
-   - Preservar planos, valores e sistema de assinatura existentes.
+1. **`callAI`** — para PDFs, usar bloco `{ type: "file", file: { filename, file_data: "data:application/pdf;base64,..." } }`. Para erros, ler `resp.text()` e incluir status + trecho no `Error.message`, com `console.error` server-side.
+2. **Pipeline de tradução** — reduzir `CHUNK_CHARS` para ~6000 e processar até 3 chunks em paralelo (`Promise.all` com janela de concorrência). Encurta a duração total e diminui chance de timeout.
+3. **Guardas de tamanho** — recusar com mensagem clara: texto extraído > 120k chars ou PDF sem texto extraível > 4MB.
+4. **Logs** — `console.error("[translateFile] failure", { recId, kind, size, err })` no `catch` para inspeção via server-function-logs.
 
-5. Corrigir inconsistências no banco
-   - Criar uma migração para reforçar/corrigir `spend_for_feature`, `has_premium_access` e grants necessários.
-   - Ajustar a tabela/histórico de traduções apenas se necessário para estabilidade; sem mudar valores dos pacotes avulsos.
+### O que NÃO muda
+Dashboard, navegação, cobrança de créditos, RLS, bucket, planos, webhooks.
 
-6. Validação
-   - Verificar navegação até `/file-translator`.
-   - Verificar que usuário com créditos consegue acessar.
-   - Verificar que usuário sem saldo recebe CTA para comprar créditos/assinar.
-   - Verificar que uma tradução concluída desconta 10 créditos automaticamente e registra no histórico.
-   - Verificar que Pro/Ultra recebem o aviso/saldo mensal esperado via webhook.
+### Validação
+Build/typecheck, abrir `/file-translator` no Playwright, subir um TXT pequeno (deve concluir e debitar 10 créditos) e verificar logs caso ainda falhe.
