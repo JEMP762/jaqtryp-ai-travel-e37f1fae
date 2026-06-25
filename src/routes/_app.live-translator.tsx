@@ -142,9 +142,10 @@ async function translateText(
   const resp = await fetch("/api/ai", {
     method: "POST",
     headers: await authedJsonHeaders(),
-    body: JSON.stringify({ system, prompt: text }),
+    body: JSON.stringify({ system, prompt: text, featureKey: "translate_voice" }),
   });
   const data = await resp.json();
+  if (resp.status === 402) throw new Error(data.error || "Créditos insuficientes.");
   if (!resp.ok) throw new Error(data.error || "Erro de tradução");
   const out = (data.text as string).trim();
   setCached(fromCode, toCode, text, out);
