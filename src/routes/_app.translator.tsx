@@ -77,10 +77,12 @@ function TranslatorPage() {
             "You are an OCR + translation assistant. Extract ALL readable text from the image, then translate it. Return ONLY a JSON object with two fields: {\"original\": string, \"translation\": string}. No markdown, no code fences.",
           prompt: `Extract the text from the image (source language: ${fromName}) and translate it to ${toName}.`,
           image: dataUrl,
+          featureKey: "translate_image",
         }),
       });
       const data = await resp.json();
       if (resp.status === 401) throw new Error("Sessão expirada, faça login novamente.");
+      if (resp.status === 402) throw new Error(data.error || "Créditos insuficientes.");
       if (!resp.ok) throw new Error(data.error || "Erro");
       const raw = (data.text as string) ?? "";
       const cleaned = raw.replace(/```json|```/g, "").trim();
