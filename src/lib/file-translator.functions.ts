@@ -342,13 +342,25 @@ export const translateFile = createServerFn({ method: "POST" })
         throw new Error("Não foi possível extrair conteúdo do arquivo.");
       }
 
+      // Guardas para evitar timeout do Worker
+      if (isPdfFallback && bytes.length > MAX_PDF_INLINE_BYTES) {
+        throw new Error(
+          "PDF muito grande sem texto extraível. Envie um PDF com texto selecionável ou um arquivo até 4MB.",
+        );
+      }
+      if (!isPdfFallback && extracted.length > MAX_TEXT_CHARS) {
+        throw new Error(
+          `Conteúdo muito extenso (${extracted.length.toLocaleString("pt-BR")} caracteres). Divida o arquivo e tente novamente (limite ${MAX_TEXT_CHARS.toLocaleString("pt-BR")}).`,
+        );
+      }
+
       // 6) Detectar idioma
       const sourceLang = isPdfFallback ? "auto" : await detectLanguage(extracted);
 
       // 7) Traduzir
       let translated: string;
       if (isPdfFallback) {
-        // PDF sem texto extraível: enviar como inline_data para Gemini
+        // PDF sem texto extraível: enviar como arquivo inline para Gemini
         translated = await callAI({
           system: `Você é um tradutor profissional. Extraia TODO o conteúdo do PDF anexo e traduza para ${LANG_NAME[data.target_lang] ?? data.target_lang}. Preserve a estrutura (títulos, listas, tabelas como markdown). Responda apenas com o conteúdo traduzido em markdown.`,
           prompt: "Traduza este documento.",
