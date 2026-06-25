@@ -1,21 +1,26 @@
-## Plano — Corrigir erro de processamento do Tradutor de Arquivos IA
+## Plano
 
-### Causa raiz
-Inspecionei `src/lib/file-translator.functions.ts` e identifiquei três problemas que fazem a tradução falhar logo após o upload:
+1. Corrigir o erro `Invalid key`
+   - Sanitizar o nome do arquivo antes de montar o caminho no armazenamento.
+   - Remover/substituir caracteres problemáticos como travessão, acentos especiais, múltiplos espaços e símbolos que tornam a chave inválida.
+   - Exemplo: `portugal — Roteiro__pt.md` passará a ser salvo como algo seguro, como `portugal-roteiro__pt.md`.
 
-1. **PDF enviado com formato multimodal incorreto.** O código manda PDFs como `image_url` com data URL `application/pdf`. O AI Gateway/Google rejeita — PDFs devem ir como `{ type: "file", file: { filename, file_data } }`.
-2. **Erros do Gateway são engolidos.** Qualquer falha vira `"Falha ao consultar IA"` sem status nem corpo, impossibilitando o diagnóstico.
-3. **Risco de timeout do Worker.** Tradução em chunks é totalmente sequencial; arquivos médios estouram o tempo do Worker e o usuário vê "erro ao processar".
+2. Manter o nome amigável para o usuário
+   - O arquivo baixado continuará com um nome legível.
+   - O caminho interno será seguro para o backend.
 
-### Mudanças (apenas em `src/lib/file-translator.functions.ts`)
+3. Melhorar a mensagem de erro
+   - Se o armazenamento falhar, retornar uma mensagem mais clara e registrar detalhes técnicos no log.
 
-1. **`callAI`** — para PDFs, usar bloco `{ type: "file", file: { filename, file_data: "data:application/pdf;base64,..." } }`. Para erros, ler `resp.text()` e incluir status + trecho no `Error.message`, com `console.error` server-side.
-2. **Pipeline de tradução** — reduzir `CHUNK_CHARS` para ~6000 e processar até 3 chunks em paralelo (`Promise.all` com janela de concorrência). Encurta a duração total e diminui chance de timeout.
-3. **Guardas de tamanho** — recusar com mensagem clara: texto extraído > 120k chars ou PDF sem texto extraível > 4MB.
-4. **Logs** — `console.error("[translateFile] failure", { recId, kind, size, err })` no `catch` para inspeção via server-function-logs.
+4. Confirmar cobrança automática de créditos
+   - A cobrança já está posicionada para acontecer somente depois que a tradução é gerada e salva com sucesso.
+   - Após corrigir o salvamento, a função `spend_for_feature('file_translation')` deve debitar automaticamente os créditos.
+   - Também vou ajustar a verificação para usar o saldo total correto e evitar inconsistências com o catálogo de créditos.
 
-### O que NÃO muda
-Dashboard, navegação, cobrança de créditos, RLS, bucket, planos, webhooks.
+5. Validar o fluxo
+   - Testar mentalmente o caso informado (`portugal — Roteiro__pt.md`) contra a nova sanitização.
+   - Conferir que o caminho fica no formato permitido: `userId/translationId/nome-seguro.md`.
 
-### Validação
-Build/typecheck, abrir `/file-translator` no Playwright, subir um TXT pequeno (deve concluir e debitar 10 créditos) e verificar logs caso ainda falhe.
+## Observação
+
+Não precisa de uma nova API para esse erro. A chave inválida vem do nome/caminho do arquivo no armazenamento, não da IA.
