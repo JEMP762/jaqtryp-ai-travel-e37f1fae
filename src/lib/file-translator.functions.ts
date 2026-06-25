@@ -432,7 +432,7 @@ export const translateFile = createServerFn({ method: "POST" })
         target_lang: data.target_lang,
         credits_spent: spent,
         download_url: signed?.signedUrl ?? null,
-        file_name: outName,
+        file_name: friendlyName,
       };
     } catch (e: any) {
       console.error("[translateFile] failure", {
