@@ -21,6 +21,7 @@ const PLANS = [
     monthly: { price: "$9", priceId: "price_1TdX3QF2249riykhAAlqarhW" },
     yearly: { price: "$97.20", priceId: "price_1TdXZNF2249riykhwvbz6EWl" },
     features: [
+      "600 créditos por mês incluídos (renovam automaticamente)",
       "Roteiros ilimitados",
       "Tradutor voz + câmera",
       "Alertas de voos",
@@ -35,6 +36,7 @@ const PLANS = [
     monthly: { price: "$19", priceId: "price_1TdX4XF2249riykh3ja7kaHB" },
     yearly: { price: "$205.20", priceId: "price_1TdXSYF2249riykhv8DaMEYx" },
     features: [
+      "1500 créditos por mês incluídos (renovam automaticamente)",
       "Tudo do Pro",
       "Concierge IA prioritário",
       "Roteiros multi-cidade",
