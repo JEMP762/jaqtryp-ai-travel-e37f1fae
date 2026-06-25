@@ -188,8 +188,8 @@ const FxAskSchema = z.object({ prompt: z.string().min(1).max(300) });
 export const fxAsk = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((i: unknown) => FxAskSchema.parse(i))
-  .handler(async ({ data }) => {
-    const system =
+  .handler(async ({ data, context }) => {
+    const { supabase, userId } = context as any;
       'Você interpreta perguntas de conversão de moedas. Retorne JSON estrito {"amount": number, "from": "ISO", "to": "ISO"}. Use BRL como destino padrão quando não especificado. Apenas JSON.';
     const raw = await callLovableAI({ system, prompt: data.prompt, json: true });
     let parsed: any = {};
