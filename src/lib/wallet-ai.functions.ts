@@ -98,7 +98,7 @@ export const scanReceipt = createServerFn({ method: "POST" })
       const m = text.match(/\{[\s\S]*\}/);
       if (m) parsed = JSON.parse(m[0]);
     }
-    return {
+    const result = {
       suggestion: {
         amount: Number(parsed.amount) || 0,
         currency: String(parsed.currency || "BRL").toUpperCase().slice(0, 4),
@@ -113,6 +113,8 @@ export const scanReceipt = createServerFn({ method: "POST" })
       },
       raw: parsed,
     };
+    await chargeOrThrow(supabase, userId, "scanner_ocr", { wallet_id: data.wallet_id });
+    return result;
   });
 
 // ---------- CHAT FINANCEIRO ----------
