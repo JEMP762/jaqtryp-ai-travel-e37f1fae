@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { requireAuthFromRequest } from "@/lib/auth-route.server";
+import { chargeFeature, checkBalance, insufficientCreditsResponse } from "@/lib/credit-charge.server";
 
 type Msg = { role: "system" | "user" | "assistant"; content: string };
 
@@ -77,6 +78,7 @@ export const Route = createFileRoute("/api/chat")({
       POST: async ({ request }) => {
         const auth = await requireAuthFromRequest(request);
         if (!auth.ok) return auth.response;
+        const userId = auth.userId;
 
         const apiKey = process.env.LOVABLE_API_KEY;
         if (!apiKey) {
@@ -95,6 +97,10 @@ export const Route = createFileRoute("/api/chat")({
         const messages = Array.isArray(body.messages) ? body.messages.slice(-30) : [];
         const lang = body.lang === "en" ? "en" : "pt";
         const system = lang === "en" ? SYSTEM_PROMPT_EN : SYSTEM_PROMPT_PT;
+
+        // Pre-check balance before opening the upstream stream.
+        const pre = await checkBalance(userId, "translate_text");
+        if (!pre.ok) return insufficientCreditsResponse(pre as any);
 
         const resp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
           method: "POST",
