@@ -1,48 +1,47 @@
+## Objetivo
 
-# Personalização de tema pelo usuário
+Hoje o seletor de tema troca apenas a cor de **destaque** (botões, links, glow). O fundo do sistema continua sempre o mesmo cinza-escuro azulado. Você quer que cada tema também pinte o **pano de fundo** (background do app, sidebar, cards) com a paleta escolhida, mantendo legibilidade.
 
-Adicionar um seletor visual de temas dentro do sistema para o usuário escolher a cor principal (accent) que será aplicada em toda a interface, incluindo uma nova opção **Azul Claro**.
+## O que será feito
 
-## O que será entregue
+### 1. Estender cada tema em `src/styles.css`
+Para cada um dos 7 temas (Neon Blue, Azul Claro, Violeta, Esmeralda, Pôr do Sol, Rosa, Grafite), além das variáveis de accent já existentes, sobrescrever também:
 
-1. **Novo provider de tema** (`src/lib/theme/ThemeProvider.tsx`)
-   - Mantém `themeId` (ex: `neon-blue`, `sky`, `violet`, `emerald`, `sunset`, `rose`, `slate`) persistido em `localStorage` (`jq_theme`).
-   - Aplica `data-theme="<id>"` no `<html>` para trocar tokens via CSS.
-   - Hook `useTheme()` para ler/atualizar.
-   - Registrado no `__root.tsx` junto de `I18nProvider`.
+- `--background` — fundo principal (tom escuro tingido com a cor do tema)
+- `--card`, `--popover` — superfícies elevadas
+- `--muted`, `--muted-foreground` — áreas secundárias
+- `--border`, `--input` — bordas sutis com tom do tema
+- `--sidebar`, `--sidebar-accent`, `--sidebar-border` — barra lateral
+- `--gradient-card`, `--gradient-hero` — fundos com gradiente
 
-2. **Tokens por tema em `src/styles.css`**
-   - Mantém o tema atual (Neon Blue) como padrão.
-   - Adiciona blocos `:root[data-theme="sky"] { ... }` etc. sobrescrevendo apenas `--primary`, `--primary-glow`, `--ring`, `--sidebar-primary`, `--gradient-primary`, `--gradient-hero`, `--shadow-glow`.
-   - Sem hardcode — tudo via tokens semânticos já existentes, então todo o app reflete a troca automaticamente (sidebar ativo, botões, gradientes, glow, badges).
+A estratégia é manter o **dark mode** (legível), mas deslocar o matiz (hue) do cinza para a cor do tema. Exemplo:
+- **Azul Claro:** fundo `oklch(0.12 0.025 230)` (escuro com leve toque azul-céu)
+- **Violeta:** fundo `oklch(0.12 0.03 295)`
+- **Esmeralda:** fundo `oklch(0.12 0.025 160)`
+- **Pôr do Sol:** fundo `oklch(0.13 0.025 40)` (escuro com calor avermelhado)
+- **Rosa:** fundo `oklch(0.13 0.025 10)`
+- **Grafite:** fundo neutro `oklch(0.14 0.005 255)`
+- **Neon Blue:** mantém o atual (default)
 
-3. **Paleta proposta** (6–7 opções, visualmente distintas)
-   - **Neon Blue** (atual, padrão)
-   - **Sky** (azul claro — pedido do usuário)
-   - **Violet**
-   - **Emerald**
-   - **Sunset** (laranja/coral)
-   - **Rose**
-   - **Slate** (neutro grafite)
+Cards/sidebar/borders seguem a mesma lógica, apenas 1–3 pontos de luminosidade acima do background para criar hierarquia visual.
 
-4. **UI de seleção** (`src/components/ThemeSwitcher.tsx`)
-   - Card com swatches circulares (cor primária + glow) mostrando cada tema.
-   - Item ativo com anel `ring-2 ring-primary`.
-   - Aplica imediatamente ao clicar (preview ao vivo).
+### 2. Transição suave
+Adicionar `transition: background-color 300ms ease` no `body` para que a troca de tema não pisque bruscamente.
 
-5. **Pontos de acesso**
-   - Nova rota `/_app/settings/appearance` com o `ThemeSwitcher` e título "Aparência".
-   - Link "Aparência" no sidebar (`src/routes/_app.tsx`) com ícone `Palette`.
-   - Mini-swatch no rodapé do sidebar (ao lado do seletor PT/EN) para troca rápida.
-
-## Fora de escopo
-
-- Modo claro/escuro completo (o app é dark-first; só trocamos a cor de destaque).
-- Cores totalmente customizadas via color picker — apenas presets curados.
-- Backend: preferência fica em `localStorage` (sem coluna no banco) para não exigir migração.
+### 3. Nada de mudança em componentes
+Como todos os componentes já usam tokens semânticos (`bg-background`, `bg-card`, `border-border`, etc.), nenhum arquivo `.tsx` precisa ser tocado. A troca acontece 100% via CSS.
 
 ## Detalhes técnicos
 
-- Os tokens trocados são apenas accent/primary; `background`, `card`, `border` continuam iguais para manter a identidade dark futurista.
-- `--gradient-primary` é redefinido em cada tema usando `var(--primary)` / `var(--primary-glow)` para que `bg-gradient-primary`, `text-gradient` e `shadow-glow` atualizem sem mudar componentes.
-- O `ThemeProvider` aplica o atributo antes do primeiro paint via `useLayoutEffect` para evitar flash do tema padrão.
+- Edição única em `src/styles.css`, expandindo os blocos `:root[data-theme="..."]` que já criei.
+- Sem mudanças em `ThemeProvider`, `ThemeSwitcher` nem rotas.
+- Sem migração de banco, sem novas dependências.
+
+## Arquivos afetados
+
+- `src/styles.css` (expansão dos 6 blocos de tema + transição no body)
+
+## Fora do escopo
+
+- Modo claro (light mode) — todos os temas continuam dark, só muda o matiz.
+- Permitir cor customizada via color picker (pode virar próximo passo se quiser).
