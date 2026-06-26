@@ -35,6 +35,7 @@ import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { CreditLowBalanceBanner } from "@/components/CreditLowBalanceBanner";
 import { ThemeQuickSwatches } from "@/components/ThemeSwitcher";
+import { AppearanceModeQuickToggle } from "@/components/AppearanceModeSwitcher";
 
 export const Route = createFileRoute("/_app")({
   component: AppShell,
