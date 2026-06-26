@@ -1,6 +1,6 @@
 import * as React from "react";
 
-export type AppearanceMode = "dark" | "light-sky" | "light-peach";
+export type AppearanceMode = "dark" | "light-sky" | "light-lovable";
 
 export type AppearanceModeDef = {
   id: AppearanceMode;
@@ -23,10 +23,10 @@ export const APPEARANCE_MODES: AppearanceModeDef[] = [
     swatch: ["#ffffff", "#eaf4ff", "#bcdcff"],
   },
   {
-    id: "light-peach",
-    name: "Claro Pêssego",
-    description: "Branco creme estilo Lovable",
-    swatch: ["#fff8f3", "#ffe8d6", "#ffd0b0"],
+    id: "light-lovable",
+    name: "Claro Lovable",
+    description: "Branco com toque rosa Lovable",
+    swatch: ["#ffffff", "#ffe4ef", "#ff6db3"],
   },
 ];
 
