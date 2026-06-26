@@ -50,7 +50,11 @@ export function AppearanceModeProvider({ children }: { children: React.ReactNode
 
   React.useEffect(() => {
     if (typeof window === "undefined") return;
-    const saved = window.localStorage.getItem(STORAGE_KEY) as AppearanceMode | null;
+    let saved = window.localStorage.getItem(STORAGE_KEY) as AppearanceMode | null;
+    if ((saved as string) === "light-peach") {
+      saved = "light-lovable";
+      window.localStorage.setItem(STORAGE_KEY, saved);
+    }
     if (saved && APPEARANCE_MODES.some((m) => m.id === saved)) {
       setModeState(saved);
       applyMode(saved);
