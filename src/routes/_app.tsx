@@ -123,6 +123,10 @@ function AppShell() {
         })}
       </nav>
       <div className="border-t border-border p-3">
+        <div className="mb-3 px-1">
+          <div className="mb-1.5 text-[10px] uppercase tracking-wider text-muted-foreground">Tema</div>
+          <ThemeQuickSwatches />
+        </div>
         <button
           onClick={() => setLang(lang === "pt" ? "en" : "pt")}
           className="mb-2 flex w-full items-center gap-2 rounded-lg px-3 py-2 text-xs text-muted-foreground hover:bg-sidebar-accent hover:text-foreground"
