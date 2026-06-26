@@ -1,11 +1,11 @@
-import { Check, Moon, Sun, Sparkles } from "lucide-react";
+import { Check, Moon, Sun, Heart } from "lucide-react";
 import { useAppearanceMode, type AppearanceMode, type AppearanceModeDef } from "@/lib/theme/AppearanceModeProvider";
 import { cn } from "@/lib/utils";
 
 const ICONS: Record<AppearanceMode, React.ElementType> = {
   dark: Moon,
   "light-sky": Sun,
-  "light-peach": Sparkles,
+  "light-lovable": Heart,
 };
 
 export function AppearanceModeSwitcher() {
