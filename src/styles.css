@@ -428,35 +428,40 @@
   --shadow-elegant: 0 10px 30px -10px oklch(0.5 0.05 230 / 0.18);
 }
 
-:root[data-mode="light-peach"] {
-  --background: oklch(0.985 0.012 60);
-  --foreground: oklch(0.22 0.025 40);
-  --card: oklch(1 0.003 60);
-  --card-foreground: oklch(0.22 0.025 40);
-  --popover: oklch(1 0.003 60);
-  --popover-foreground: oklch(0.22 0.025 40);
-  --secondary: oklch(0.94 0.022 50);
-  --secondary-foreground: oklch(0.22 0.025 40);
-  --muted: oklch(0.96 0.015 50);
-  --muted-foreground: oklch(0.48 0.04 40);
-  --accent: oklch(0.92 0.04 45);
-  --accent-foreground: oklch(0.22 0.025 40);
-  --border: oklch(0.55 0.08 40 / 18%);
-  --input: oklch(0.55 0.08 40 / 22%);
+:root[data-mode="light-lovable"] {
+  --background: oklch(0.985 0.012 350);
+  --foreground: oklch(0.2 0.04 350);
+  --card: oklch(1 0.005 350);
+  --card-foreground: oklch(0.2 0.04 350);
+  --popover: oklch(1 0.005 350);
+  --popover-foreground: oklch(0.2 0.04 350);
+  --secondary: oklch(0.94 0.025 350);
+  --secondary-foreground: oklch(0.2 0.04 350);
+  --muted: oklch(0.96 0.018 350);
+  --muted-foreground: oklch(0.48 0.05 350);
+  --accent: oklch(0.92 0.05 350);
+  --accent-foreground: oklch(0.2 0.04 350);
+  --border: oklch(0.6 0.12 350 / 18%);
+  --input: oklch(0.6 0.12 350 / 22%);
+  --primary: oklch(0.68 0.22 350);
   --primary-foreground: oklch(1 0 0);
+  --ring: oklch(0.68 0.22 350);
 
-  --sidebar: oklch(0.97 0.018 50);
-  --sidebar-foreground: oklch(0.25 0.025 40);
-  --sidebar-accent: oklch(0.93 0.025 45);
-  --sidebar-accent-foreground: oklch(0.22 0.025 40);
-  --sidebar-border: oklch(0.55 0.08 40 / 16%);
+  --sidebar: oklch(0.97 0.02 350);
+  --sidebar-foreground: oklch(0.25 0.04 350);
+  --sidebar-accent: oklch(0.93 0.03 350);
+  --sidebar-accent-foreground: oklch(0.2 0.04 350);
+  --sidebar-border: oklch(0.6 0.12 350 / 16%);
+  --sidebar-primary: oklch(0.68 0.22 350);
   --sidebar-primary-foreground: oklch(1 0 0);
 
-  --gradient-card: linear-gradient(180deg, oklch(1 0.003 60), oklch(0.97 0.018 50));
-  --gradient-hero: radial-gradient(ellipse 80% 60% at 50% 0%, oklch(0.78 0.16 45 / 0.22), transparent 60%),
-    radial-gradient(ellipse 60% 50% at 80% 30%, oklch(0.85 0.12 30 / 0.16), transparent 60%),
-    linear-gradient(180deg, oklch(0.985 0.012 60), oklch(0.96 0.018 50));
-  --shadow-elegant: 0 10px 30px -10px oklch(0.6 0.1 40 / 0.22);
+  --gradient-primary: linear-gradient(135deg, oklch(0.72 0.22 350), oklch(0.66 0.24 340));
+  --gradient-card: linear-gradient(180deg, oklch(1 0.005 350), oklch(0.97 0.02 350));
+  --gradient-hero: radial-gradient(ellipse 80% 60% at 50% 0%, oklch(0.78 0.2 350 / 0.22), transparent 60%),
+    radial-gradient(ellipse 60% 50% at 80% 30%, oklch(0.82 0.16 340 / 0.16), transparent 60%),
+    linear-gradient(180deg, oklch(0.985 0.012 350), oklch(0.96 0.02 350));
+  --shadow-glow: 0 0 40px oklch(0.7 0.22 350 / 0.35);
+  --shadow-elegant: 0 10px 30px -10px oklch(0.6 0.18 350 / 0.25);
 }
 
 /* Glass effect adapts to light modes */

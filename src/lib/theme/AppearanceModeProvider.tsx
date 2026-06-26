@@ -1,6 +1,6 @@
 import * as React from "react";
 
-export type AppearanceMode = "dark" | "light-sky" | "light-peach";
+export type AppearanceMode = "dark" | "light-sky" | "light-lovable";
 
 export type AppearanceModeDef = {
   id: AppearanceMode;
@@ -23,10 +23,10 @@ export const APPEARANCE_MODES: AppearanceModeDef[] = [
     swatch: ["#ffffff", "#eaf4ff", "#bcdcff"],
   },
   {
-    id: "light-peach",
-    name: "Claro Pêssego",
-    description: "Branco creme estilo Lovable",
-    swatch: ["#fff8f3", "#ffe8d6", "#ffd0b0"],
+    id: "light-lovable",
+    name: "Claro Lovable",
+    description: "Branco com toque rosa Lovable",
+    swatch: ["#ffffff", "#ffe4ef", "#ff6db3"],
   },
 ];
 
@@ -50,7 +50,11 @@ export function AppearanceModeProvider({ children }: { children: React.ReactNode
 
   React.useEffect(() => {
     if (typeof window === "undefined") return;
-    const saved = window.localStorage.getItem(STORAGE_KEY) as AppearanceMode | null;
+    let saved = window.localStorage.getItem(STORAGE_KEY) as AppearanceMode | null;
+    if ((saved as string) === "light-peach") {
+      saved = "light-lovable";
+      window.localStorage.setItem(STORAGE_KEY, saved);
+    }
     if (saved && APPEARANCE_MODES.some((m) => m.id === saved)) {
       setModeState(saved);
       applyMode(saved);
