@@ -11,6 +11,7 @@ import {
 import appCss from "../styles.css?url";
 import { I18nProvider } from "@/lib/i18n/I18nProvider";
 import { ThemeProvider } from "@/lib/theme/ThemeProvider";
+import { AppearanceModeProvider } from "@/lib/theme/AppearanceModeProvider";
 import { AuthProvider } from "@/hooks/useAuth";
 import { Toaster } from "@/components/ui/sonner";
 
@@ -132,14 +133,16 @@ function RootComponent() {
 
   return (
     <QueryClientProvider client={queryClient}>
-      <ThemeProvider>
-        <I18nProvider>
-          <AuthProvider>
-            <Outlet />
-            <Toaster position="top-right" theme="dark" richColors closeButton />
-          </AuthProvider>
-        </I18nProvider>
-      </ThemeProvider>
+      <AppearanceModeProvider>
+        <ThemeProvider>
+          <I18nProvider>
+            <AuthProvider>
+              <Outlet />
+              <Toaster position="top-right" theme="dark" richColors closeButton />
+            </AuthProvider>
+          </I18nProvider>
+        </ThemeProvider>
+      </AppearanceModeProvider>
     </QueryClientProvider>
   );
 }
