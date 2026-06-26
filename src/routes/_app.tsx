@@ -83,6 +83,7 @@ function AppShell() {
     { to: "/deals", icon: Tag, label: "Promoções" },
     { to: "/shield", icon: ShieldCheck, label: "JAQ Shield" },
     { to: "/billing", icon: CreditCard, label: "Minha Assinatura" },
+    { to: "/settings/appearance", icon: Palette, label: "Aparência" },
   ] as const;
 
   const onSignOut = async () => {
