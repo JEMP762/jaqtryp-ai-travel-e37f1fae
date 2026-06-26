@@ -22,6 +22,7 @@ import {
   Wallet,
   Coins,
   FileText,
+  Palette,
 } from "lucide-react";
 
 
@@ -33,6 +34,7 @@ import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { CreditLowBalanceBanner } from "@/components/CreditLowBalanceBanner";
+import { ThemeQuickSwatches } from "@/components/ThemeSwitcher";
 
 export const Route = createFileRoute("/_app")({
   component: AppShell,
@@ -81,6 +83,7 @@ function AppShell() {
     { to: "/deals", icon: Tag, label: "Promoções" },
     { to: "/shield", icon: ShieldCheck, label: "JAQ Shield" },
     { to: "/billing", icon: CreditCard, label: "Minha Assinatura" },
+    { to: "/settings/appearance", icon: Palette, label: "Aparência" },
   ] as const;
 
   const onSignOut = async () => {
@@ -120,6 +123,10 @@ function AppShell() {
         })}
       </nav>
       <div className="border-t border-border p-3">
+        <div className="mb-3 px-1">
+          <div className="mb-1.5 text-[10px] uppercase tracking-wider text-muted-foreground">Tema</div>
+          <ThemeQuickSwatches />
+        </div>
         <button
           onClick={() => setLang(lang === "pt" ? "en" : "pt")}
           className="mb-2 flex w-full items-center gap-2 rounded-lg px-3 py-2 text-xs text-muted-foreground hover:bg-sidebar-accent hover:text-foreground"

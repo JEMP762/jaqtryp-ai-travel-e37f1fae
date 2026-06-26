@@ -37,6 +37,7 @@ import { Route as AppBillingRouteImport } from './routes/_app.billing'
 import { Route as ApiPublicTtsRouteImport } from './routes/api.public.tts'
 import { Route as ApiPublicTranslateBroadcastRouteImport } from './routes/api.public.translate-broadcast'
 import { Route as ApiPublicSttRouteImport } from './routes/api.public.stt'
+import { Route as AppSettingsAppearanceRouteImport } from './routes/_app.settings.appearance'
 import { Route as AppAdminSettingsRouteImport } from './routes/_app.admin.settings'
 import { Route as AppAdminFinancialRouteImport } from './routes/_app.admin.financial'
 import { Route as ApiPublicPaymentsWebhookRouteImport } from './routes/api.public.payments.webhook'
@@ -181,6 +182,11 @@ const ApiPublicSttRoute = ApiPublicSttRouteImport.update({
   path: '/api/public/stt',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AppSettingsAppearanceRoute = AppSettingsAppearanceRouteImport.update({
+  id: '/settings/appearance',
+  path: '/settings/appearance',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppAdminSettingsRoute = AppAdminSettingsRouteImport.update({
   id: '/admin/settings',
   path: '/admin/settings',
@@ -225,6 +231,7 @@ export interface FileRoutesByFullPath {
   '/live-room/$code': typeof LiveRoomCodeRoute
   '/admin/financial': typeof AppAdminFinancialRoute
   '/admin/settings': typeof AppAdminSettingsRoute
+  '/settings/appearance': typeof AppSettingsAppearanceRoute
   '/api/public/stt': typeof ApiPublicSttRoute
   '/api/public/translate-broadcast': typeof ApiPublicTranslateBroadcastRoute
   '/api/public/tts': typeof ApiPublicTtsRoute
@@ -257,6 +264,7 @@ export interface FileRoutesByTo {
   '/live-room/$code': typeof LiveRoomCodeRoute
   '/admin/financial': typeof AppAdminFinancialRoute
   '/admin/settings': typeof AppAdminSettingsRoute
+  '/settings/appearance': typeof AppSettingsAppearanceRoute
   '/api/public/stt': typeof ApiPublicSttRoute
   '/api/public/translate-broadcast': typeof ApiPublicTranslateBroadcastRoute
   '/api/public/tts': typeof ApiPublicTtsRoute
@@ -291,6 +299,7 @@ export interface FileRoutesById {
   '/live-room/$code': typeof LiveRoomCodeRoute
   '/_app/admin/financial': typeof AppAdminFinancialRoute
   '/_app/admin/settings': typeof AppAdminSettingsRoute
+  '/_app/settings/appearance': typeof AppSettingsAppearanceRoute
   '/api/public/stt': typeof ApiPublicSttRoute
   '/api/public/translate-broadcast': typeof ApiPublicTranslateBroadcastRoute
   '/api/public/tts': typeof ApiPublicTtsRoute
@@ -325,6 +334,7 @@ export interface FileRouteTypes {
     | '/live-room/$code'
     | '/admin/financial'
     | '/admin/settings'
+    | '/settings/appearance'
     | '/api/public/stt'
     | '/api/public/translate-broadcast'
     | '/api/public/tts'
@@ -357,6 +367,7 @@ export interface FileRouteTypes {
     | '/live-room/$code'
     | '/admin/financial'
     | '/admin/settings'
+    | '/settings/appearance'
     | '/api/public/stt'
     | '/api/public/translate-broadcast'
     | '/api/public/tts'
@@ -390,6 +401,7 @@ export interface FileRouteTypes {
     | '/live-room/$code'
     | '/_app/admin/financial'
     | '/_app/admin/settings'
+    | '/_app/settings/appearance'
     | '/api/public/stt'
     | '/api/public/translate-broadcast'
     | '/api/public/tts'
@@ -613,6 +625,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicSttRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_app/settings/appearance': {
+      id: '/_app/settings/appearance'
+      path: '/settings/appearance'
+      fullPath: '/settings/appearance'
+      preLoaderRoute: typeof AppSettingsAppearanceRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/_app/admin/settings': {
       id: '/_app/admin/settings'
       path: '/admin/settings'
@@ -653,6 +672,7 @@ interface AppRouteChildren {
   AppWalletRoute: typeof AppWalletRoute
   AppAdminFinancialRoute: typeof AppAdminFinancialRoute
   AppAdminSettingsRoute: typeof AppAdminSettingsRoute
+  AppSettingsAppearanceRoute: typeof AppSettingsAppearanceRoute
 }
 
 const AppRouteChildren: AppRouteChildren = {
@@ -671,6 +691,7 @@ const AppRouteChildren: AppRouteChildren = {
   AppWalletRoute: AppWalletRoute,
   AppAdminFinancialRoute: AppAdminFinancialRoute,
   AppAdminSettingsRoute: AppAdminSettingsRoute,
+  AppSettingsAppearanceRoute: AppSettingsAppearanceRoute,
 }
 
 const AppRouteWithChildren = AppRoute._addFileChildren(AppRouteChildren)
@@ -696,13 +717,3 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}
