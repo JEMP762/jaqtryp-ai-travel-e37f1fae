@@ -19,7 +19,9 @@ import {
   searchStays,
   getStayRates,
   createStayBooking,
+  getStaysProviderStatus,
 } from "@/lib/stays.functions";
+
 import { getCommissionSettings } from "@/lib/pricing.functions";
 import { PriceBreakdown } from "@/components/pricing/PriceBreakdown";
 import { UpsellSuggestions } from "@/components/pricing/UpsellSuggestions";
@@ -51,8 +53,16 @@ function StaysPage() {
   const ratesFn = useServerFn(getStayRates);
   const bookFn = useServerFn(createStayBooking);
   const settingsFn = useServerFn(getCommissionSettings);
+  const providerStatusFn = useServerFn(getStaysProviderStatus);
   const sp = Route.useSearch();
   const settingsQuery = useQuery({ queryKey: ["commission-settings"], queryFn: () => settingsFn(), retry: false });
+  const providerQuery = useQuery({
+    queryKey: ["stays-provider-status"],
+    queryFn: () => providerStatusFn(),
+    retry: false,
+    staleTime: 5 * 60 * 1000,
+  });
+
 
   const [form, setForm] = React.useState(() => ({
     query: sp.query || "Lisboa",
@@ -74,11 +84,19 @@ function StaysPage() {
   });
 
   const [apiUnavailable, setApiUnavailable] = React.useState(false);
+  const providerUnavailable = providerQuery.data?.unavailable ?? false;
+  const affiliateId = providerQuery.data?.booking_affiliate_id ?? null;
+  const showFallback = apiUnavailable || providerUnavailable;
 
   const bookingFallback = React.useMemo(() => {
     const q = encodeURIComponent(form.query || "");
-    return `https://www.booking.com/searchresults.html?ss=${q}&checkin=${form.check_in_date}&checkout=${form.check_out_date}&group_adults=${form.guests}`;
-  }, [form]);
+    const aid = affiliateId ? `&aid=${encodeURIComponent(affiliateId)}` : "";
+    return `https://www.booking.com/searchresults.html?ss=${q}&checkin=${form.check_in_date}&checkout=${form.check_out_date}&group_adults=${form.guests}${aid}`;
+  }, [form, affiliateId]);
+
+  const isUnavailableError = (msg: string) =>
+    /\b(401|403|404)\b/.test(msg) ||
+    /forbidden|not[_ ]found|unauthori[sz]ed|insufficient[_ ]scope|not enabled/i.test(msg);
 
   const search = useMutation({
     mutationFn: () => searchFn({ data: form }),
@@ -89,7 +107,7 @@ function StaysPage() {
     },
     onError: (e) => {
       const msg = (e as Error).message || "";
-      if (msg.includes("403") || /forbidden/i.test(msg)) {
+      if (isUnavailableError(msg)) {
         setApiUnavailable(true);
         toast.error("Hospedagens indisponíveis no momento", {
           description: "Abrindo busca no Booking.com…",
@@ -100,6 +118,7 @@ function StaysPage() {
       }
     },
   });
+
 
   // Auto-trigger when arriving from a deal (?auto=true)
   const autoRan = React.useRef(false);
@@ -239,23 +258,27 @@ function StaysPage() {
         </div>
       </form>
 
-      {apiUnavailable && (
-        <div className="mt-6 rounded-2xl border border-border bg-card p-5 text-center">
-          <div className="mb-1 text-sm font-semibold">Reservas internas indisponíveis</div>
+      {showFallback && (
+        <div className="mt-6 rounded-2xl border border-primary/30 bg-gradient-to-br from-primary/10 to-card p-5">
+          <div className="mb-1 text-sm font-semibold">
+            Reservas internas em habilitação
+          </div>
           <p className="mb-3 text-xs text-muted-foreground">
-            Nosso provedor de hospedagens está temporariamente indisponível. Reserve direto no
-            Booking.com com a mesma busca.
+            Estamos concluindo a aprovação do nosso provedor de hospedagens (Duffel Stays).
+            Enquanto isso, sua busca abre no Booking.com{affiliateId ? " com nossa parceria oficial" : ""} —
+            mesmos preços, reserva imediata.
           </p>
           <a
             href={bookingFallback}
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground hover:opacity-90"
+            className="inline-flex items-center gap-2 rounded-lg bg-gradient-primary px-4 py-2 text-sm font-semibold text-primary-foreground shadow-glow hover:opacity-90"
           >
-            Reservar no Booking.com ↗
+            Buscar no Booking.com ↗
           </a>
         </div>
       )}
+
 
       {/* Results */}
       <div className="mt-6 grid gap-4 md:grid-cols-2 lg:grid-cols-3">
