@@ -1,37 +1,44 @@
-## Objetivo
+# Consertar o dashboard de Hospedagem
 
-Remover o modo **Claro Pêssego** e substituir por um novo modo **Claro Lovable** (rosa/coral característico da Lovable), mantendo Escuro e Claro Azul intactos. Voos fica em standby até resposta da Duffel.
+## Diagnóstico
 
-## Mudanças
+Testei a API direto agora:
 
-### 1. `src/lib/theme/AppearanceModeProvider.tsx`
-- Trocar tipo `AppearanceMode`: `"dark" | "light-sky" | "light-lovable"` (remove `light-peach`).
-- Atualizar `APPEARANCE_MODES`: substituir entrada `light-peach` por `light-lovable`:
-  - name: "Claro Lovable"
-  - description: "Branco com toque rosa Lovable"
-  - swatch: `["#ffffff", "#ffe4ef", "#ff6db3"]` (paleta rosa-lovable)
-- Migração leve: se `localStorage` tiver `"light-peach"` salvo, normalizar para `"light-lovable"` ao ler.
+- `GET /air/airports` (voos) → **200 OK** ✅
+- `GET /stays/accommodation/suggestions?query=Lisboa` → **404 Not found** ❌
 
-### 2. `src/components/AppearanceModeSwitcher.tsx`
-- Atualizar mapa `ICONS`: remover `"light-peach"`, adicionar `"light-lovable"` usando o ícone `Heart` (lucide).
+Ou seja, a conta Duffel deste projeto **não tem o produto Stays habilitado**. Igual aos voos, a Duffel exige aprovação separada para liberar Stays. Enquanto isso, toda busca vai falhar.
 
-### 3. `src/styles.css`
-- Remover o bloco `:root[data-mode="light-peach"]` e qualquer override `[data-mode="light-peach"][data-theme="..."]`.
-- Adicionar bloco `:root[data-mode="light-lovable"]` com tokens claros em paleta rosa Lovable:
-  - `--background: oklch(0.985 0.012 350)` (branco com toque rosa)
-  - `--foreground: oklch(0.2 0.04 350)`
-  - `--card: oklch(1 0.005 350)`
-  - `--muted: oklch(0.96 0.018 350)`
-  - `--border: oklch(0.6 0.12 350 / 18%)`
-  - `--sidebar: oklch(0.97 0.02 350)`
-  - `--primary` default rosa Lovable (`oklch(0.68 0.22 350)`), `--primary-foreground` branco
-  - Gradient/glow rosa.
-- Espelhar a mesma estratégia já usada para `light-sky`: blocos de tema (`[data-theme="..."]`) coexistem só sobrescrevendo destaque/ring/gradient, sem alterar o fundo claro.
+Além disso, o código atual em `src/routes/_app.stays.tsx` (linha 92) só reconhece erro `403` como "API indisponível" — o 404 real cai no `else` e mostra um toast genérico "Not found" que provavelmente confundiu você.
 
-### 4. Não mexer
-- Tema Escuro e Claro Azul permanecem como estão.
-- Funcionalidades de Voos / Duffel: nada por agora, aguardar autorização.
+## O que vou fazer
 
-## Fora do escopo
-- Qualquer mudança no módulo de voos (aguardando Duffel).
-- Detecção automática de `prefers-color-scheme`.
+### 1. Corrigir a detecção de indisponibilidade (fix imediato)
+No `_app.stays.tsx`, ampliar o `onError` da busca para tratar 401/403/404/`not_found`/`insufficient_scope` como "API indisponível" e acionar o mesmo fallback bonito que já existe (card "Reservas internas indisponíveis" + botão Booking.com com a busca pré-preenchida).
+
+### 2. Mostrar fallback proativo (sem esperar erro)
+Adicionar uma flag `stays_provider_status` que o backend expõe. Se a Duffel Stays retornar erro conhecido de acesso, guardar em memória por 5 min e já mostrar o card do Booking.com no topo antes mesmo do usuário buscar, explicando: *"Reservas internas de hospedagem estão em processo de habilitação com nosso provedor. Enquanto isso, buscas abrem no Booking.com com sua comissão de afiliado."*
+
+### 3. Preparar Booking.com Affiliate como fonte principal temporária
+Enquanto a Duffel não libera Stays, o Booking Affiliate Program:
+- é gratuito e aprovação em ~24h
+- paga 25–40% da comissão do Booking em cada reserva confirmada
+- deep links já funcionam sem SDK
+
+Vou:
+- Adicionar `BOOKING_AFFILIATE_ID` como variável (você cadastra em https://www.booking.com/affiliate-program → me envia o `aid`)
+- Reescrever a URL do fallback para incluir `&aid=${BOOKING_AFFILIATE_ID}` — assim já monetiza cada clique
+- Deixar o botão "Reservar no Booking.com" mais destacado
+
+### 4. Deixar código Duffel Stays pronto pra ligar
+Não removo `stays.functions.ts` — mantenho tudo funcionando. No dia que a Duffel aprovar Stays, é só o backend parar de retornar 404 e o dashboard volta ao fluxo interno automaticamente.
+
+### 5. Instrução clara para você
+Vou deixar no chat os 2 passos que dependem de você:
+1. Solicitar acesso ao Stays na Duffel: dashboard Duffel → **Products → Stays → Request access** (grátis, ~2-5 dias úteis)
+2. Cadastrar no Booking Affiliate: https://www.booking.com/affiliate-program/v2/index.html — me mandar o `aid` quando aprovado
+
+## Fora de escopo desta rodada
+- Integrar Hotelbeds, Expedia TAAP ou outro API de hotéis (podemos ver depois se você quiser reservas *internas* de fato, sem redirect)
+- Mexer em voos, chat, tradutor ou outras áreas
+- Publicar / Play Store (fica para outra conversa quando você quiser)

@@ -43,10 +43,49 @@ async function duffelFetch(path: string, init: RequestInit = {}) {
       json?.errors?.[0]?.message ||
       json?.errors?.[0]?.title ||
       `Duffel Stays API ${res.status}`;
-    throw new Error(msg);
+    const err: any = new Error(msg);
+    err.status = res.status;
+    err.code = json?.errors?.[0]?.code;
+    throw err;
   }
   return json;
 }
+
+// Cache provider status in memory for 5 min to avoid probing on every request.
+let providerStatusCache: { unavailable: boolean; reason?: string; ts: number } | null = null;
+const PROVIDER_CACHE_MS = 5 * 60 * 1000;
+
+export const getStaysProviderStatus = createServerFn({ method: "GET" }).handler(
+  async () => {
+    const affiliateId = process.env.BOOKING_AFFILIATE_ID || null;
+    if (providerStatusCache && Date.now() - providerStatusCache.ts < PROVIDER_CACHE_MS) {
+      return {
+        unavailable: providerStatusCache.unavailable,
+        reason: providerStatusCache.reason ?? null,
+        booking_affiliate_id: affiliateId,
+      };
+    }
+    try {
+      await duffelFetch(`/stays/accommodation/suggestions?query=Lisboa`);
+      providerStatusCache = { unavailable: false, ts: Date.now() };
+      return { unavailable: false, reason: null, booking_affiliate_id: affiliateId };
+    } catch (e: any) {
+      const status = e?.status;
+      const unavailable = status === 401 || status === 403 || status === 404;
+      providerStatusCache = {
+        unavailable,
+        reason: unavailable ? "duffel_stays_not_enabled" : e?.message,
+        ts: Date.now(),
+      };
+      return {
+        unavailable,
+        reason: providerStatusCache.reason ?? null,
+        booking_affiliate_id: affiliateId,
+      };
+    }
+  },
+);
+
 
 const SearchSchema = z.object({
   // Free-text destination (city / hotel name). We geocode via Duffel suggestions.
