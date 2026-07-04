@@ -19,7 +19,9 @@ import {
   searchStays,
   getStayRates,
   createStayBooking,
+  getStaysProviderStatus,
 } from "@/lib/stays.functions";
+
 import { getCommissionSettings } from "@/lib/pricing.functions";
 import { PriceBreakdown } from "@/components/pricing/PriceBreakdown";
 import { UpsellSuggestions } from "@/components/pricing/UpsellSuggestions";
