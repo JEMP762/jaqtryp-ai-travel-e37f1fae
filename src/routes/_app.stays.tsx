@@ -258,23 +258,27 @@ function StaysPage() {
         </div>
       </form>
 
-      {apiUnavailable && (
-        <div className="mt-6 rounded-2xl border border-border bg-card p-5 text-center">
-          <div className="mb-1 text-sm font-semibold">Reservas internas indisponíveis</div>
+      {showFallback && (
+        <div className="mt-6 rounded-2xl border border-primary/30 bg-gradient-to-br from-primary/10 to-card p-5">
+          <div className="mb-1 text-sm font-semibold">
+            Reservas internas em habilitação
+          </div>
           <p className="mb-3 text-xs text-muted-foreground">
-            Nosso provedor de hospedagens está temporariamente indisponível. Reserve direto no
-            Booking.com com a mesma busca.
+            Estamos concluindo a aprovação do nosso provedor de hospedagens (Duffel Stays).
+            Enquanto isso, sua busca abre no Booking.com{affiliateId ? " com nossa parceria oficial" : ""} —
+            mesmos preços, reserva imediata.
           </p>
           <a
             href={bookingFallback}
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground hover:opacity-90"
+            className="inline-flex items-center gap-2 rounded-lg bg-gradient-primary px-4 py-2 text-sm font-semibold text-primary-foreground shadow-glow hover:opacity-90"
           >
-            Reservar no Booking.com ↗
+            Buscar no Booking.com ↗
           </a>
         </div>
       )}
+
 
       {/* Results */}
       <div className="mt-6 grid gap-4 md:grid-cols-2 lg:grid-cols-3">
