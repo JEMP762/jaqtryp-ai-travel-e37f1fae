@@ -53,8 +53,16 @@ function StaysPage() {
   const ratesFn = useServerFn(getStayRates);
   const bookFn = useServerFn(createStayBooking);
   const settingsFn = useServerFn(getCommissionSettings);
+  const providerStatusFn = useServerFn(getStaysProviderStatus);
   const sp = Route.useSearch();
   const settingsQuery = useQuery({ queryKey: ["commission-settings"], queryFn: () => settingsFn(), retry: false });
+  const providerQuery = useQuery({
+    queryKey: ["stays-provider-status"],
+    queryFn: () => providerStatusFn(),
+    retry: false,
+    staleTime: 5 * 60 * 1000,
+  });
+
 
   const [form, setForm] = React.useState(() => ({
     query: sp.query || "Lisboa",
