@@ -100,7 +100,16 @@ function StaysPage() {
 
   const search = useMutation({
     mutationFn: () => searchFn({ data: form }),
-    onSuccess: (d) => {
+    onSuccess: (d: any) => {
+      if (d?.unavailable) {
+        setApiUnavailable(true);
+        setResults([]);
+        toast.error("Hospedagens indisponíveis no momento", {
+          description: "Abrindo busca no Booking.com…",
+          action: { label: "Abrir Booking", onClick: () => window.open(bookingFallback, "_blank", "noopener,noreferrer") },
+        });
+        return;
+      }
       setApiUnavailable(false);
       setResults(d.results);
       if (!d.results.length) toast.message("Nenhum resultado encontrado");

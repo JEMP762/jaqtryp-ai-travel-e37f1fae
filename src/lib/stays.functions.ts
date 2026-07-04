@@ -100,58 +100,75 @@ export const searchStays = createServerFn({ method: "POST" })
   .middleware([withSupabaseAuthHeader, requireSupabaseAuth])
   .inputValidator((input: unknown) => SearchSchema.parse(input))
   .handler(async ({ data }) => {
-    // Resolve location via Duffel suggestions
-    const suggestRes = await duffelFetch(
-      `/stays/accommodation/suggestions?query=${encodeURIComponent(data.query)}`,
-    );
-    const suggestion = suggestRes?.data?.[0];
-    if (!suggestion) {
-      return { results: [], location: null };
-    }
+    try {
+      const suggestRes = await duffelFetch(
+        `/stays/accommodation/suggestions?query=${encodeURIComponent(data.query)}`,
+      );
+      const suggestion = suggestRes?.data?.[0];
+      if (!suggestion) {
+        return { results: [], location: null, unavailable: false };
+      }
 
-    const body: any = {
-      data: {
-        check_in_date: data.check_in_date,
-        check_out_date: data.check_out_date,
-        rooms: data.rooms,
-        guests: Array.from({ length: data.guests }).map(() => ({ type: "adult" })),
-      },
-    };
-
-    if (suggestion.accommodation?.id) {
-      body.data.accommodation_ids = [suggestion.accommodation.id];
-    } else if (suggestion.location?.geographic_coordinates) {
-      body.data.location = {
-        radius: 10,
-        geographic_coordinates: suggestion.location.geographic_coordinates,
-      };
-    } else {
-      return { results: [], location: suggestion };
-    }
-
-    const result = await duffelFetch("/stays/search", {
-      method: "POST",
-      body: JSON.stringify(body),
-    });
-
-    const results = (result?.data?.results || []).slice(0, 30).map((r: any) => ({
-      id: r.id,
-      accommodation: {
-        id: r.accommodation?.id,
-        name: r.accommodation?.name,
-        rating: r.accommodation?.rating,
-        review_score: r.accommodation?.review_score,
-        photos: (r.accommodation?.photos || []).slice(0, 5).map((p: any) => p.url),
-        location: {
-          address: r.accommodation?.location?.address,
+      const body: any = {
+        data: {
+          check_in_date: data.check_in_date,
+          check_out_date: data.check_out_date,
+          rooms: data.rooms,
+          guests: Array.from({ length: data.guests }).map(() => ({ type: "adult" })),
         },
-        amenities: (r.accommodation?.amenities || []).map((a: any) => a.type),
-      },
-      cheapest_rate_total_amount: r.cheapest_rate_total_amount,
-      cheapest_rate_currency: r.cheapest_rate_currency,
-    }));
+      };
 
-    return { results, location: suggestion };
+      if (suggestion.accommodation?.id) {
+        body.data.accommodation_ids = [suggestion.accommodation.id];
+      } else if (suggestion.location?.geographic_coordinates) {
+        body.data.location = {
+          radius: 10,
+          geographic_coordinates: suggestion.location.geographic_coordinates,
+        };
+      } else {
+        return { results: [], location: suggestion, unavailable: false };
+      }
+
+      const result = await duffelFetch("/stays/search", {
+        method: "POST",
+        body: JSON.stringify(body),
+      });
+
+      const results = (result?.data?.results || []).slice(0, 30).map((r: any) => ({
+        id: r.id,
+        accommodation: {
+          id: r.accommodation?.id,
+          name: r.accommodation?.name,
+          rating: r.accommodation?.rating,
+          review_score: r.accommodation?.review_score,
+          photos: (r.accommodation?.photos || []).slice(0, 5).map((p: any) => p.url),
+          location: { address: r.accommodation?.location?.address },
+          amenities: (r.accommodation?.amenities || []).map((a: any) => a.type),
+        },
+        cheapest_rate_total_amount: r.cheapest_rate_total_amount,
+        cheapest_rate_currency: r.cheapest_rate_currency,
+      }));
+
+      return { results, location: suggestion, unavailable: false };
+    } catch (e: any) {
+      const status = e?.status;
+      const unavailable =
+        status === 401 || status === 403 || status === 404 || status === 400;
+      if (unavailable) {
+        providerStatusCache = {
+          unavailable: true,
+          reason: "duffel_stays_not_enabled",
+          ts: Date.now(),
+        };
+        return {
+          results: [],
+          location: null,
+          unavailable: true,
+          reason: "duffel_stays_not_enabled",
+        };
+      }
+      throw e;
+    }
   });
 
 const RatesSchema = z.object({ search_result_id: z.string() });
