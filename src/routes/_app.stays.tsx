@@ -84,11 +84,19 @@ function StaysPage() {
   });
 
   const [apiUnavailable, setApiUnavailable] = React.useState(false);
+  const providerUnavailable = providerQuery.data?.unavailable ?? false;
+  const affiliateId = providerQuery.data?.booking_affiliate_id ?? null;
+  const showFallback = apiUnavailable || providerUnavailable;
 
   const bookingFallback = React.useMemo(() => {
     const q = encodeURIComponent(form.query || "");
-    return `https://www.booking.com/searchresults.html?ss=${q}&checkin=${form.check_in_date}&checkout=${form.check_out_date}&group_adults=${form.guests}`;
-  }, [form]);
+    const aid = affiliateId ? `&aid=${encodeURIComponent(affiliateId)}` : "";
+    return `https://www.booking.com/searchresults.html?ss=${q}&checkin=${form.check_in_date}&checkout=${form.check_out_date}&group_adults=${form.guests}${aid}`;
+  }, [form, affiliateId]);
+
+  const isUnavailableError = (msg: string) =>
+    /\b(401|403|404)\b/.test(msg) ||
+    /forbidden|not[_ ]found|unauthori[sz]ed|insufficient[_ ]scope|not enabled/i.test(msg);
 
   const search = useMutation({
     mutationFn: () => searchFn({ data: form }),
@@ -99,7 +107,7 @@ function StaysPage() {
     },
     onError: (e) => {
       const msg = (e as Error).message || "";
-      if (msg.includes("403") || /forbidden/i.test(msg)) {
+      if (isUnavailableError(msg)) {
         setApiUnavailable(true);
         toast.error("Hospedagens indisponíveis no momento", {
           description: "Abrindo busca no Booking.com…",
@@ -110,6 +118,7 @@ function StaysPage() {
       }
     },
   });
+
 
   // Auto-trigger when arriving from a deal (?auto=true)
   const autoRan = React.useRef(false);
