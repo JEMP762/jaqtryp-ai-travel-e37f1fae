@@ -26,7 +26,11 @@ type Body = {
   targets?: Array<{ userId?: string; lang?: string }>;
   withAudio?: boolean;
   voiceId?: string;
+  roomCode?: string;
+  fromUserId?: string;
+  fromName?: string;
 };
+
 
 async function translate(text: string, fromLang: string, toLang: string, apiKey: string) {
   if (fromLang === toLang) return text;
