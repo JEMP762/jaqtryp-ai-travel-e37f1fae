@@ -143,7 +143,7 @@ export const Route = createFileRoute("/api/public/translate-broadcast")({
           if (body.roomCode && body.fromUserId) {
             try {
               const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-              const { data: inserted, error: insErr } = await supabaseAdmin
+              const { data: inserted, error: insErr } = await (supabaseAdmin as any)
                 .from("live_room_messages")
                 .insert({
                   room_code: body.roomCode,
@@ -156,7 +156,8 @@ export const Route = createFileRoute("/api/public/translate-broadcast")({
                 .select("id")
                 .single();
               if (insErr) console.error("live_room_messages insert failed:", insErr);
-              else messageId = inserted?.id ?? null;
+              else messageId = (inserted as { id?: string } | null)?.id ?? null;
+
             } catch (e) {
               console.error("live_room_messages insert exception:", e);
             }
