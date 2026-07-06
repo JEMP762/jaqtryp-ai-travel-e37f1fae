@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import * as React from "react";
-import { Mic, Square, Copy, Share2, Users, Volume2, Loader2, ArrowLeft } from "lucide-react";
+import { Mic, Square, Copy, Share2, Users, Volume2, Loader2, ArrowLeft, Wifi, WifiOff } from "lucide-react";
 import { toast } from "sonner";
 import type { RealtimeChannel } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
@@ -13,6 +13,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
+import { CallPanel, CallModeSelector, type CallMode } from "@/components/live-room/CallPanel";
 
 export const Route = createFileRoute("/live-room/$code")({
   component: LiveRoomPage,
@@ -32,22 +33,21 @@ const LANGS = [
   { code: "ru-RU", label: "Русский", flag: "🇷🇺" },
 ];
 
-function langLabel(c: string) {
-  return LANGS.find((l) => l.code === c)?.label ?? c;
-}
 function langFlag(c: string) {
   return LANGS.find((l) => l.code === c)?.flag ?? "🌐";
 }
 
 type Presence = { userId: string; lang: string; name: string };
-type IncomingMessage = {
+type PerRecipientMap = Record<string, { text: string; audio?: string; lang: string }>;
+type MessageRow = {
   id: string;
-  fromUserId: string;
-  fromName: string;
-  fromLang: string;
-  originalText: string;
-  perRecipient: Record<string, { text: string; audio?: string; lang: string }>;
-  ts: number;
+  room_code: string;
+  from_user_id: string;
+  from_name: string;
+  from_lang: string;
+  original_text: string;
+  per_recipient: PerRecipientMap;
+  created_at: string;
 };
 type RenderedMessage = {
   id: string;
@@ -92,8 +92,12 @@ function LiveRoomPage() {
   const [listening, setListening] = React.useState(false);
   const [busy, setBusy] = React.useState(false);
   const [status, setStatus] = React.useState("");
+  const [channelStatus, setChannelStatus] = React.useState<"connecting" | "connected" | "error">("connecting");
+  const [callMode, setCallMode] = React.useState<CallMode>("none");
+  const [audioBlocked, setAudioBlocked] = React.useState(false);
 
   const channelRef = React.useRef<RealtimeChannel | null>(null);
+  const signalListenersRef = React.useRef<Set<(p: unknown) => void>>(new Set());
   const recRef = React.useRef<MediaRecorder | null>(null);
   const streamRef = React.useRef<MediaStream | null>(null);
   const chunksRef = React.useRef<Blob[]>([]);
@@ -101,6 +105,8 @@ function LiveRoomPage() {
   const audioRef = React.useRef<HTMLAudioElement | null>(null);
   const scrollRef = React.useRef<HTMLDivElement>(null);
   const participantsRef = React.useRef<Presence[]>([]);
+  const seenIdsRef = React.useRef<Set<string>>(new Set());
+  const pendingAudioRef = React.useRef<string | null>(null);
 
   React.useEffect(() => {
     participantsRef.current = participants;
@@ -115,15 +121,45 @@ function LiveRoomPage() {
       audioRef.current = new Audio();
       audioRef.current.setAttribute("playsinline", "true");
     }
+    // Prime with a silent MP3 during user gesture so future .play() calls succeed on iOS/Android
+    try {
+      audioRef.current.muted = true;
+      audioRef.current.src =
+        "data:audio/mp3;base64,SUQzBAAAAAAAI1RTU0UAAAAPAAADTGF2ZjU4Ljc2LjEwMAAAAAAAAAAAAAAA//tQxAADB8AhSmxhIIEVCSiJrDCQBTcu3UrAIwUdkRgQbFAZC1CQEwTJ9mjRvBA4UOLD8nKVOWfh+UlK3z/177OXrfOdKl7pyn3Xf//FJAhDQHIIAIBAEAAA//8AAAA=";
+      const p = audioRef.current.play();
+      if (p && typeof p.then === "function") p.then(() => {
+        if (audioRef.current) audioRef.current.muted = false;
+      }).catch(() => {});
+    } catch {
+      /* ignore */
+    }
   }, []);
 
   const playBase64 = React.useCallback((b64: string) => {
-    if (!audioRef.current) audioRef.current = new Audio();
+    if (!audioRef.current) {
+      audioRef.current = new Audio();
+      audioRef.current.setAttribute("playsinline", "true");
+    }
+    audioRef.current.muted = false;
     audioRef.current.src = `data:audio/mpeg;base64,${b64}`;
-    audioRef.current.play().catch(() => {
-      toast.info("Toque em qualquer lugar para liberar o áudio");
+    audioRef.current.play().then(() => {
+      setAudioBlocked(false);
+      pendingAudioRef.current = null;
+    }).catch(() => {
+      pendingAudioRef.current = b64;
+      setAudioBlocked(true);
     });
   }, []);
+
+  const manualPlayPending = React.useCallback(() => {
+    const b64 = pendingAudioRef.current;
+    if (!b64) {
+      setAudioBlocked(false);
+      return;
+    }
+    unlockAudio();
+    setTimeout(() => playBase64(b64), 50);
+  }, [playBase64, unlockAudio]);
 
   // Join the realtime channel
   React.useEffect(() => {
@@ -141,31 +177,61 @@ function LiveRoomPage() {
       setParticipants(list);
     });
 
-    channel.on("broadcast", { event: "message" }, ({ payload }) => {
-      const msg = payload as IncomingMessage;
-      const forMe = msg.perRecipient[myId];
-      const translated = forMe?.text ?? msg.originalText;
-      const audio = forMe?.audio;
-      setMessages((prev) => [
-        ...prev,
-        {
-          id: msg.id,
-          fromUserId: msg.fromUserId,
-          fromName: msg.fromName,
-          fromLang: msg.fromLang,
-          originalText: msg.originalText,
-          translatedText: translated,
-          audio,
-          ts: msg.ts,
-          mine: false,
-        },
-      ]);
-      if (audio) playBase64(audio);
+    // WebRTC / call-mode signaling
+    channel.on("broadcast", { event: "signal" }, ({ payload }) => {
+      signalListenersRef.current.forEach((cb) => cb(payload));
     });
+    channel.on("broadcast", { event: "callmode" }, ({ payload }) => {
+      const p = payload as { mode?: CallMode; from?: string };
+      if (p?.mode && p.from !== myId) {
+        toast.info(`Anfitrião iniciou ${p.mode === "video" ? "vídeo" : "áudio ao vivo"}`, {
+          action: {
+            label: "Entrar",
+            onClick: () => setCallMode(p.mode!),
+          },
+        });
+      }
+    });
+
+    // Postgres_changes on live_room_messages — reliable transport
+    channel.on(
+      "postgres_changes",
+      { event: "INSERT", schema: "public", table: "live_room_messages", filter: `room_code=eq.${code}` },
+      (payload) => {
+        const row = payload.new as MessageRow;
+        if (!row || seenIdsRef.current.has(row.id)) return;
+        seenIdsRef.current.add(row.id);
+        const forMe = row.per_recipient?.[myId];
+        const isMine = row.from_user_id === myId;
+        const translated = forMe?.text ?? row.original_text;
+        const audio = forMe?.audio;
+        setMessages((prev) => [
+          ...prev,
+          {
+            id: row.id,
+            fromUserId: row.from_user_id,
+            fromName: row.from_name,
+            fromLang: row.from_lang,
+            originalText: row.original_text,
+            translatedText: translated,
+            audio,
+            ts: new Date(row.created_at).getTime(),
+            mine: isMine,
+          },
+        ]);
+        // Only auto-play audio from others (user opted-out of hearing own voice)
+        if (!isMine && audio) playBase64(audio);
+      },
+    );
 
     channel.subscribe(async (st) => {
       if (st === "SUBSCRIBED") {
+        setChannelStatus("connected");
         await channel.track({ userId: myId, lang: myLang, name: myName || "Convidado" });
+      } else if (st === "CHANNEL_ERROR" || st === "TIMED_OUT") {
+        setChannelStatus("error");
+      } else {
+        setChannelStatus("connecting");
       }
     });
     channelRef.current = channel;
@@ -173,6 +239,7 @@ function LiveRoomPage() {
       channel.unsubscribe();
       supabase.removeChannel(channel);
       channelRef.current = null;
+      seenIdsRef.current.clear();
     };
   }, [joined, code, myId, myLang, myName, playBase64]);
 
@@ -213,8 +280,15 @@ function LiveRoomPage() {
     streamRef.current = null;
   };
 
+  const others = participants.filter((p) => p.userId !== myId);
+  const canRecord = others.length > 0;
+
   const startRecording = async () => {
     unlockAudio();
+    if (!canRecord) {
+      toast.info("Aguardando alguém entrar com o link…");
+      return;
+    }
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
         audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true },
@@ -296,23 +370,8 @@ function LiveRoomPage() {
         return;
       }
 
-      const others = participantsRef.current.filter((p) => p.userId !== myId);
-      if (others.length === 0) {
-        // No one else: just show locally
-        const id = crypto.randomUUID();
-        setMessages((prev) => [
-          ...prev,
-          {
-            id,
-            fromUserId: myId,
-            fromName: myName || "Eu",
-            fromLang: myLang,
-            originalText: original,
-            translatedText: original,
-            ts: Date.now(),
-            mine: true,
-          },
-        ]);
+      const currentOthers = participantsRef.current.filter((p) => p.userId !== myId);
+      if (currentOthers.length === 0) {
         setStatus("Aguardando convidado entrar para traduzir…");
         toast.info("Compartilhe o link para começar a traduzir");
         return;
@@ -326,52 +385,52 @@ function LiveRoomPage() {
           fromLang: myLang,
           text: original,
           withAudio: true,
-          targets: others.map((p) => ({ userId: p.userId, lang: p.lang })),
+          roomCode: code,
+          fromUserId: myId,
+          fromName: myName || "Eu",
+          targets: currentOthers.map((p) => ({ userId: p.userId, lang: p.lang })),
         }),
       });
       if (!tResp.ok) {
         const e = await tResp.text();
         throw new Error(`Translate: ${e.slice(0, 120)}`);
       }
-      const data = (await tResp.json()) as {
-        perRecipient: Record<string, { text: string; audio?: string; lang: string }>;
-      };
-
-      const id = crypto.randomUUID();
-      const ts = Date.now();
-      const msg: IncomingMessage = {
-        id,
-        fromUserId: myId,
-        fromName: myName || "Eu",
-        fromLang: myLang,
-        originalText: original,
-        perRecipient: data.perRecipient,
-        ts,
-      };
-
-      // Broadcast to others
-      await channelRef.current?.send({ type: "broadcast", event: "message", payload: msg });
-
-      // Add to my own view (translated to my own lang would be original — show original)
-      setMessages((prev) => [
-        ...prev,
-        {
-          id,
-          fromUserId: myId,
-          fromName: myName || "Eu",
-          fromLang: myLang,
-          originalText: original,
-          translatedText: original,
-          ts,
-          mine: true,
-        },
-      ]);
+      // Message will arrive via postgres_changes for all participants (including sender)
+      await tResp.json();
       setStatus("");
     } catch (e) {
       toast.error((e as Error).message);
       setStatus("");
     } finally {
       setBusy(false);
+    }
+  };
+
+  // Signaling bridge for WebRTC P2P
+  const callChannel = React.useMemo(
+    () => ({
+      send: (payload: unknown) => {
+        channelRef.current?.send({ type: "broadcast", event: "signal", payload });
+      },
+      onSignal: (cb: (p: unknown) => void) => {
+        signalListenersRef.current.add(cb as (p: unknown) => void);
+        return () => {
+          signalListenersRef.current.delete(cb as (p: unknown) => void);
+        };
+      },
+    }),
+    [],
+  );
+
+  const changeCallMode = (m: CallMode) => {
+    unlockAudio();
+    setCallMode(m);
+    if (m !== "none") {
+      channelRef.current?.send({
+        type: "broadcast",
+        event: "callmode",
+        payload: { mode: m, from: myId },
+      });
     }
   };
 
@@ -433,15 +492,22 @@ function LiveRoomPage() {
     );
   }
 
-  const others = participants.filter((p) => p.userId !== myId);
-
   return (
     <div className="mx-auto flex h-[100dvh] max-w-3xl flex-col bg-background px-4 py-4">
       {/* Header */}
       <div className="rounded-2xl border border-border bg-card/60 p-4">
         <div className="flex items-center justify-between gap-2">
           <div>
-            <div className="text-xs text-muted-foreground">Sala</div>
+            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+              Sala
+              {channelStatus === "connected" ? (
+                <Wifi className="h-3 w-3 text-emerald-500" />
+              ) : channelStatus === "error" ? (
+                <WifiOff className="h-3 w-3 text-red-500" />
+              ) : (
+                <Loader2 className="h-3 w-3 animate-spin" />
+              )}
+            </div>
             <div className="font-mono text-lg font-bold tracking-wider">{code}</div>
           </div>
           <div className="flex gap-2">
@@ -479,7 +545,7 @@ function LiveRoomPage() {
             Aguardando alguém entrar com o link…
           </div>
         )}
-        <div className="mt-3">
+        <div className="mt-3 flex flex-col gap-2 sm:flex-row">
           <Select value={myLang} onValueChange={setMyLang}>
             <SelectTrigger className="h-9 text-sm">
               <SelectValue />
@@ -493,7 +559,34 @@ function LiveRoomPage() {
             </SelectContent>
           </Select>
         </div>
+        <div className="mt-3">
+          <CallModeSelector mode={callMode} onChange={changeCallMode} disabled={!canRecord} />
+        </div>
       </div>
+
+      {/* Call panel */}
+      {callMode !== "none" && (
+        <div className="mt-3">
+          <CallPanel
+            mode={callMode}
+            code={code}
+            myId={myId}
+            userName={myName || "Convidado"}
+            peers={others.map((o) => o.userId)}
+            onLeave={() => setCallMode("none")}
+            channel={callChannel as never}
+          />
+        </div>
+      )}
+
+      {audioBlocked && (
+        <div className="mt-3 flex items-center justify-between rounded-lg border border-amber-500/40 bg-amber-500/10 p-3 text-xs">
+          <span>Áudio bloqueado pelo navegador. Toque para tocar.</span>
+          <Button size="sm" onClick={manualPlayPending}>
+            <Volume2 className="mr-1 h-3 w-3" /> Tocar áudio
+          </Button>
+        </div>
+      )}
 
       {/* Messages */}
       <div ref={scrollRef} className="flex-1 space-y-3 overflow-y-auto py-4">
@@ -543,7 +636,7 @@ function LiveRoomPage() {
         <div className="flex justify-center">
           <Button
             size="lg"
-            disabled={busy}
+            disabled={busy || !canRecord}
             onClick={listening ? stopRecording : startRecording}
             className={cn(
               "h-16 w-16 rounded-full shadow-glow",
@@ -560,7 +653,7 @@ function LiveRoomPage() {
           </Button>
         </div>
         <div className="mt-2 text-center text-xs text-muted-foreground">
-          {listening ? "Toque para parar" : "Toque para falar"}
+          {!canRecord ? "Aguardando convidado…" : listening ? "Toque para parar" : "Toque para falar"}
         </div>
       </div>
     </div>
