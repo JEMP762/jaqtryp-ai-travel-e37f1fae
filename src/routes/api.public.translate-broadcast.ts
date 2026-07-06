@@ -138,8 +138,32 @@ export const Route = createFileRoute("/api/public/translate-broadcast")({
             perRecipient[t.userId] = { text: r.text, audio: r.audio, lang: t.lang };
           }
 
+          // Persist to live_room_messages so all participants receive via realtime
+          let messageId: string | null = null;
+          if (body.roomCode && body.fromUserId) {
+            try {
+              const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+              const { data: inserted, error: insErr } = await supabaseAdmin
+                .from("live_room_messages")
+                .insert({
+                  room_code: body.roomCode,
+                  from_user_id: body.fromUserId,
+                  from_name: body.fromName || "Convidado",
+                  from_lang: fromLang,
+                  original_text: text,
+                  per_recipient: perRecipient,
+                })
+                .select("id")
+                .single();
+              if (insErr) console.error("live_room_messages insert failed:", insErr);
+              else messageId = inserted?.id ?? null;
+            } catch (e) {
+              console.error("live_room_messages insert exception:", e);
+            }
+          }
+
           return new Response(
-            JSON.stringify({ originalText: text, fromLang, perRecipient }),
+            JSON.stringify({ originalText: text, fromLang, perRecipient, messageId }),
             { headers: { "content-type": "application/json" } },
           );
         } catch (e) {
@@ -152,3 +176,4 @@ export const Route = createFileRoute("/api/public/translate-broadcast")({
     },
   },
 });
+
