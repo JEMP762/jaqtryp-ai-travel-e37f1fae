@@ -519,6 +519,14 @@ function LiveRoomPage() {
   const changeCallMode = (m: CallMode) => {
     unlockAudio();
     setCallMode(m);
+    if (m === "video") {
+      // Only set self as host if nobody else claimed it yet
+      setVideoHostId((prev) => prev ?? myId);
+    }
+    if (m === "none") {
+      setSharedVideoUrl(null);
+      setVideoHostId(null);
+    }
     if (m !== "none") {
       channelRef.current?.send({
         type: "broadcast",
@@ -527,6 +535,18 @@ function LiveRoomPage() {
       });
     }
   };
+
+  const broadcastDailyUrl = React.useCallback(
+    (url: string) => {
+      setSharedVideoUrl(url);
+      channelRef.current?.send({
+        type: "broadcast",
+        event: "daily-url",
+        payload: { url, from: myId },
+      });
+    },
+    [myId],
+  );
 
   // Join screen
   if (!joined) {
