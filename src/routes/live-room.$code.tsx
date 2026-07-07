@@ -94,6 +94,8 @@ function LiveRoomPage() {
   const [status, setStatus] = React.useState("");
   const [channelStatus, setChannelStatus] = React.useState<"connecting" | "connected" | "error">("connecting");
   const [callMode, setCallMode] = React.useState<CallMode>("none");
+  const [videoHostId, setVideoHostId] = React.useState<string | null>(null);
+  const [sharedVideoUrl, setSharedVideoUrl] = React.useState<string | null>(null);
   const [audioBlocked, setAudioBlocked] = React.useState(false);
 
   const channelRef = React.useRef<RealtimeChannel | null>(null);
@@ -107,6 +109,13 @@ function LiveRoomPage() {
   const participantsRef = React.useRef<Presence[]>([]);
   const seenIdsRef = React.useRef<Set<string>>(new Set());
   const pendingAudioRef = React.useRef<string | null>(null);
+  // VAD (voice activity detection) refs
+  const vadCtxRef = React.useRef<AudioContext | null>(null);
+  const vadAnalyserRef = React.useRef<AnalyserNode | null>(null);
+  const vadRafRef = React.useRef<number | null>(null);
+  const vadSpokeRef = React.useRef(false);
+  const vadSilenceStartRef = React.useRef<number | null>(null);
+  const vadMaxTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
 
   React.useEffect(() => {
     participantsRef.current = participants;
@@ -184,12 +193,20 @@ function LiveRoomPage() {
     channel.on("broadcast", { event: "callmode" }, ({ payload }) => {
       const p = payload as { mode?: CallMode; from?: string };
       if (p?.mode && p.from !== myId) {
+        if (p.mode === "video" && p.from) setVideoHostId(p.from);
         toast.info(`Anfitrião iniciou ${p.mode === "video" ? "vídeo" : "áudio ao vivo"}`, {
           action: {
             label: "Entrar",
             onClick: () => setCallMode(p.mode!),
           },
         });
+      }
+    });
+    channel.on("broadcast", { event: "daily-url" }, ({ payload }) => {
+      const p = payload as { url?: string; from?: string };
+      if (p?.url && p.from !== myId) {
+        setSharedVideoUrl(p.url);
+        if (p.from) setVideoHostId(p.from);
       }
     });
 
@@ -280,6 +297,25 @@ function LiveRoomPage() {
     streamRef.current = null;
   };
 
+  const stopVad = React.useCallback(() => {
+    if (vadRafRef.current != null) {
+      cancelAnimationFrame(vadRafRef.current);
+      vadRafRef.current = null;
+    }
+    if (vadMaxTimerRef.current) {
+      clearTimeout(vadMaxTimerRef.current);
+      vadMaxTimerRef.current = null;
+    }
+    vadAnalyserRef.current = null;
+    const ctx = vadCtxRef.current;
+    vadCtxRef.current = null;
+    if (ctx && ctx.state !== "closed") {
+      ctx.close().catch(() => {});
+    }
+    vadSpokeRef.current = false;
+    vadSilenceStartRef.current = null;
+  }, []);
+
   const others = participants.filter((p) => p.userId !== myId);
   const canRecord = others.length > 0;
 
@@ -310,11 +346,13 @@ function LiveRoomPage() {
       };
       rec.onerror = () => {
         toast.error("Erro no microfone");
+        stopVad();
         stopTracks();
         setListening(false);
       };
       rec.onstop = async () => {
         setListening(false);
+        stopVad();
         stopTracks();
         const blobType = mimeRef.current || rec.mimeType || "audio/webm";
         const blob = new Blob(chunksRef.current, { type: blobType });
@@ -329,7 +367,63 @@ function LiveRoomPage() {
       recRef.current = rec;
       rec.start();
       setListening(true);
-      setStatus("Gravando…");
+      setStatus("Gravando… (pare de falar para enviar)");
+
+      // ---- VAD: auto-stop on silence ----
+      try {
+        const AC =
+          window.AudioContext ||
+          (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
+        if (AC) {
+          const ctx = new AC();
+          const src = ctx.createMediaStreamSource(stream);
+          const analyser = ctx.createAnalyser();
+          analyser.fftSize = 1024;
+          src.connect(analyser);
+          vadCtxRef.current = ctx;
+          vadAnalyserRef.current = analyser;
+          const buf = new Uint8Array(analyser.fftSize);
+          const SPEECH_THRESHOLD = 0.025; // RMS above this = speech
+          const SILENCE_MS = 1200; // stop after this much silence
+          const MIN_SPEECH_MS = 350; // require some speech first
+          let speechStart: number | null = null;
+
+          const tick = () => {
+            const a = vadAnalyserRef.current;
+            if (!a || !recRef.current || recRef.current.state !== "recording") return;
+            a.getByteTimeDomainData(buf);
+            let sumSq = 0;
+            for (let i = 0; i < buf.length; i++) {
+              const v = (buf[i] - 128) / 128;
+              sumSq += v * v;
+            }
+            const rms = Math.sqrt(sumSq / buf.length);
+            const now = performance.now();
+            if (rms > SPEECH_THRESHOLD) {
+              if (speechStart == null) speechStart = now;
+              if (!vadSpokeRef.current && now - speechStart >= MIN_SPEECH_MS) {
+                vadSpokeRef.current = true;
+              }
+              vadSilenceStartRef.current = null;
+            } else if (vadSpokeRef.current) {
+              if (vadSilenceStartRef.current == null) vadSilenceStartRef.current = now;
+              else if (now - vadSilenceStartRef.current >= SILENCE_MS) {
+                stopRecording();
+                return;
+              }
+            }
+            vadRafRef.current = requestAnimationFrame(tick);
+          };
+          vadRafRef.current = requestAnimationFrame(tick);
+
+          // Safety cap: never record more than 30s
+          vadMaxTimerRef.current = setTimeout(() => {
+            if (recRef.current && recRef.current.state === "recording") stopRecording();
+          }, 30_000);
+        }
+      } catch {
+        /* VAD is best-effort; manual stop still works */
+      }
     } catch (e) {
       const err = e as DOMException;
       if (err.name === "NotAllowedError") toast.error("Permissão de microfone negada");
@@ -425,6 +519,14 @@ function LiveRoomPage() {
   const changeCallMode = (m: CallMode) => {
     unlockAudio();
     setCallMode(m);
+    if (m === "video") {
+      // Only set self as host if nobody else claimed it yet
+      setVideoHostId((prev) => prev ?? myId);
+    }
+    if (m === "none") {
+      setSharedVideoUrl(null);
+      setVideoHostId(null);
+    }
     if (m !== "none") {
       channelRef.current?.send({
         type: "broadcast",
@@ -433,6 +535,18 @@ function LiveRoomPage() {
       });
     }
   };
+
+  const broadcastDailyUrl = React.useCallback(
+    (url: string) => {
+      setSharedVideoUrl(url);
+      channelRef.current?.send({
+        type: "broadcast",
+        event: "daily-url",
+        payload: { url, from: myId },
+      });
+    },
+    [myId],
+  );
 
   // Join screen
   if (!joined) {
@@ -573,8 +687,15 @@ function LiveRoomPage() {
             myId={myId}
             userName={myName || "Convidado"}
             peers={others.map((o) => o.userId)}
-            onLeave={() => setCallMode("none")}
+            onLeave={() => {
+              setCallMode("none");
+              setSharedVideoUrl(null);
+              setVideoHostId(null);
+            }}
             channel={callChannel as never}
+            isHost={videoHostId === null || videoHostId === myId}
+            sharedVideoUrl={sharedVideoUrl}
+            onVideoUrlReady={broadcastDailyUrl}
           />
         </div>
       )}

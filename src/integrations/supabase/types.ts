@@ -455,6 +455,39 @@ export type Database = {
           },
         ]
       }
+      live_room_messages: {
+        Row: {
+          created_at: string
+          from_lang: string
+          from_name: string
+          from_user_id: string
+          id: string
+          original_text: string
+          per_recipient: Json
+          room_code: string
+        }
+        Insert: {
+          created_at?: string
+          from_lang: string
+          from_name: string
+          from_user_id: string
+          id?: string
+          original_text: string
+          per_recipient?: Json
+          room_code: string
+        }
+        Update: {
+          created_at?: string
+          from_lang?: string
+          from_name?: string
+          from_user_id?: string
+          id?: string
+          original_text?: string
+          per_recipient?: Json
+          room_code?: string
+        }
+        Relationships: []
+      }
       pending_flight_bookings: {
         Row: {
           breakdown: Json
