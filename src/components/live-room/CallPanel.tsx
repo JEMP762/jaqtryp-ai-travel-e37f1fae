@@ -10,9 +10,12 @@ interface Props {
   code: string;
   userName: string;
   onLeave: () => void;
+  isHost: boolean;
+  sharedUrl?: string | null;
+  onUrlReady?: (url: string) => void;
 }
 
-export function DailyVideoCall({ code, userName, onLeave }: Props) {
+export function DailyVideoCall({ code, userName, onLeave, isHost, sharedUrl, onUrlReady }: Props) {
   const ref = React.useRef<HTMLDivElement>(null);
   const callRef = React.useRef<DailyCall | null>(null);
   const [loading, setLoading] = React.useState(true);
@@ -21,22 +24,11 @@ export function DailyVideoCall({ code, userName, onLeave }: Props) {
 
   React.useEffect(() => {
     let disposed = false;
-    (async () => {
+    let fallbackTimer: ReturnType<typeof setTimeout> | null = null;
+
+    const boot = async (url: string) => {
+      if (disposed || !ref.current) return;
       try {
-        const res = await createRoom({ data: { code } });
-        if (disposed) return;
-        if (!res.ok || !res.url) {
-          if (res.reason === "no_api_key") {
-            setError(
-              "Chamadas de vídeo ainda não estão configuradas. O administrador precisa adicionar a chave DAILY_API_KEY.",
-            );
-          } else {
-            setError("Não foi possível criar a sala de vídeo: " + (res.error || "erro"));
-          }
-          setLoading(false);
-          return;
-        }
-        if (!ref.current) return;
         const call = DailyIframe.createFrame(ref.current, {
           iframeStyle: {
             width: "100%",
@@ -48,20 +40,61 @@ export function DailyVideoCall({ code, userName, onLeave }: Props) {
           showFullscreenButton: true,
         });
         callRef.current = call;
-        call.on("left-meeting", () => {
-          onLeave();
+        call.on("left-meeting", () => onLeave());
+        call.on("error", (ev) => {
+          const msg =
+            (ev as { errorMsg?: string; error?: { msg?: string } })?.errorMsg ||
+            (ev as { error?: { msg?: string } })?.error?.msg ||
+            "Erro na chamada de vídeo";
+          setError(msg);
         });
-        await call.join({ url: res.url, userName: userName || "Convidado" });
+        await call.join({ url, userName: userName || "Convidado" });
         setLoading(false);
       } catch (e) {
-        console.error(e);
+        setError("Erro ao entrar na chamada: " + (e as Error).message);
+        setLoading(false);
+      }
+    };
+
+    const createAndBoot = async () => {
+      try {
+        const res = await createRoom({ data: { code } });
+        if (disposed) return;
+        if (!res.ok || !res.url) {
+          if (res.reason === "no_api_key") {
+            setError(
+              "Chamadas de vídeo ainda não estão configuradas. O administrador precisa adicionar a chave DAILY_API_KEY.",
+            );
+          } else {
+            setError(
+              "Não foi possível criar a sala de vídeo: " + (res.error || res.reason || "erro"),
+            );
+          }
+          setLoading(false);
+          return;
+        }
+        onUrlReady?.(res.url);
+        await boot(res.url);
+      } catch (e) {
         setError("Erro ao iniciar chamada: " + (e as Error).message);
         setLoading(false);
       }
-    })();
+    };
+
+    if (sharedUrl) {
+      void boot(sharedUrl);
+    } else if (isHost) {
+      void createAndBoot();
+    } else {
+      // Guest: wait up to 4s for the host's URL; fallback = create it ourselves
+      fallbackTimer = setTimeout(() => {
+        if (!disposed && !callRef.current) void createAndBoot();
+      }, 4000);
+    }
 
     return () => {
       disposed = true;
+      if (fallbackTimer) clearTimeout(fallbackTimer);
       const c = callRef.current;
       callRef.current = null;
       if (c) {
@@ -77,7 +110,39 @@ export function DailyVideoCall({ code, userName, onLeave }: Props) {
         }
       }
     };
-  }, [code, userName, createRoom, onLeave]);
+    // Only boot once per mount; sharedUrl arriving later triggers via fallbackTimer path
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Guest received the URL after mount → boot now
+  React.useEffect(() => {
+    if (!sharedUrl || callRef.current) return;
+    let disposed = false;
+    (async () => {
+      if (!ref.current || disposed) return;
+      try {
+        const call = DailyIframe.createFrame(ref.current, {
+          iframeStyle: { width: "100%", height: "100%", border: "0", borderRadius: "12px" },
+          showLeaveButton: true,
+          showFullscreenButton: true,
+        });
+        callRef.current = call;
+        call.on("left-meeting", () => onLeave());
+        call.on("error", (ev) => {
+          const msg =
+            (ev as { errorMsg?: string })?.errorMsg || "Erro na chamada de vídeo";
+          setError(msg);
+        });
+        await call.join({ url: sharedUrl, userName: userName || "Convidado" });
+        setLoading(false);
+      } catch (e) {
+        setError("Erro ao entrar na chamada: " + (e as Error).message);
+      }
+    })();
+    return () => {
+      disposed = true;
+    };
+  }, [sharedUrl, onLeave, userName]);
 
   if (error) {
     return (
