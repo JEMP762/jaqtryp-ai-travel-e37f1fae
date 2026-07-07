@@ -94,6 +94,8 @@ function LiveRoomPage() {
   const [status, setStatus] = React.useState("");
   const [channelStatus, setChannelStatus] = React.useState<"connecting" | "connected" | "error">("connecting");
   const [callMode, setCallMode] = React.useState<CallMode>("none");
+  const [videoHostId, setVideoHostId] = React.useState<string | null>(null);
+  const [sharedVideoUrl, setSharedVideoUrl] = React.useState<string | null>(null);
   const [audioBlocked, setAudioBlocked] = React.useState(false);
 
   const channelRef = React.useRef<RealtimeChannel | null>(null);
