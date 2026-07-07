@@ -366,12 +366,24 @@ interface CallPanelProps {
   peers: string[];
   onLeave: () => void;
   channel: AudioP2PProps["channel"];
+  isHost?: boolean;
+  sharedVideoUrl?: string | null;
+  onVideoUrlReady?: (url: string) => void;
 }
 
 export function CallPanel(props: CallPanelProps) {
   if (props.mode === "none") return null;
   if (props.mode === "video") {
-    return <DailyVideoCall code={props.code} userName={props.userName} onLeave={props.onLeave} />;
+    return (
+      <DailyVideoCall
+        code={props.code}
+        userName={props.userName}
+        onLeave={props.onLeave}
+        isHost={props.isHost ?? true}
+        sharedUrl={props.sharedVideoUrl ?? null}
+        onUrlReady={props.onVideoUrlReady}
+      />
+    );
   }
   return (
     <AudioCallP2P
