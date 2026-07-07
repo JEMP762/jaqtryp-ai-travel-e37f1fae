@@ -107,6 +107,13 @@ function LiveRoomPage() {
   const participantsRef = React.useRef<Presence[]>([]);
   const seenIdsRef = React.useRef<Set<string>>(new Set());
   const pendingAudioRef = React.useRef<string | null>(null);
+  // VAD (voice activity detection) refs
+  const vadCtxRef = React.useRef<AudioContext | null>(null);
+  const vadAnalyserRef = React.useRef<AnalyserNode | null>(null);
+  const vadRafRef = React.useRef<number | null>(null);
+  const vadSpokeRef = React.useRef(false);
+  const vadSilenceStartRef = React.useRef<number | null>(null);
+  const vadMaxTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
 
   React.useEffect(() => {
     participantsRef.current = participants;
