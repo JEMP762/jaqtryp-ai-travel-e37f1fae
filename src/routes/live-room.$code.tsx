@@ -193,12 +193,20 @@ function LiveRoomPage() {
     channel.on("broadcast", { event: "callmode" }, ({ payload }) => {
       const p = payload as { mode?: CallMode; from?: string };
       if (p?.mode && p.from !== myId) {
+        if (p.mode === "video" && p.from) setVideoHostId(p.from);
         toast.info(`Anfitrião iniciou ${p.mode === "video" ? "vídeo" : "áudio ao vivo"}`, {
           action: {
             label: "Entrar",
             onClick: () => setCallMode(p.mode!),
           },
         });
+      }
+    });
+    channel.on("broadcast", { event: "daily-url" }, ({ payload }) => {
+      const p = payload as { url?: string; from?: string };
+      if (p?.url && p.from !== myId) {
+        setSharedVideoUrl(p.url);
+        if (p.from) setVideoHostId(p.from);
       }
     });
 
