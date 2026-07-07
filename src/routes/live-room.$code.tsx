@@ -687,8 +687,15 @@ function LiveRoomPage() {
             myId={myId}
             userName={myName || "Convidado"}
             peers={others.map((o) => o.userId)}
-            onLeave={() => setCallMode("none")}
+            onLeave={() => {
+              setCallMode("none");
+              setSharedVideoUrl(null);
+              setVideoHostId(null);
+            }}
             channel={callChannel as never}
+            isHost={videoHostId === null || videoHostId === myId}
+            sharedVideoUrl={sharedVideoUrl}
+            onVideoUrlReady={broadcastDailyUrl}
           />
         </div>
       )}
