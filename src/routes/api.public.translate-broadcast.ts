@@ -141,26 +141,27 @@ export const Route = createFileRoute("/api/public/translate-broadcast")({
           // Persist to live_room_messages so all participants receive via realtime
           let messageId: string | null = null;
           if (body.roomCode && body.fromUserId) {
-            try {
-              const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-              const { data: inserted, error: insErr } = await (supabaseAdmin as any)
-                .from("live_room_messages")
-                .insert({
-                  room_code: body.roomCode,
-                  from_user_id: body.fromUserId,
-                  from_name: body.fromName || "Convidado",
-                  from_lang: fromLang,
-                  original_text: text,
-                  per_recipient: perRecipient,
-                })
-                .select("id")
-                .single();
-              if (insErr) console.error("live_room_messages insert failed:", insErr);
-              else messageId = (inserted as { id?: string } | null)?.id ?? null;
-
-            } catch (e) {
-              console.error("live_room_messages insert exception:", e);
+            const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+            const { data: inserted, error: insErr } = await (supabaseAdmin as any)
+              .from("live_room_messages")
+              .insert({
+                room_code: body.roomCode,
+                from_user_id: body.fromUserId,
+                from_name: body.fromName || "Convidado",
+                from_lang: fromLang,
+                original_text: text,
+                per_recipient: perRecipient,
+              })
+              .select("id")
+              .single();
+            if (insErr) {
+              console.error("live_room_messages insert failed:", insErr);
+              return new Response(
+                JSON.stringify({ error: `DB insert failed: ${insErr.message}` }),
+                { status: 500, headers: { "content-type": "application/json" } },
+              );
             }
+            messageId = (inserted as { id?: string } | null)?.id ?? null;
           }
 
           return new Response(
