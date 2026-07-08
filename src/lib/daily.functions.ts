@@ -54,15 +54,22 @@ export const createDailyRoom = createServerFn({ method: "POST" })
         body: JSON.stringify(body),
       });
 
-      // Room may already exist — fetch it
-      if (resp.status === 409) {
+      // Room may already exist — Daily returns 409 in some cases and 400
+      // (invalid-request-error "a room named ... already exists") in others.
+      let alreadyExists = resp.status === 409;
+      let errText = "";
+      if (!alreadyExists && resp.status === 400) {
+        errText = await resp.clone().text();
+        if (/already exists/i.test(errText)) alreadyExists = true;
+      }
+      if (alreadyExists) {
         resp = await fetch(`https://api.daily.co/v1/rooms/jaq-${data.code}`, {
           headers: { Authorization: `Bearer ${apiKey}` },
         });
       }
 
       if (!resp.ok) {
-        const err = await resp.text();
+        const err = errText || (await resp.text());
         console.error("Daily createRoom failed:", resp.status, err);
         return { ok: false, reason: "provider_error", error: `${resp.status}` };
       }

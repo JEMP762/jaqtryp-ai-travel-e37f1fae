@@ -152,8 +152,10 @@ export const searchStays = createServerFn({ method: "POST" })
       return { results, location: suggestion, unavailable: false };
     } catch (e: any) {
       const status = e?.status;
-      const unavailable =
-        status === 401 || status === 403 || status === 404 || status === 400;
+      // 400 = user input error (invalid dates, unsupported location, etc.) — do NOT
+      // poison the shared provider cache. Only true availability signals should flip
+      // every user into the Booking.com fallback.
+      const unavailable = status === 401 || status === 403 || status === 404;
       if (unavailable) {
         providerStatusCache = {
           unavailable: true,
@@ -165,6 +167,14 @@ export const searchStays = createServerFn({ method: "POST" })
           location: null,
           unavailable: true,
           reason: "duffel_stays_not_enabled",
+        };
+      }
+      if (status === 400) {
+        return {
+          results: [],
+          location: null,
+          unavailable: false,
+          reason: "invalid_search_parameters",
         };
       }
       throw e;
