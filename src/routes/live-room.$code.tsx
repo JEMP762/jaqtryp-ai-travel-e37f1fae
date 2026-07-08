@@ -37,7 +37,7 @@ function langFlag(c: string) {
   return LANGS.find((l) => l.code === c)?.flag ?? "🌐";
 }
 
-type Presence = { userId: string; lang: string; name: string };
+type Presence = { userId: string; lang: string; name: string; liveOn?: boolean };
 type PerRecipientMap = Record<string, { text: string; audio?: string; lang: string }>;
 type MessageRow = {
   id: string;
@@ -281,16 +281,9 @@ function LiveRoomPage() {
         },
       ]);
       if (!isMine && (audio || translated)) {
-        const rec = recRef.current;
-        if (rec && rec.state !== "inactive") {
-          discardNextRecordingRef.current = true;
-          try {
-            rec.requestData();
-            rec.stop();
-          } catch {
-            /* ignore */
-          }
-        }
+        // Only pause playback when a new message arrives; DO NOT stop the
+        // receiver's own recording — otherwise their speech gets discarded
+        // whenever they talk at the same time as the sender.
         if (audio) playBase64(audio);
         else void playTranslatedText(translated, forMe?.lang ?? myLang);
       }
@@ -372,6 +365,14 @@ function LiveRoomPage() {
     channel.on("broadcast", { event: "translated-message" }, ({ payload }) => {
       handleIncomingRow(payload as MessageRow);
     });
+    channel.on("broadcast", { event: "nudge-live" }, ({ payload }) => {
+      const p = payload as { from?: string; fromName?: string; to?: string };
+      if (p?.to && p.to !== myId) return;
+      if (p?.from === myId) return;
+      toast.info(`${p?.fromName || "Anfitrião"} pediu para você ligar a tradução ao vivo`, {
+        duration: 8000,
+      });
+    });
 
     channel.on(
       "postgres_changes",
@@ -392,7 +393,7 @@ function LiveRoomPage() {
     channel.subscribe(async (st) => {
       if (st === "SUBSCRIBED") {
         setChannelStatus("connected");
-        await channel.track({ userId: myId, lang: myLang, name: myName || "Convidado" });
+        await channel.track({ userId: myId, lang: myLang, name: myName || "Convidado", liveOn: liveTranslateOnRef.current });
       } else if (st === "CHANNEL_ERROR" || st === "TIMED_OUT") {
         setChannelStatus("error");
       } else {
@@ -408,11 +409,23 @@ function LiveRoomPage() {
     };
   }, [joined, code, myId, myLang, myName, applyRoomState, handleIncomingRow]);
 
-  // Update presence when language/name changes
+  // Update presence when language/name/liveOn changes
   React.useEffect(() => {
     if (!joined || !channelRef.current) return;
-    channelRef.current.track({ userId: myId, lang: myLang, name: myName || "Convidado" });
-  }, [joined, myId, myLang, myName]);
+    channelRef.current.track({ userId: myId, lang: myLang, name: myName || "Convidado", liveOn: liveTranslateOn });
+  }, [joined, myId, myLang, myName, liveTranslateOn]);
+
+  const nudgePeer = React.useCallback(
+    (peerId: string) => {
+      channelRef.current?.send({
+        type: "broadcast",
+        event: "nudge-live",
+        payload: { from: myId, fromName: myName || "Anfitrião", to: peerId },
+      });
+      toast.success("Lembrete enviado");
+    },
+    [myId, myName],
+  );
 
   const inviteUrl = typeof window !== "undefined" ? `${window.location.origin}/live-room/${code}` : "";
 
@@ -882,25 +895,60 @@ function LiveRoomPage() {
           {participants.length === 0 ? (
             <span className="text-muted-foreground">Conectando…</span>
           ) : (
-            participants.map((p) => (
-              <span
-                key={p.userId}
-                className={cn(
-                  "rounded-full border px-2 py-0.5",
-                  p.userId === myId
-                    ? "border-primary bg-primary/15 text-primary"
-                    : "border-border bg-background text-muted-foreground",
-                )}
-              >
-                {langFlag(p.lang)} {p.name}
-                {p.userId === myId ? " (você)" : ""}
-              </span>
-            ))
+            participants.map((p) => {
+              const isMe = p.userId === myId;
+              const live = isMe ? liveTranslateOn : !!p.liveOn;
+              return (
+                <span
+                  key={p.userId}
+                  className={cn(
+                    "flex items-center gap-1 rounded-full border px-2 py-0.5",
+                    isMe
+                      ? "border-primary bg-primary/15 text-primary"
+                      : "border-border bg-background text-muted-foreground",
+                  )}
+                >
+                  <span>
+                    {langFlag(p.lang)} {p.name}
+                    {isMe ? " (você)" : ""}
+                  </span>
+                  <span
+                    title={live ? "Tradução ao vivo LIGADA" : "Tradução ao vivo DESLIGADA"}
+                    className={cn(
+                      "ml-1 rounded px-1 text-[10px] font-semibold",
+                      live
+                        ? "bg-emerald-500/20 text-emerald-500"
+                        : "bg-muted text-muted-foreground",
+                    )}
+                  >
+                    {live ? "🎙 ON" : "🔇 OFF"}
+                  </span>
+                  {!isMe && !live && (
+                    <button
+                      onClick={() => nudgePeer(p.userId)}
+                      className="ml-1 rounded bg-amber-500/20 px-1 text-[10px] font-semibold text-amber-600 hover:bg-amber-500/30"
+                    >
+                      Pedir p/ ligar
+                    </button>
+                  )}
+                </span>
+              );
+            })
           )}
         </div>
         {others.length === 0 && (
           <div className="mt-2 text-xs text-amber-500">
             Aguardando alguém entrar com o link…
+          </div>
+        )}
+        {others.length > 0 && others.some((p) => !p.liveOn) && (
+          <div className="mt-2 rounded-lg border border-amber-500/40 bg-amber-500/10 p-2 text-xs text-amber-600">
+            ⚠️ {others.filter((p) => !p.liveOn).map((p) => p.name).join(", ")} está sem tradução ativa. Peça para tocar em <b>“Ligar tradução ao vivo”</b> para você ouvir a fala traduzida.
+          </div>
+        )}
+        {!liveTranslateOn && others.length > 0 && (
+          <div className="mt-2 rounded-lg border border-primary/40 bg-primary/10 p-2 text-xs text-primary">
+            👉 Toque em <b>“Ligar tradução ao vivo”</b> abaixo para começar a enviar sua fala traduzida.
           </div>
         )}
         <div className="mt-3 flex flex-col gap-2 sm:flex-row">
@@ -991,38 +1039,51 @@ function LiveRoomPage() {
         ))}
       </div>
 
-      {/* Mic */}
+      {/* Mic controls */}
       <div className="border-t border-border pt-4">
         {status && (
           <div className="mb-2 text-center text-xs text-muted-foreground">{status}</div>
         )}
-        <div className="flex justify-center">
+        <div className="flex flex-col items-stretch gap-2 sm:flex-row sm:justify-center">
           <Button
             size="lg"
             disabled={!liveTranslateOn && !canRecord}
             onClick={liveTranslateOn ? stopLiveTranslation : startLiveTranslation}
             className={cn(
-              "h-16 w-16 rounded-full shadow-glow",
+              "h-14 flex-1 rounded-xl px-6 text-base font-semibold shadow-glow sm:flex-none",
               liveTranslateOn ? "bg-red-500 hover:bg-red-600" : "bg-gradient-primary",
             )}
           >
             {busy ? (
-              <Loader2 className="h-6 w-6 animate-spin" />
+              <Loader2 className="mr-2 h-5 w-5 animate-spin" />
             ) : liveTranslateOn ? (
-              <Square className="h-6 w-6" />
+              <Square className="mr-2 h-5 w-5" />
             ) : (
-              <Mic className="h-6 w-6" />
+              <Mic className="mr-2 h-5 w-5" />
             )}
+            {liveTranslateOn ? "Desligar tradução ao vivo" : "🎙 Ligar tradução ao vivo"}
           </Button>
+          {liveTranslateOn && (
+            <Button
+              size="lg"
+              variant="outline"
+              disabled={!listening || busy}
+              onClick={stopRecording}
+              className="h-14 rounded-xl px-4 text-sm"
+              title="Encerra a gravação atual e envia agora"
+            >
+              📨 Enviar agora
+            </Button>
+          )}
         </div>
         <div className="mt-2 text-center text-xs text-muted-foreground">
           {!canRecord
             ? "Aguardando convidado…"
             : liveTranslateOn
               ? listening
-                ? "Traduzindo ao vivo — toque para desligar"
-                : "Tradução ao vivo ligada"
-              : "Toque para ligar tradução ao vivo"}
+                ? "Ouvindo — pare de falar para enviar, ou toque em Enviar agora"
+                : "Tradução ao vivo ligada — pode falar"
+              : "Toque em “Ligar tradução ao vivo” para começar"}
         </div>
       </div>
     </div>
