@@ -488,6 +488,30 @@ export type Database = {
         }
         Relationships: []
       }
+      live_room_state: {
+        Row: {
+          call_mode: string
+          daily_url: string | null
+          room_code: string
+          updated_at: string
+          video_host_id: string | null
+        }
+        Insert: {
+          call_mode?: string
+          daily_url?: string | null
+          room_code: string
+          updated_at?: string
+          video_host_id?: string | null
+        }
+        Update: {
+          call_mode?: string
+          daily_url?: string | null
+          room_code?: string
+          updated_at?: string
+          video_host_id?: string | null
+        }
+        Relationships: []
+      }
       pending_flight_bookings: {
         Row: {
           breakdown: Json
