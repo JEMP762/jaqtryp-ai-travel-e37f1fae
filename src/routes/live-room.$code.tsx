@@ -895,25 +895,60 @@ function LiveRoomPage() {
           {participants.length === 0 ? (
             <span className="text-muted-foreground">Conectando…</span>
           ) : (
-            participants.map((p) => (
-              <span
-                key={p.userId}
-                className={cn(
-                  "rounded-full border px-2 py-0.5",
-                  p.userId === myId
-                    ? "border-primary bg-primary/15 text-primary"
-                    : "border-border bg-background text-muted-foreground",
-                )}
-              >
-                {langFlag(p.lang)} {p.name}
-                {p.userId === myId ? " (você)" : ""}
-              </span>
-            ))
+            participants.map((p) => {
+              const isMe = p.userId === myId;
+              const live = isMe ? liveTranslateOn : !!p.liveOn;
+              return (
+                <span
+                  key={p.userId}
+                  className={cn(
+                    "flex items-center gap-1 rounded-full border px-2 py-0.5",
+                    isMe
+                      ? "border-primary bg-primary/15 text-primary"
+                      : "border-border bg-background text-muted-foreground",
+                  )}
+                >
+                  <span>
+                    {langFlag(p.lang)} {p.name}
+                    {isMe ? " (você)" : ""}
+                  </span>
+                  <span
+                    title={live ? "Tradução ao vivo LIGADA" : "Tradução ao vivo DESLIGADA"}
+                    className={cn(
+                      "ml-1 rounded px-1 text-[10px] font-semibold",
+                      live
+                        ? "bg-emerald-500/20 text-emerald-500"
+                        : "bg-muted text-muted-foreground",
+                    )}
+                  >
+                    {live ? "🎙 ON" : "🔇 OFF"}
+                  </span>
+                  {!isMe && !live && (
+                    <button
+                      onClick={() => nudgePeer(p.userId)}
+                      className="ml-1 rounded bg-amber-500/20 px-1 text-[10px] font-semibold text-amber-600 hover:bg-amber-500/30"
+                    >
+                      Pedir p/ ligar
+                    </button>
+                  )}
+                </span>
+              );
+            })
           )}
         </div>
         {others.length === 0 && (
           <div className="mt-2 text-xs text-amber-500">
             Aguardando alguém entrar com o link…
+          </div>
+        )}
+        {others.length > 0 && others.some((p) => !p.liveOn) && (
+          <div className="mt-2 rounded-lg border border-amber-500/40 bg-amber-500/10 p-2 text-xs text-amber-600">
+            ⚠️ {others.filter((p) => !p.liveOn).map((p) => p.name).join(", ")} está sem tradução ativa. Peça para tocar em <b>“Ligar tradução ao vivo”</b> para você ouvir a fala traduzida.
+          </div>
+        )}
+        {!liveTranslateOn && others.length > 0 && (
+          <div className="mt-2 rounded-lg border border-primary/40 bg-primary/10 p-2 text-xs text-primary">
+            👉 Toque em <b>“Ligar tradução ao vivo”</b> abaixo para começar a enviar sua fala traduzida.
           </div>
         )}
         <div className="mt-3 flex flex-col gap-2 sm:flex-row">
