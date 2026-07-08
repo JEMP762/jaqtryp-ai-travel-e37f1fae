@@ -60,15 +60,23 @@ type RenderedMessage = {
   ts: number;
   mine: boolean;
 };
+type RoomStateRow = {
+  room_code: string;
+  call_mode: CallMode;
+  video_host_id: string | null;
+  daily_url: string | null;
+  updated_at?: string;
+};
 
 function getOrCreateUserId() {
   if (typeof window === "undefined") return "anon";
   const k = "jaq-live-room-uid";
-  let id = sessionStorage.getItem(k);
+  let id = localStorage.getItem(k) || sessionStorage.getItem(k);
   if (!id) {
     id = crypto.randomUUID();
-    sessionStorage.setItem(k, id);
   }
+  localStorage.setItem(k, id);
+  sessionStorage.setItem(k, id);
   return id;
 }
 function getOrCreateName() {
@@ -97,6 +105,7 @@ function LiveRoomPage() {
   const [videoHostId, setVideoHostId] = React.useState<string | null>(null);
   const [sharedVideoUrl, setSharedVideoUrl] = React.useState<string | null>(null);
   const [audioBlocked, setAudioBlocked] = React.useState(false);
+  const [liveTranslateOn, setLiveTranslateOn] = React.useState(false);
 
   const channelRef = React.useRef<RealtimeChannel | null>(null);
   const signalListenersRef = React.useRef<Set<(p: unknown) => void>>(new Set());
@@ -116,10 +125,17 @@ function LiveRoomPage() {
   const vadSpokeRef = React.useRef(false);
   const vadSilenceStartRef = React.useRef<number | null>(null);
   const vadMaxTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
+  const liveTranslateOnRef = React.useRef(false);
+  const audioPlayingRef = React.useRef(false);
+  const restartTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
 
   React.useEffect(() => {
     participantsRef.current = participants;
   }, [participants]);
+
+  React.useEffect(() => {
+    liveTranslateOnRef.current = liveTranslateOn;
+  }, [liveTranslateOn]);
 
   React.useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
@@ -151,14 +167,95 @@ function LiveRoomPage() {
     }
     audioRef.current.muted = false;
     audioRef.current.src = `data:audio/mpeg;base64,${b64}`;
+    audioPlayingRef.current = true;
+    audioRef.current.onended = () => {
+      audioPlayingRef.current = false;
+    };
+    audioRef.current.onerror = () => {
+      audioPlayingRef.current = false;
+    };
     audioRef.current.play().then(() => {
       setAudioBlocked(false);
       pendingAudioRef.current = null;
     }).catch(() => {
+      audioPlayingRef.current = false;
       pendingAudioRef.current = b64;
       setAudioBlocked(true);
     });
   }, []);
+
+  const persistRoomState = React.useCallback(
+    async (state: Partial<RoomStateRow>) => {
+      try {
+        const payload = {
+          room_code: code,
+          call_mode: state.call_mode ?? callMode,
+          video_host_id: state.video_host_id === undefined ? videoHostId : state.video_host_id,
+          daily_url: state.daily_url === undefined ? sharedVideoUrl : state.daily_url,
+        };
+        await (supabase as any)
+          .from("live_room_state")
+          .upsert(payload, { onConflict: "room_code" });
+      } catch {
+        /* best effort */
+      }
+    },
+    [callMode, code, sharedVideoUrl, videoHostId],
+  );
+
+  const applyRoomState = React.useCallback(
+    (row: RoomStateRow) => {
+      if (!row || row.room_code !== code) return;
+      const nextMode = row.call_mode || "none";
+      setCallMode(nextMode);
+      setVideoHostId(row.video_host_id ?? null);
+      setSharedVideoUrl(row.daily_url ?? null);
+    },
+    [code],
+  );
+
+  const handleIncomingRow = React.useCallback(
+    (row: MessageRow) => {
+      if (!row || row.room_code !== code || seenIdsRef.current.has(row.id)) return;
+      seenIdsRef.current.add(row.id);
+      const forMe = row.per_recipient?.[myId];
+      const isMine = row.from_user_id === myId;
+      const translated = forMe?.text ?? row.original_text;
+      const audio = forMe?.audio;
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: row.id,
+          fromUserId: row.from_user_id,
+          fromName: row.from_name,
+          fromLang: row.from_lang,
+          originalText: row.original_text,
+          translatedText: translated,
+          audio,
+          ts: new Date(row.created_at).getTime(),
+          mine: isMine,
+        },
+      ]);
+      if (!isMine && audio) playBase64(audio);
+    },
+    [code, myId, playBase64],
+  );
+
+  React.useEffect(() => {
+    if (!joined) return;
+    (async () => {
+      try {
+        const { data } = await (supabase as any)
+          .from("live_room_state")
+          .select("room_code, call_mode, video_host_id, daily_url, updated_at")
+          .eq("room_code", code)
+          .maybeSingle();
+        if (data) applyRoomState(data as RoomStateRow);
+      } catch {
+        /* best effort */
+      }
+    })();
+  }, [applyRoomState, code, joined]);
 
   const manualPlayPending = React.useCallback(() => {
     const b64 = pendingAudioRef.current;
@@ -209,6 +306,15 @@ function LiveRoomPage() {
         if (p.from) setVideoHostId(p.from);
       }
     });
+    channel.on("broadcast", { event: "translated-message" }, ({ payload }) => {
+      handleIncomingRow(payload as MessageRow);
+    });
+
+    channel.on(
+      "postgres_changes",
+      { event: "*", schema: "public", table: "live_room_state", filter: `room_code=eq.${code}` },
+      (payload) => applyRoomState(payload.new as RoomStateRow),
+    );
 
     // Postgres_changes on live_room_messages — reliable transport
     channel.on(
@@ -216,28 +322,7 @@ function LiveRoomPage() {
       { event: "INSERT", schema: "public", table: "live_room_messages", filter: `room_code=eq.${code}` },
       (payload) => {
         const row = payload.new as MessageRow;
-        if (!row || seenIdsRef.current.has(row.id)) return;
-        seenIdsRef.current.add(row.id);
-        const forMe = row.per_recipient?.[myId];
-        const isMine = row.from_user_id === myId;
-        const translated = forMe?.text ?? row.original_text;
-        const audio = forMe?.audio;
-        setMessages((prev) => [
-          ...prev,
-          {
-            id: row.id,
-            fromUserId: row.from_user_id,
-            fromName: row.from_name,
-            fromLang: row.from_lang,
-            originalText: row.original_text,
-            translatedText: translated,
-            audio,
-            ts: new Date(row.created_at).getTime(),
-            mine: isMine,
-          },
-        ]);
-        // Only auto-play audio from others (user opted-out of hearing own voice)
-        if (!isMine && audio) playBase64(audio);
+        handleIncomingRow(row);
       },
     );
 
@@ -258,7 +343,7 @@ function LiveRoomPage() {
       channelRef.current = null;
       seenIdsRef.current.clear();
     };
-  }, [joined, code, myId, myLang, myName, playBase64]);
+  }, [joined, code, myId, myLang, myName, applyRoomState, handleIncomingRow]);
 
   // Update presence when language/name changes
   React.useEffect(() => {
