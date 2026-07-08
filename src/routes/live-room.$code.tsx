@@ -690,14 +690,22 @@ function LiveRoomPage() {
   const changeCallMode = (m: CallMode) => {
     unlockAudio();
     setCallMode(m);
+    let nextHost = videoHostId;
     if (m === "video") {
       // Only set self as host if nobody else claimed it yet
-      setVideoHostId((prev) => prev ?? myId);
+      nextHost = videoHostId ?? myId;
+      setVideoHostId(nextHost);
     }
     if (m === "none") {
+      nextHost = null;
       setSharedVideoUrl(null);
       setVideoHostId(null);
     }
+    void persistRoomState({
+      call_mode: m,
+      video_host_id: nextHost,
+      daily_url: m === "none" ? null : sharedVideoUrl,
+    });
     if (m !== "none") {
       channelRef.current?.send({
         type: "broadcast",
@@ -710,13 +718,14 @@ function LiveRoomPage() {
   const broadcastDailyUrl = React.useCallback(
     (url: string) => {
       setSharedVideoUrl(url);
+      void persistRoomState({ call_mode: "video", video_host_id: videoHostId ?? myId, daily_url: url });
       channelRef.current?.send({
         type: "broadcast",
         event: "daily-url",
         payload: { url, from: myId },
       });
     },
-    [myId],
+    [myId, persistRoomState, videoHostId],
   );
 
   // Join screen
