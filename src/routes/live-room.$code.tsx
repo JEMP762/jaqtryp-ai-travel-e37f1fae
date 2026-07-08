@@ -128,6 +128,7 @@ function LiveRoomPage() {
   const liveTranslateOnRef = React.useRef(false);
   const audioPlayingRef = React.useRef(false);
   const restartTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
+  const discardNextRecordingRef = React.useRef(false);
 
   React.useEffect(() => {
     participantsRef.current = participants;
@@ -236,7 +237,19 @@ function LiveRoomPage() {
           mine: isMine,
         },
       ]);
-      if (!isMine && audio) playBase64(audio);
+      if (!isMine && audio) {
+        const rec = recRef.current;
+        if (rec && rec.state !== "inactive") {
+          discardNextRecordingRef.current = true;
+          try {
+            rec.requestData();
+            rec.stop();
+          } catch {
+            /* ignore */
+          }
+        }
+        playBase64(audio);
+      }
     },
     [code, myId, playBase64],
   );
@@ -377,10 +390,10 @@ function LiveRoomPage() {
     }
   };
 
-  const stopTracks = () => {
+  const stopTracks = React.useCallback(() => {
     streamRef.current?.getTracks().forEach((t) => t.stop());
     streamRef.current = null;
-  };
+  }, []);
 
   const stopVad = React.useCallback(() => {
     if (vadRafRef.current != null) {
@@ -403,6 +416,28 @@ function LiveRoomPage() {
 
   const others = participants.filter((p) => p.userId !== myId);
   const canRecord = others.length > 0;
+
+  function clearRestartTimer() {
+    if (restartTimerRef.current) {
+      clearTimeout(restartTimerRef.current);
+      restartTimerRef.current = null;
+    }
+  }
+
+  function scheduleNextListening(delay = 650) {
+    clearRestartTimer();
+    if (!liveTranslateOnRef.current) return;
+    restartTimerRef.current = setTimeout(() => {
+      restartTimerRef.current = null;
+      if (!liveTranslateOnRef.current) return;
+      if (audioPlayingRef.current) {
+        scheduleNextListening(500);
+        return;
+      }
+      if (participantsRef.current.filter((p) => p.userId !== myId).length === 0) return;
+      if (!recRef.current || recRef.current.state === "inactive") void startRecording();
+    }, delay);
+  }
 
   const startRecording = async () => {
     unlockAudio();
@@ -443,8 +478,15 @@ function LiveRoomPage() {
         const blob = new Blob(chunksRef.current, { type: blobType });
         chunksRef.current = [];
         recRef.current = null;
+        if (discardNextRecordingRef.current) {
+          discardNextRecordingRef.current = false;
+          setStatus(liveTranslateOnRef.current ? "Ouvindo tradução recebida…" : "");
+          scheduleNextListening(900);
+          return;
+        }
         if (blob.size < 1200) {
           setStatus("");
+          scheduleNextListening();
           return;
         }
         await processAudio(blob, blobType);
@@ -528,6 +570,33 @@ function LiveRoomPage() {
     }
   };
 
+  const stopLiveTranslation = () => {
+    liveTranslateOnRef.current = false;
+    setLiveTranslateOn(false);
+    clearRestartTimer();
+    setStatus("");
+    if (recRef.current && recRef.current.state !== "inactive") {
+      discardNextRecordingRef.current = true;
+      stopRecording();
+    } else {
+      stopVad();
+      stopTracks();
+      setListening(false);
+    }
+  };
+
+  const startLiveTranslation = () => {
+    unlockAudio();
+    if (!canRecord) {
+      toast.info("Aguardando alguém entrar com o link…");
+      return;
+    }
+    liveTranslateOnRef.current = true;
+    setLiveTranslateOn(true);
+    setStatus("Tradução ao vivo ligada…");
+    scheduleNextListening(50);
+  };
+
   const processAudio = async (blob: Blob, blobType: string) => {
     setBusy(true);
     setStatus("Transcrevendo…");
@@ -574,14 +643,31 @@ function LiveRoomPage() {
         const e = await tResp.text();
         throw new Error(`Translate: ${e.slice(0, 120)}`);
       }
-      // Message will arrive via postgres_changes for all participants (including sender)
-      await tResp.json();
+      const result = (await tResp.json()) as {
+        originalText?: string;
+        fromLang?: string;
+        perRecipient?: PerRecipientMap;
+        messageId?: string | null;
+      };
+      const row: MessageRow = {
+        id: result.messageId || crypto.randomUUID(),
+        room_code: code,
+        from_user_id: myId,
+        from_name: myName || "Eu",
+        from_lang: result.fromLang || myLang,
+        original_text: result.originalText || original,
+        per_recipient: result.perRecipient || {},
+        created_at: new Date().toISOString(),
+      };
+      handleIncomingRow(row);
+      channelRef.current?.send({ type: "broadcast", event: "translated-message", payload: row });
       setStatus("");
     } catch (e) {
       toast.error((e as Error).message);
       setStatus("");
     } finally {
       setBusy(false);
+      scheduleNextListening();
     }
   };
 
