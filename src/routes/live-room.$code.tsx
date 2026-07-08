@@ -118,6 +118,7 @@ function LiveRoomPage() {
   const participantsRef = React.useRef<Presence[]>([]);
   const seenIdsRef = React.useRef<Set<string>>(new Set());
   const pendingAudioRef = React.useRef<string | null>(null);
+  const pendingTextAudioRef = React.useRef<{ text: string; lang: string } | null>(null);
   // VAD (voice activity detection) refs
   const vadCtxRef = React.useRef<AudioContext | null>(null);
   const vadAnalyserRef = React.useRef<AnalyserNode | null>(null);
@@ -214,8 +215,10 @@ function LiveRoomPage() {
       await audioRef.current.play();
       setAudioBlocked(false);
       pendingAudioRef.current = null;
+      pendingTextAudioRef.current = null;
     } catch {
       audioPlayingRef.current = false;
+      pendingTextAudioRef.current = { text: clean, lang };
       setAudioBlocked(true);
     } finally {
       if (objectUrl) {
@@ -313,13 +316,19 @@ function LiveRoomPage() {
 
   const manualPlayPending = React.useCallback(() => {
     const b64 = pendingAudioRef.current;
+    const pendingText = pendingTextAudioRef.current;
     if (!b64) {
-      setAudioBlocked(false);
+      if (pendingText) {
+        unlockAudio();
+        setTimeout(() => void playTranslatedText(pendingText.text, pendingText.lang), 50);
+      } else {
+        setAudioBlocked(false);
+      }
       return;
     }
     unlockAudio();
     setTimeout(() => playBase64(b64), 50);
-  }, [playBase64, unlockAudio]);
+  }, [playBase64, playTranslatedText, unlockAudio]);
 
   // Join the realtime channel
   React.useEffect(() => {
