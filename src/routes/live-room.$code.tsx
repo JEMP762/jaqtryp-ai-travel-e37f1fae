@@ -185,6 +185,46 @@ function LiveRoomPage() {
     });
   }, []);
 
+  const playTranslatedText = React.useCallback(async (text: string, lang: string) => {
+    const clean = text.trim().slice(0, 220);
+    if (!clean) return;
+    if (!audioRef.current) {
+      audioRef.current = new Audio();
+      audioRef.current.setAttribute("playsinline", "true");
+    }
+    let objectUrl: string | null = null;
+    try {
+      audioPlayingRef.current = true;
+      const resp = await fetch(
+        `/api/public/tts?lang=${encodeURIComponent(lang)}&text=${encodeURIComponent(clean)}`,
+        { credentials: "same-origin" },
+      );
+      if (!resp.ok) throw new Error(`TTS ${resp.status}`);
+      const blob = await resp.blob();
+      if (!blob.size) throw new Error("TTS vazio");
+      objectUrl = URL.createObjectURL(blob);
+      audioRef.current.muted = false;
+      audioRef.current.src = objectUrl;
+      audioRef.current.onended = () => {
+        audioPlayingRef.current = false;
+      };
+      audioRef.current.onerror = () => {
+        audioPlayingRef.current = false;
+      };
+      await audioRef.current.play();
+      setAudioBlocked(false);
+      pendingAudioRef.current = null;
+    } catch {
+      audioPlayingRef.current = false;
+      setAudioBlocked(true);
+    } finally {
+      if (objectUrl) {
+        const urlToRevoke = objectUrl;
+        window.setTimeout(() => URL.revokeObjectURL(urlToRevoke), 5000);
+      }
+    }
+  }, []);
+
   const persistRoomState = React.useCallback(
     async (state: Partial<RoomStateRow>) => {
       try {
@@ -237,7 +277,7 @@ function LiveRoomPage() {
           mine: isMine,
         },
       ]);
-      if (!isMine && audio) {
+      if (!isMine && (audio || translated)) {
         const rec = recRef.current;
         if (rec && rec.state !== "inactive") {
           discardNextRecordingRef.current = true;
@@ -248,10 +288,11 @@ function LiveRoomPage() {
             /* ignore */
           }
         }
-        playBase64(audio);
+        if (audio) playBase64(audio);
+        else void playTranslatedText(translated, forMe?.lang ?? myLang);
       }
     },
-    [code, myId, playBase64],
+    [code, myId, myLang, playBase64, playTranslatedText],
   );
 
   React.useEffect(() => {
