@@ -166,7 +166,15 @@ export function DailyVideoCall({ code, userName, onLeave, isHost, sharedUrl, onU
         </div>
         <p className="text-muted-foreground">{error}</p>
         <div className="mt-3 flex gap-2">
-          <Button size="sm" variant="outline" onClick={() => setRetryNonce((n) => n + 1)}>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => {
+              setError(null);
+              setLoading(true);
+              setRetryNonce((n) => n + 1);
+            }}
+          >
             Tentar novamente
           </Button>
           <Button size="sm" variant="outline" onClick={onLeave}>
