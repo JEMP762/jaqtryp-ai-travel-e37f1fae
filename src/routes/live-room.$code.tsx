@@ -597,6 +597,20 @@ function LiveRoomPage() {
     scheduleNextListening(50);
   };
 
+  React.useEffect(() => {
+    if (!liveTranslateOn) return;
+    if (!canRecord) {
+      if (recRef.current && recRef.current.state !== "inactive") {
+        discardNextRecordingRef.current = true;
+        stopRecording();
+      }
+      setStatus("Aguardando convidado…");
+      return;
+    }
+    if (!listening && !busy) scheduleNextListening(250);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [liveTranslateOn, canRecord, listening, busy]);
+
   const processAudio = async (blob: Blob, blobType: string) => {
     setBusy(true);
     setStatus("Transcrevendo…");
@@ -937,16 +951,16 @@ function LiveRoomPage() {
         <div className="flex justify-center">
           <Button
             size="lg"
-            disabled={busy || !canRecord}
-            onClick={listening ? stopRecording : startRecording}
+            disabled={!liveTranslateOn && !canRecord}
+            onClick={liveTranslateOn ? stopLiveTranslation : startLiveTranslation}
             className={cn(
               "h-16 w-16 rounded-full shadow-glow",
-              listening ? "bg-red-500 hover:bg-red-600" : "bg-gradient-primary",
+              liveTranslateOn ? "bg-red-500 hover:bg-red-600" : "bg-gradient-primary",
             )}
           >
             {busy ? (
               <Loader2 className="h-6 w-6 animate-spin" />
-            ) : listening ? (
+            ) : liveTranslateOn ? (
               <Square className="h-6 w-6" />
             ) : (
               <Mic className="h-6 w-6" />
@@ -954,7 +968,13 @@ function LiveRoomPage() {
           </Button>
         </div>
         <div className="mt-2 text-center text-xs text-muted-foreground">
-          {!canRecord ? "Aguardando convidado…" : listening ? "Toque para parar" : "Toque para falar"}
+          {!canRecord
+            ? "Aguardando convidado…"
+            : liveTranslateOn
+              ? listening
+                ? "Traduzindo ao vivo — toque para desligar"
+                : "Tradução ao vivo ligada"
+              : "Toque para ligar tradução ao vivo"}
         </div>
       </div>
     </div>
