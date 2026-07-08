@@ -1,8 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
 
-// Multilingual ElevenLabs voice (works across the languages we support).
-const DEFAULT_VOICE_ID = "EXAVITQu4vr4xnSDxMaL"; // Sarah
-
 const LANG_NAME: Record<string, string> = {
   "pt-BR": "Portuguese (Brazil)",
   "en-US": "English (US)",
@@ -57,35 +54,13 @@ async function translate(text: string, fromLang: string, toLang: string, apiKey:
   return (data.choices?.[0]?.message?.content || "").trim();
 }
 
-async function tts(text: string, voiceId: string, apiKey: string): Promise<string> {
-  const resp = await fetch(
-    `https://api.elevenlabs.io/v1/text-to-speech/${voiceId}?output_format=mp3_44100_128`,
-    {
-      method: "POST",
-      headers: { "xi-api-key": apiKey, "Content-Type": "application/json" },
-      body: JSON.stringify({
-        text,
-        model_id: "eleven_multilingual_v2",
-        voice_settings: { stability: 0.45, similarity_boost: 0.8, style: 0.2, use_speaker_boost: true },
-      }),
-    },
-  );
-  if (!resp.ok) {
-    const err = await resp.text();
-    throw new Error(`TTS failed ${resp.status}: ${err.slice(0, 200)}`);
-  }
-  const buf = await resp.arrayBuffer();
-  return Buffer.from(buf).toString("base64");
-}
-
 export const Route = createFileRoute("/api/public/translate-broadcast")({
   server: {
     handlers: {
       POST: async ({ request }) => {
         const aiKey = process.env.LOVABLE_API_KEY;
-        const elKey = process.env.ELEVENLABS_API_KEY;
-        if (!aiKey || !elKey) {
-          return new Response(JSON.stringify({ error: "AI/ElevenLabs not configured" }), {
+        if (!aiKey) {
+          return new Response(JSON.stringify({ error: "AI not configured" }), {
             status: 500,
             headers: { "content-type": "application/json" },
           });
@@ -99,9 +74,6 @@ export const Route = createFileRoute("/api/public/translate-broadcast")({
         const text = (body.text || "").trim();
         const fromLang = body.fromLang || "";
         const targets = Array.isArray(body.targets) ? body.targets : [];
-        const withAudio = body.withAudio !== false;
-        const voiceId = body.voiceId || DEFAULT_VOICE_ID;
-
         if (!text || !fromLang || targets.length === 0) {
           return new Response(JSON.stringify({ error: "Missing text/fromLang/targets" }), {
             status: 400,
@@ -125,8 +97,9 @@ export const Route = createFileRoute("/api/public/translate-broadcast")({
           await Promise.all(
             uniqueLangs.map(async (lang) => {
               const tr = await translate(text, fromLang, lang, aiKey);
-              const audio = withAudio && tr ? await tts(tr, voiceId, elKey) : undefined;
-              perLang[lang] = { text: tr, audio };
+              // Keep realtime/database payload small and reliable. The receiver generates
+              // speech locally from the translated text via /api/public/tts.
+              perLang[lang] = { text: tr };
             }),
           );
 
