@@ -20,15 +20,26 @@ export function DailyVideoCall({ code, userName, onLeave, isHost, sharedUrl, onU
   const callRef = React.useRef<DailyCall | null>(null);
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
+  const [retryNonce, setRetryNonce] = React.useState(0);
   const createRoom = useServerFn(createDailyRoom);
 
   React.useEffect(() => {
     let disposed = false;
     let fallbackTimer: ReturnType<typeof setTimeout> | null = null;
+    setLoading(true);
+    setError(null);
 
     const boot = async (url: string) => {
       if (disposed || !ref.current) return;
       try {
+        if (callRef.current) {
+          try {
+            callRef.current.destroy();
+          } catch {
+            /* ignore */
+          }
+          callRef.current = null;
+        }
         const call = DailyIframe.createFrame(ref.current, {
           iframeStyle: {
             width: "100%",
@@ -110,9 +121,9 @@ export function DailyVideoCall({ code, userName, onLeave, isHost, sharedUrl, onU
         }
       }
     };
-    // Only boot once per mount; sharedUrl arriving later triggers via fallbackTimer path
+    // Retry explicitly remounts the Daily frame; sharedUrl arriving later is handled below.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [retryNonce]);
 
   // Guest received the URL after mount → boot now
   React.useEffect(() => {
@@ -121,6 +132,8 @@ export function DailyVideoCall({ code, userName, onLeave, isHost, sharedUrl, onU
     (async () => {
       if (!ref.current || disposed) return;
       try {
+        setError(null);
+        setLoading(true);
         const call = DailyIframe.createFrame(ref.current, {
           iframeStyle: { width: "100%", height: "100%", border: "0", borderRadius: "12px" },
           showLeaveButton: true,
@@ -137,6 +150,7 @@ export function DailyVideoCall({ code, userName, onLeave, isHost, sharedUrl, onU
         setLoading(false);
       } catch (e) {
         setError("Erro ao entrar na chamada: " + (e as Error).message);
+        setLoading(false);
       }
     })();
     return () => {
@@ -151,9 +165,22 @@ export function DailyVideoCall({ code, userName, onLeave, isHost, sharedUrl, onU
           <VideoOff className="h-4 w-4" /> Vídeo indisponível
         </div>
         <p className="text-muted-foreground">{error}</p>
-        <Button size="sm" variant="outline" className="mt-3" onClick={onLeave}>
-          Fechar
-        </Button>
+        <div className="mt-3 flex gap-2">
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => {
+              setError(null);
+              setLoading(true);
+              setRetryNonce((n) => n + 1);
+            }}
+          >
+            Tentar novamente
+          </Button>
+          <Button size="sm" variant="outline" onClick={onLeave}>
+            Fechar
+          </Button>
+        </div>
       </div>
     );
   }

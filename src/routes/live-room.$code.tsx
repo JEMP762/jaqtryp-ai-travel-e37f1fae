@@ -60,15 +60,23 @@ type RenderedMessage = {
   ts: number;
   mine: boolean;
 };
+type RoomStateRow = {
+  room_code: string;
+  call_mode: CallMode;
+  video_host_id: string | null;
+  daily_url: string | null;
+  updated_at?: string;
+};
 
 function getOrCreateUserId() {
   if (typeof window === "undefined") return "anon";
   const k = "jaq-live-room-uid";
-  let id = sessionStorage.getItem(k);
+  let id = localStorage.getItem(k) || sessionStorage.getItem(k);
   if (!id) {
     id = crypto.randomUUID();
-    sessionStorage.setItem(k, id);
   }
+  localStorage.setItem(k, id);
+  sessionStorage.setItem(k, id);
   return id;
 }
 function getOrCreateName() {
@@ -97,6 +105,7 @@ function LiveRoomPage() {
   const [videoHostId, setVideoHostId] = React.useState<string | null>(null);
   const [sharedVideoUrl, setSharedVideoUrl] = React.useState<string | null>(null);
   const [audioBlocked, setAudioBlocked] = React.useState(false);
+  const [liveTranslateOn, setLiveTranslateOn] = React.useState(false);
 
   const channelRef = React.useRef<RealtimeChannel | null>(null);
   const signalListenersRef = React.useRef<Set<(p: unknown) => void>>(new Set());
@@ -109,6 +118,7 @@ function LiveRoomPage() {
   const participantsRef = React.useRef<Presence[]>([]);
   const seenIdsRef = React.useRef<Set<string>>(new Set());
   const pendingAudioRef = React.useRef<string | null>(null);
+  const pendingTextAudioRef = React.useRef<{ text: string; lang: string } | null>(null);
   // VAD (voice activity detection) refs
   const vadCtxRef = React.useRef<AudioContext | null>(null);
   const vadAnalyserRef = React.useRef<AnalyserNode | null>(null);
@@ -116,10 +126,18 @@ function LiveRoomPage() {
   const vadSpokeRef = React.useRef(false);
   const vadSilenceStartRef = React.useRef<number | null>(null);
   const vadMaxTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
+  const liveTranslateOnRef = React.useRef(false);
+  const audioPlayingRef = React.useRef(false);
+  const restartTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
+  const discardNextRecordingRef = React.useRef(false);
 
   React.useEffect(() => {
     participantsRef.current = participants;
   }, [participants]);
+
+  React.useEffect(() => {
+    liveTranslateOnRef.current = liveTranslateOn;
+  }, [liveTranslateOn]);
 
   React.useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
@@ -151,24 +169,166 @@ function LiveRoomPage() {
     }
     audioRef.current.muted = false;
     audioRef.current.src = `data:audio/mpeg;base64,${b64}`;
+    audioPlayingRef.current = true;
+    audioRef.current.onended = () => {
+      audioPlayingRef.current = false;
+    };
+    audioRef.current.onerror = () => {
+      audioPlayingRef.current = false;
+    };
     audioRef.current.play().then(() => {
       setAudioBlocked(false);
       pendingAudioRef.current = null;
     }).catch(() => {
+      audioPlayingRef.current = false;
       pendingAudioRef.current = b64;
       setAudioBlocked(true);
     });
   }, []);
 
+  const playTranslatedText = React.useCallback(async (text: string, lang: string) => {
+    const clean = text.trim().slice(0, 220);
+    if (!clean) return;
+    if (!audioRef.current) {
+      audioRef.current = new Audio();
+      audioRef.current.setAttribute("playsinline", "true");
+    }
+    let objectUrl: string | null = null;
+    try {
+      audioPlayingRef.current = true;
+      const resp = await fetch(
+        `/api/public/tts?lang=${encodeURIComponent(lang)}&text=${encodeURIComponent(clean)}`,
+        { credentials: "same-origin" },
+      );
+      if (!resp.ok) throw new Error(`TTS ${resp.status}`);
+      const blob = await resp.blob();
+      if (!blob.size) throw new Error("TTS vazio");
+      objectUrl = URL.createObjectURL(blob);
+      audioRef.current.muted = false;
+      audioRef.current.src = objectUrl;
+      audioRef.current.onended = () => {
+        audioPlayingRef.current = false;
+      };
+      audioRef.current.onerror = () => {
+        audioPlayingRef.current = false;
+      };
+      await audioRef.current.play();
+      setAudioBlocked(false);
+      pendingAudioRef.current = null;
+      pendingTextAudioRef.current = null;
+    } catch {
+      audioPlayingRef.current = false;
+      pendingTextAudioRef.current = { text: clean, lang };
+      setAudioBlocked(true);
+    } finally {
+      if (objectUrl) {
+        const urlToRevoke = objectUrl;
+        window.setTimeout(() => URL.revokeObjectURL(urlToRevoke), 5000);
+      }
+    }
+  }, []);
+
+  const persistRoomState = React.useCallback(
+    async (state: Partial<RoomStateRow>) => {
+      try {
+        const payload = {
+          room_code: code,
+          call_mode: state.call_mode ?? callMode,
+          video_host_id: state.video_host_id === undefined ? videoHostId : state.video_host_id,
+          daily_url: state.daily_url === undefined ? sharedVideoUrl : state.daily_url,
+        };
+        await (supabase as any)
+          .from("live_room_state")
+          .upsert(payload, { onConflict: "room_code" });
+      } catch {
+        /* best effort */
+      }
+    },
+    [callMode, code, sharedVideoUrl, videoHostId],
+  );
+
+  const applyRoomState = React.useCallback(
+    (row: RoomStateRow) => {
+      if (!row || row.room_code !== code) return;
+      const nextMode = row.call_mode || "none";
+      setCallMode(nextMode);
+      setVideoHostId(row.video_host_id ?? null);
+      setSharedVideoUrl(row.daily_url ?? null);
+    },
+    [code],
+  );
+
+  const handleIncomingRow = React.useCallback(
+    (row: MessageRow) => {
+      if (!row || row.room_code !== code || seenIdsRef.current.has(row.id)) return;
+      seenIdsRef.current.add(row.id);
+      const forMe = row.per_recipient?.[myId];
+      const isMine = row.from_user_id === myId;
+      const translated = forMe?.text ?? row.original_text;
+      const audio = forMe?.audio;
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: row.id,
+          fromUserId: row.from_user_id,
+          fromName: row.from_name,
+          fromLang: row.from_lang,
+          originalText: row.original_text,
+          translatedText: translated,
+          audio,
+          ts: new Date(row.created_at).getTime(),
+          mine: isMine,
+        },
+      ]);
+      if (!isMine && (audio || translated)) {
+        const rec = recRef.current;
+        if (rec && rec.state !== "inactive") {
+          discardNextRecordingRef.current = true;
+          try {
+            rec.requestData();
+            rec.stop();
+          } catch {
+            /* ignore */
+          }
+        }
+        if (audio) playBase64(audio);
+        else void playTranslatedText(translated, forMe?.lang ?? myLang);
+      }
+    },
+    [code, myId, myLang, playBase64, playTranslatedText],
+  );
+
+  React.useEffect(() => {
+    if (!joined) return;
+    (async () => {
+      try {
+        const { data } = await (supabase as any)
+          .from("live_room_state")
+          .select("room_code, call_mode, video_host_id, daily_url, updated_at")
+          .eq("room_code", code)
+          .maybeSingle();
+        if (data) applyRoomState(data as RoomStateRow);
+      } catch {
+        /* best effort */
+      }
+    })();
+  }, [applyRoomState, code, joined]);
+
   const manualPlayPending = React.useCallback(() => {
     const b64 = pendingAudioRef.current;
+    const pendingText = pendingTextAudioRef.current;
     if (!b64) {
-      setAudioBlocked(false);
+      if (pendingText) {
+        unlockAudio();
+        setTimeout(() => void playTranslatedText(pendingText.text, pendingText.lang), 50);
+      } else {
+        setAudioBlocked(false);
+      }
       return;
     }
     unlockAudio();
     setTimeout(() => playBase64(b64), 50);
-  }, [playBase64, unlockAudio]);
+  }, [playBase64, playTranslatedText, unlockAudio]);
 
   // Join the realtime channel
   React.useEffect(() => {
@@ -209,6 +369,15 @@ function LiveRoomPage() {
         if (p.from) setVideoHostId(p.from);
       }
     });
+    channel.on("broadcast", { event: "translated-message" }, ({ payload }) => {
+      handleIncomingRow(payload as MessageRow);
+    });
+
+    channel.on(
+      "postgres_changes",
+      { event: "*", schema: "public", table: "live_room_state", filter: `room_code=eq.${code}` },
+      (payload) => applyRoomState(payload.new as RoomStateRow),
+    );
 
     // Postgres_changes on live_room_messages — reliable transport
     channel.on(
@@ -216,28 +385,7 @@ function LiveRoomPage() {
       { event: "INSERT", schema: "public", table: "live_room_messages", filter: `room_code=eq.${code}` },
       (payload) => {
         const row = payload.new as MessageRow;
-        if (!row || seenIdsRef.current.has(row.id)) return;
-        seenIdsRef.current.add(row.id);
-        const forMe = row.per_recipient?.[myId];
-        const isMine = row.from_user_id === myId;
-        const translated = forMe?.text ?? row.original_text;
-        const audio = forMe?.audio;
-        setMessages((prev) => [
-          ...prev,
-          {
-            id: row.id,
-            fromUserId: row.from_user_id,
-            fromName: row.from_name,
-            fromLang: row.from_lang,
-            originalText: row.original_text,
-            translatedText: translated,
-            audio,
-            ts: new Date(row.created_at).getTime(),
-            mine: isMine,
-          },
-        ]);
-        // Only auto-play audio from others (user opted-out of hearing own voice)
-        if (!isMine && audio) playBase64(audio);
+        handleIncomingRow(row);
       },
     );
 
@@ -258,7 +406,7 @@ function LiveRoomPage() {
       channelRef.current = null;
       seenIdsRef.current.clear();
     };
-  }, [joined, code, myId, myLang, myName, playBase64]);
+  }, [joined, code, myId, myLang, myName, applyRoomState, handleIncomingRow]);
 
   // Update presence when language/name changes
   React.useEffect(() => {
@@ -292,10 +440,10 @@ function LiveRoomPage() {
     }
   };
 
-  const stopTracks = () => {
+  const stopTracks = React.useCallback(() => {
     streamRef.current?.getTracks().forEach((t) => t.stop());
     streamRef.current = null;
-  };
+  }, []);
 
   const stopVad = React.useCallback(() => {
     if (vadRafRef.current != null) {
@@ -318,6 +466,28 @@ function LiveRoomPage() {
 
   const others = participants.filter((p) => p.userId !== myId);
   const canRecord = others.length > 0;
+
+  function clearRestartTimer() {
+    if (restartTimerRef.current) {
+      clearTimeout(restartTimerRef.current);
+      restartTimerRef.current = null;
+    }
+  }
+
+  function scheduleNextListening(delay = 650) {
+    clearRestartTimer();
+    if (!liveTranslateOnRef.current) return;
+    restartTimerRef.current = setTimeout(() => {
+      restartTimerRef.current = null;
+      if (!liveTranslateOnRef.current) return;
+      if (audioPlayingRef.current) {
+        scheduleNextListening(500);
+        return;
+      }
+      if (participantsRef.current.filter((p) => p.userId !== myId).length === 0) return;
+      if (!recRef.current || recRef.current.state === "inactive") void startRecording();
+    }, delay);
+  }
 
   const startRecording = async () => {
     unlockAudio();
@@ -358,8 +528,15 @@ function LiveRoomPage() {
         const blob = new Blob(chunksRef.current, { type: blobType });
         chunksRef.current = [];
         recRef.current = null;
+        if (discardNextRecordingRef.current) {
+          discardNextRecordingRef.current = false;
+          setStatus(liveTranslateOnRef.current ? "Ouvindo tradução recebida…" : "");
+          scheduleNextListening(900);
+          return;
+        }
         if (blob.size < 1200) {
           setStatus("");
+          scheduleNextListening();
           return;
         }
         await processAudio(blob, blobType);
@@ -443,6 +620,47 @@ function LiveRoomPage() {
     }
   };
 
+  const stopLiveTranslation = () => {
+    liveTranslateOnRef.current = false;
+    setLiveTranslateOn(false);
+    clearRestartTimer();
+    setStatus("");
+    if (recRef.current && recRef.current.state !== "inactive") {
+      discardNextRecordingRef.current = true;
+      stopRecording();
+    } else {
+      stopVad();
+      stopTracks();
+      setListening(false);
+    }
+  };
+
+  const startLiveTranslation = () => {
+    unlockAudio();
+    if (!canRecord) {
+      toast.info("Aguardando alguém entrar com o link…");
+      return;
+    }
+    liveTranslateOnRef.current = true;
+    setLiveTranslateOn(true);
+    setStatus("Tradução ao vivo ligada…");
+    scheduleNextListening(50);
+  };
+
+  React.useEffect(() => {
+    if (!liveTranslateOn) return;
+    if (!canRecord) {
+      if (recRef.current && recRef.current.state !== "inactive") {
+        discardNextRecordingRef.current = true;
+        stopRecording();
+      }
+      setStatus("Aguardando convidado…");
+      return;
+    }
+    if (!listening && !busy) scheduleNextListening(250);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [liveTranslateOn, canRecord, listening, busy]);
+
   const processAudio = async (blob: Blob, blobType: string) => {
     setBusy(true);
     setStatus("Transcrevendo…");
@@ -489,14 +707,31 @@ function LiveRoomPage() {
         const e = await tResp.text();
         throw new Error(`Translate: ${e.slice(0, 120)}`);
       }
-      // Message will arrive via postgres_changes for all participants (including sender)
-      await tResp.json();
+      const result = (await tResp.json()) as {
+        originalText?: string;
+        fromLang?: string;
+        perRecipient?: PerRecipientMap;
+        messageId?: string | null;
+      };
+      const row: MessageRow = {
+        id: result.messageId || crypto.randomUUID(),
+        room_code: code,
+        from_user_id: myId,
+        from_name: myName || "Eu",
+        from_lang: result.fromLang || myLang,
+        original_text: result.originalText || original,
+        per_recipient: result.perRecipient || {},
+        created_at: new Date().toISOString(),
+      };
+      handleIncomingRow(row);
+      channelRef.current?.send({ type: "broadcast", event: "translated-message", payload: row });
       setStatus("");
     } catch (e) {
       toast.error((e as Error).message);
       setStatus("");
     } finally {
       setBusy(false);
+      scheduleNextListening();
     }
   };
 
@@ -519,14 +754,22 @@ function LiveRoomPage() {
   const changeCallMode = (m: CallMode) => {
     unlockAudio();
     setCallMode(m);
+    let nextHost = videoHostId;
     if (m === "video") {
       // Only set self as host if nobody else claimed it yet
-      setVideoHostId((prev) => prev ?? myId);
+      nextHost = videoHostId ?? myId;
+      setVideoHostId(nextHost);
     }
     if (m === "none") {
+      nextHost = null;
       setSharedVideoUrl(null);
       setVideoHostId(null);
     }
+    void persistRoomState({
+      call_mode: m,
+      video_host_id: nextHost,
+      daily_url: m === "none" ? null : sharedVideoUrl,
+    });
     if (m !== "none") {
       channelRef.current?.send({
         type: "broadcast",
@@ -539,13 +782,14 @@ function LiveRoomPage() {
   const broadcastDailyUrl = React.useCallback(
     (url: string) => {
       setSharedVideoUrl(url);
+      void persistRoomState({ call_mode: "video", video_host_id: videoHostId ?? myId, daily_url: url });
       channelRef.current?.send({
         type: "broadcast",
         event: "daily-url",
         payload: { url, from: myId },
       });
     },
-    [myId],
+    [myId, persistRoomState, videoHostId],
   );
 
   // Join screen
@@ -689,8 +933,6 @@ function LiveRoomPage() {
             peers={others.map((o) => o.userId)}
             onLeave={() => {
               setCallMode("none");
-              setSharedVideoUrl(null);
-              setVideoHostId(null);
             }}
             channel={callChannel as never}
             isHost={videoHostId === null || videoHostId === myId}
@@ -757,16 +999,16 @@ function LiveRoomPage() {
         <div className="flex justify-center">
           <Button
             size="lg"
-            disabled={busy || !canRecord}
-            onClick={listening ? stopRecording : startRecording}
+            disabled={!liveTranslateOn && !canRecord}
+            onClick={liveTranslateOn ? stopLiveTranslation : startLiveTranslation}
             className={cn(
               "h-16 w-16 rounded-full shadow-glow",
-              listening ? "bg-red-500 hover:bg-red-600" : "bg-gradient-primary",
+              liveTranslateOn ? "bg-red-500 hover:bg-red-600" : "bg-gradient-primary",
             )}
           >
             {busy ? (
               <Loader2 className="h-6 w-6 animate-spin" />
-            ) : listening ? (
+            ) : liveTranslateOn ? (
               <Square className="h-6 w-6" />
             ) : (
               <Mic className="h-6 w-6" />
@@ -774,7 +1016,13 @@ function LiveRoomPage() {
           </Button>
         </div>
         <div className="mt-2 text-center text-xs text-muted-foreground">
-          {!canRecord ? "Aguardando convidado…" : listening ? "Toque para parar" : "Toque para falar"}
+          {!canRecord
+            ? "Aguardando convidado…"
+            : liveTranslateOn
+              ? listening
+                ? "Traduzindo ao vivo — toque para desligar"
+                : "Tradução ao vivo ligada"
+              : "Toque para ligar tradução ao vivo"}
         </div>
       </div>
     </div>
