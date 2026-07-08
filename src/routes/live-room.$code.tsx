@@ -805,6 +805,10 @@ function LiveRoomPage() {
     [myId, persistRoomState, videoHostId],
   );
 
+  const onCallLeave = React.useCallback(() => {
+    setCallMode("none");
+  }, []);
+
   // Join screen
   if (!joined) {
     return (
