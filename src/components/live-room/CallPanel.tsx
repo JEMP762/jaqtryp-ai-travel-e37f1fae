@@ -156,7 +156,11 @@ export function DailyVideoCall({ code, userName, onLeave, isHost, sharedUrl, onU
     return () => {
       disposed = true;
     };
-  }, [sharedUrl, onLeave, userName]);
+    // Intentionally exclude onLeave/userName: they can change identity on every
+    // parent re-render, and we only want to boot the frame once when the URL
+    // arrives. Re-runs are already guarded by `callRef.current`.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sharedUrl]);
 
   if (error) {
     return (
