@@ -281,16 +281,9 @@ function LiveRoomPage() {
         },
       ]);
       if (!isMine && (audio || translated)) {
-        const rec = recRef.current;
-        if (rec && rec.state !== "inactive") {
-          discardNextRecordingRef.current = true;
-          try {
-            rec.requestData();
-            rec.stop();
-          } catch {
-            /* ignore */
-          }
-        }
+        // Only pause playback when a new message arrives; DO NOT stop the
+        // receiver's own recording — otherwise their speech gets discarded
+        // whenever they talk at the same time as the sender.
         if (audio) playBase64(audio);
         else void playTranslatedText(translated, forMe?.lang ?? myLang);
       }
