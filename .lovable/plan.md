@@ -1,31 +1,33 @@
-Plano para corrigir a sala ao vivo:
+## Por que só o convidado ouve tradução hoje
 
-1. Tornar a tradução realmente contínua
-- Transformar o botão de microfone em um modo “tradução ao vivo ligada/desligada”.
-- Enquanto estiver ligado, o app grava pequenos trechos automaticamente, para quando a pessoa silencia, envia para transcrição/tradução/voz e reinicia a escuta sozinho.
-- Isso funcionará com “sem chamada”, “só áudio” e “vídeo HD”.
+Consultei `live_room_messages`: **todas as últimas 20 mensagens da sua sala vieram do mesmo `from_user_id` (o anfitrião)**. O convidado não inseriu nenhuma. Ou seja, o convidado nunca ativa a tradução no lado dele — a chamada de vídeo/áudio (Daily) toca o áudio nativo em paralelo, mas nada é capturado para o pipeline de tradução a menos que o próprio participante ligue o botão do microfone.
 
-2. Separar chamada nativa de tradução
-- A chamada de vídeo/áudio continuará sendo o canal nativo da conversa.
-- A tradução em tempo real será enviada pelo microfone de cada participante para o outro ouvir no idioma dele.
-- Evitar que o próprio áudio traduzido seja capturado de volta pelo microfone, pausando/reiniciando a escuta nos momentos certos.
+O botão hoje é pequeno, fica no rodapé, e a UI não deixa claro que **cada lado precisa ligar o seu próprio** para que a mensagem seja enviada e traduzida para o outro.
 
-3. Corrigir entrega da tradução para quem está na sala
-- Manter um identificador estável por navegador/dispositivo, para o convidado e anfitrião não mudarem de ID ao sair/voltar.
-- Ajustar o envio para sempre mirar nos participantes atuais e mostrar erro claro se a tradução não for entregue.
-- Melhorar a exibição local para confirmar que o texto foi traduzido e enviado.
+## O que vou implementar
 
-4. Corrigir retorno/reentrada na chamada de vídeo
-- Criar estado persistente da sala no backend com modo atual da chamada, anfitrião e URL da sala de vídeo.
-- Quando alguém entra ou volta pelo link, o app recupera esse estado e reconecta à chamada existente, em vez de depender apenas de um evento temporário.
-- Adicionar ação de reconectar/tentar novamente quando o iframe de vídeo falhar ou a pessoa sair e voltar.
+### 1. Botões grandes e explícitos para cada lado
+- **Botão principal "🎙 Ligar tradução ao vivo"** no topo, do tamanho de um CTA (não mais só o círculo no rodapé). Ao ligar, muda para "🔴 Traduzindo — Desligar".
+- **Botão "📨 Enviar agora"** ao lado, para forçar o envio imediato (útil se o VAD não detectar o silêncio).
+- Mantém o círculo de microfone no rodapé como atalho, mas o CTA fica em destaque.
 
-5. Validação
-- Testar o fluxo com dois participantes simulados: convidado fala, anfitrião recebe texto e áudio traduzido; anfitrião fala, convidado recebe tradução.
-- Testar sair da sala e entrar novamente pelo link, confirmando que a chamada de vídeo e a tradução continuam disponíveis.
+### 2. Presença mostra o estado do outro lado
+- A presença passa a incluir `liveOn: boolean`.
+- No cabeçalho, ao lado de cada participante: 🎙 verde = tradução ligada, 🔇 cinza = desligada.
+- Se o outro estiver 🔇, aparece aviso amarelo: **"Peça para <Nome> tocar em 'Ligar tradução ao vivo' no aparelho dele para você ouvir a tradução."**
 
-Detalhes técnicos:
-- Adicionar uma tabela de estado da sala com Realtime e regras públicas limitadas ao código da sala.
-- Alterar `live-room.$code.tsx` para usar escuta contínua com VAD e recomeço automático.
-- Ajustar `CallPanel.tsx` para reconexão robusta e uso do URL persistido.
-- Manter `/api/public/stt` e `/api/public/translate-broadcast`, mas melhorar os retornos/erros para o frontend.
+### 3. Botão "Pedir para ativar" (host → guest)
+- No card de participante desligado, um botão "Enviar lembrete" dispara broadcast que faz o outro lado tocar um som + toast: **"O anfitrião pediu que você ligue a tradução ao vivo."**
+
+### 4. Corrigir o "áudio descartado" quando os dois falam
+- Removo o `discardNextRecordingRef` que corta a gravação do receptor quando chega uma mensagem: hoje isso faz o convidado perder a fala se falar quase junto com o anfitrião. Passo a apenas pausar a reprodução, não a captura.
+
+### 5. Corrigir o rejoin da chamada de vídeo
+- No `CallPanel`, o Daily frame não remonta quando `sharedVideoUrl` chega depois do primeiro render em uma reentrada. Vou garantir remontagem sempre que a URL mudar, resolvendo o bug de "sai e não consegue voltar".
+
+## Arquivos afetados
+- `src/routes/live-room.$code.tsx` — CTAs grandes, presença com `liveOn`, indicadores no header, botão "pedir para ativar", corrigir descarte.
+- `src/components/live-room/CallPanel.tsx` — remontar Daily quando `sharedUrl` muda.
+- Sem mudanças de schema.
+
+Confirma que posso implementar assim.

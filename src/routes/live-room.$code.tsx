@@ -37,7 +37,7 @@ function langFlag(c: string) {
   return LANGS.find((l) => l.code === c)?.flag ?? "🌐";
 }
 
-type Presence = { userId: string; lang: string; name: string };
+type Presence = { userId: string; lang: string; name: string; liveOn?: boolean };
 type PerRecipientMap = Record<string, { text: string; audio?: string; lang: string }>;
 type MessageRow = {
   id: string;
