@@ -393,7 +393,7 @@ function LiveRoomPage() {
     channel.subscribe(async (st) => {
       if (st === "SUBSCRIBED") {
         setChannelStatus("connected");
-        await channel.track({ userId: myId, lang: myLang, name: myName || "Convidado" });
+        await channel.track({ userId: myId, lang: myLang, name: myName || "Convidado", liveOn: liveTranslateOnRef.current });
       } else if (st === "CHANNEL_ERROR" || st === "TIMED_OUT") {
         setChannelStatus("error");
       } else {
@@ -409,11 +409,23 @@ function LiveRoomPage() {
     };
   }, [joined, code, myId, myLang, myName, applyRoomState, handleIncomingRow]);
 
-  // Update presence when language/name changes
+  // Update presence when language/name/liveOn changes
   React.useEffect(() => {
     if (!joined || !channelRef.current) return;
-    channelRef.current.track({ userId: myId, lang: myLang, name: myName || "Convidado" });
-  }, [joined, myId, myLang, myName]);
+    channelRef.current.track({ userId: myId, lang: myLang, name: myName || "Convidado", liveOn: liveTranslateOn });
+  }, [joined, myId, myLang, myName, liveTranslateOn]);
+
+  const nudgePeer = React.useCallback(
+    (peerId: string) => {
+      channelRef.current?.send({
+        type: "broadcast",
+        event: "nudge-live",
+        payload: { from: myId, fromName: myName || "Anfitrião", to: peerId },
+      });
+      toast.success("Lembrete enviado");
+    },
+    [myId, myName],
+  );
 
   const inviteUrl = typeof window !== "undefined" ? `${window.location.origin}/live-room/${code}` : "";
 
