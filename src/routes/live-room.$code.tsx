@@ -1039,38 +1039,51 @@ function LiveRoomPage() {
         ))}
       </div>
 
-      {/* Mic */}
+      {/* Mic controls */}
       <div className="border-t border-border pt-4">
         {status && (
           <div className="mb-2 text-center text-xs text-muted-foreground">{status}</div>
         )}
-        <div className="flex justify-center">
+        <div className="flex flex-col items-stretch gap-2 sm:flex-row sm:justify-center">
           <Button
             size="lg"
             disabled={!liveTranslateOn && !canRecord}
             onClick={liveTranslateOn ? stopLiveTranslation : startLiveTranslation}
             className={cn(
-              "h-16 w-16 rounded-full shadow-glow",
+              "h-14 flex-1 rounded-xl px-6 text-base font-semibold shadow-glow sm:flex-none",
               liveTranslateOn ? "bg-red-500 hover:bg-red-600" : "bg-gradient-primary",
             )}
           >
             {busy ? (
-              <Loader2 className="h-6 w-6 animate-spin" />
+              <Loader2 className="mr-2 h-5 w-5 animate-spin" />
             ) : liveTranslateOn ? (
-              <Square className="h-6 w-6" />
+              <Square className="mr-2 h-5 w-5" />
             ) : (
-              <Mic className="h-6 w-6" />
+              <Mic className="mr-2 h-5 w-5" />
             )}
+            {liveTranslateOn ? "Desligar tradução ao vivo" : "🎙 Ligar tradução ao vivo"}
           </Button>
+          {liveTranslateOn && (
+            <Button
+              size="lg"
+              variant="outline"
+              disabled={!listening || busy}
+              onClick={stopRecording}
+              className="h-14 rounded-xl px-4 text-sm"
+              title="Encerra a gravação atual e envia agora"
+            >
+              📨 Enviar agora
+            </Button>
+          )}
         </div>
         <div className="mt-2 text-center text-xs text-muted-foreground">
           {!canRecord
             ? "Aguardando convidado…"
             : liveTranslateOn
               ? listening
-                ? "Traduzindo ao vivo — toque para desligar"
-                : "Tradução ao vivo ligada"
-              : "Toque para ligar tradução ao vivo"}
+                ? "Ouvindo — pare de falar para enviar, ou toque em Enviar agora"
+                : "Tradução ao vivo ligada — pode falar"
+              : "Toque em “Ligar tradução ao vivo” para começar"}
         </div>
       </div>
     </div>
