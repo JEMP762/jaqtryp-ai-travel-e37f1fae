@@ -365,6 +365,14 @@ function LiveRoomPage() {
     channel.on("broadcast", { event: "translated-message" }, ({ payload }) => {
       handleIncomingRow(payload as MessageRow);
     });
+    channel.on("broadcast", { event: "nudge-live" }, ({ payload }) => {
+      const p = payload as { from?: string; fromName?: string; to?: string };
+      if (p?.to && p.to !== myId) return;
+      if (p?.from === myId) return;
+      toast.info(`${p?.fromName || "Anfitrião"} pediu para você ligar a tradução ao vivo`, {
+        duration: 8000,
+      });
+    });
 
     channel.on(
       "postgres_changes",
