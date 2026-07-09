@@ -279,6 +279,7 @@ function LiveRoomPage() {
       setCallMode(nextMode);
       setVideoHostId(row.video_host_id ?? null);
       setSharedVideoUrl(row.daily_url ?? null);
+      if (row.host_user_id) setRoomHostId(row.host_user_id);
     },
     [code],
   );
@@ -322,7 +323,7 @@ function LiveRoomPage() {
       try {
         const { data } = await (supabase as any)
           .from("live_room_state")
-          .select("room_code, call_mode, video_host_id, daily_url, updated_at")
+          .select("room_code, call_mode, video_host_id, daily_url, host_user_id, updated_at")
           .eq("room_code", code)
           .maybeSingle();
         if (data) applyRoomState(data as RoomStateRow);
