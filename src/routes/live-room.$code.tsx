@@ -706,6 +706,67 @@ function LiveRoomPage() {
     }
   };
 
+  const cancelRecording = () => {
+    discardNextRecordingRef.current = true;
+    stopRecording();
+  };
+
+  const pressPTT = () => {
+    unlockAudio();
+    if (!canRecord) {
+      toast.info("Aguardando alguém entrar com o link…");
+      return;
+    }
+    if (recRef.current && recRef.current.state !== "inactive") return;
+    setPttActive(true);
+    void startRecording();
+  };
+
+  const releasePTT = () => {
+    if (micModeRef.current !== "hold") return;
+    setPttActive(false);
+    if (recRef.current && recRef.current.state !== "inactive") stopRecording();
+  };
+
+  const toggleTapMic = () => {
+    if (recRef.current && recRef.current.state !== "inactive") {
+      stopRecording();
+    } else {
+      pressPTT();
+    }
+  };
+
+  // Spacebar as push-to-talk on desktop
+  React.useEffect(() => {
+    if (!joined) return;
+    const isTypingTarget = (t: EventTarget | null) => {
+      const el = t as HTMLElement | null;
+      if (!el) return false;
+      const tag = el.tagName;
+      return tag === "INPUT" || tag === "TEXTAREA" || (el as HTMLElement).isContentEditable;
+    };
+    const down = (e: KeyboardEvent) => {
+      if (e.code !== "Space" || e.repeat || isTypingTarget(e.target)) return;
+      if (micModeRef.current !== "hold") return;
+      e.preventDefault();
+      pressPTT();
+    };
+    const up = (e: KeyboardEvent) => {
+      if (e.code !== "Space" || isTypingTarget(e.target)) return;
+      if (micModeRef.current !== "hold") return;
+      e.preventDefault();
+      releasePTT();
+    };
+    window.addEventListener("keydown", down);
+    window.addEventListener("keyup", up);
+    return () => {
+      window.removeEventListener("keydown", down);
+      window.removeEventListener("keyup", up);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [joined, canRecord]);
+
+
   const stopLiveTranslation = () => {
     liveTranslateOnRef.current = false;
     setLiveTranslateOn(false);
