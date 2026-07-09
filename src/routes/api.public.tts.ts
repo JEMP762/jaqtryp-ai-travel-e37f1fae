@@ -26,7 +26,7 @@ export const Route = createFileRoute("/api/public/tts")({
         if (!auth.ok) return auth.response;
 
         const url = new URL(request.url);
-        const text = (url.searchParams.get("text") || "").trim().slice(0, 260);
+        const text = (url.searchParams.get("text") || "").trim().slice(0, 1200);
         const lang = url.searchParams.get("lang") || "pt-BR";
         const apiKey = process.env.LOVABLE_API_KEY;
 
