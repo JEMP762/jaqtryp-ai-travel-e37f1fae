@@ -57,20 +57,39 @@ export const createDailyRoom = createServerFn({ method: "POST" })
       // Room may already exist — Daily returns 409 in some cases and 400
       // (invalid-request-error "a room named ... already exists") in others.
       let alreadyExists = resp.status === 409;
-      let errText = "";
+      let createErrText = "";
       if (!alreadyExists && resp.status === 400) {
-        errText = await resp.clone().text();
-        if (/already exists/i.test(errText)) alreadyExists = true;
+        createErrText = await resp.clone().text();
+        if (/already exists/i.test(createErrText)) alreadyExists = true;
       }
       if (alreadyExists) {
-        resp = await fetch(`https://api.daily.co/v1/rooms/jaq-${data.code}`, {
+        const getResp = await fetch(`https://api.daily.co/v1/rooms/jaq-${data.code}`, {
           headers: { Authorization: `Bearer ${apiKey}` },
         });
+        if (getResp.ok) {
+          resp = getResp;
+        } else {
+          // Stale/expired room record on Daily side — delete and recreate.
+          const getErr = await getResp.text().catch(() => "");
+          console.warn("Daily GET fallback failed, recreating:", getResp.status, getErr.slice(0, 200));
+          await fetch(`https://api.daily.co/v1/rooms/jaq-${data.code}`, {
+            method: "DELETE",
+            headers: { Authorization: `Bearer ${apiKey}` },
+          }).catch(() => {});
+          resp = await fetch("https://api.daily.co/v1/rooms", {
+            method: "POST",
+            headers: {
+              Authorization: `Bearer ${apiKey}`,
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify(body),
+          });
+        }
       }
 
       if (!resp.ok) {
-        const err = errText || (await resp.text());
-        console.error("Daily createRoom failed:", resp.status, err);
+        const err = await resp.text().catch(() => "");
+        console.error("Daily room provisioning failed:", resp.status, err.slice(0, 300));
         return { ok: false, reason: "provider_error", error: `${resp.status}` };
       }
       const json = (await resp.json()) as { url?: string };
