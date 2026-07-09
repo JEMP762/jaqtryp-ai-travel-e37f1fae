@@ -1251,53 +1251,131 @@ function LiveRoomPage() {
         ))}
       </div>
 
-      {/* Mic controls */}
+      {/* Mic controls — big push-to-talk button */}
       <div className="border-t border-border pt-4">
         {status && (
           <div className="mb-2 text-center text-xs text-muted-foreground">{status}</div>
         )}
-        <div className="flex flex-col items-stretch gap-2 sm:flex-row sm:justify-center">
-          <Button
-            size="lg"
-            disabled={!liveTranslateOn && !canRecord}
-            onClick={liveTranslateOn ? stopLiveTranslation : startLiveTranslation}
-            className={cn(
-              "h-14 flex-1 rounded-xl px-6 text-base font-semibold shadow-glow sm:flex-none",
-              liveTranslateOn ? "bg-red-500 hover:bg-red-600" : "bg-gradient-primary",
-            )}
-          >
-            {busy ? (
-              <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-            ) : liveTranslateOn ? (
-              <Square className="mr-2 h-5 w-5" />
-            ) : (
-              <Mic className="mr-2 h-5 w-5" />
-            )}
-            {liveTranslateOn ? "Desligar tradução ao vivo" : "🎙 Ligar tradução ao vivo"}
-          </Button>
-          {liveTranslateOn && (
+
+        {/* Mode selector */}
+        <div className="mb-3 flex items-center justify-center gap-1 text-xs">
+          <span className="text-muted-foreground">Modo:</span>
+          {([
+            { id: "hold", label: "Segurar p/ falar" },
+            { id: "toggle", label: "Toque p/ falar" },
+            { id: "auto", label: "Automático" },
+          ] as const).map((opt) => (
+            <button
+              key={opt.id}
+              type="button"
+              onClick={() => {
+                if (liveTranslateOn) stopLiveTranslation();
+                if (recRef.current && recRef.current.state !== "inactive") cancelRecording();
+                setMicMode(opt.id);
+              }}
+              className={cn(
+                "rounded-full border px-2 py-0.5",
+                micMode === opt.id
+                  ? "border-primary bg-primary/15 text-primary"
+                  : "border-border text-muted-foreground hover:text-foreground",
+              )}
+            >
+              {opt.label}
+            </button>
+          ))}
+        </div>
+
+        <div className="flex flex-col items-center gap-2">
+          {micMode === "auto" ? (
             <Button
               size="lg"
-              variant="outline"
-              disabled={!listening || busy}
-              onClick={stopRecording}
-              className="h-14 rounded-xl px-4 text-sm"
-              title="Encerra a gravação atual e envia agora"
+              disabled={!liveTranslateOn && !canRecord}
+              onClick={liveTranslateOn ? stopLiveTranslation : startLiveTranslation}
+              className={cn(
+                "h-14 w-full max-w-sm rounded-xl px-6 text-base font-semibold shadow-glow",
+                liveTranslateOn ? "bg-red-500 hover:bg-red-600" : "bg-gradient-primary",
+              )}
             >
-              📨 Enviar agora
+              {busy ? (
+                <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+              ) : liveTranslateOn ? (
+                <Square className="mr-2 h-5 w-5" />
+              ) : (
+                <Mic className="mr-2 h-5 w-5" />
+              )}
+              {liveTranslateOn ? "Desligar tradução automática" : "🎙 Ligar tradução automática"}
             </Button>
+          ) : (
+            <button
+              type="button"
+              disabled={!canRecord || busy}
+              onPointerDown={(e) => {
+                e.preventDefault();
+                if (micMode === "hold") pressPTT();
+                else toggleTapMic();
+              }}
+              onPointerUp={(e) => {
+                e.preventDefault();
+                if (micMode === "hold") releasePTT();
+              }}
+              onPointerCancel={() => {
+                if (micMode === "hold") releasePTT();
+              }}
+              onPointerLeave={() => {
+                if (micMode === "hold" && pttActive) releasePTT();
+              }}
+              onContextMenu={(e) => e.preventDefault()}
+              className={cn(
+                "relative grid h-28 w-28 select-none place-items-center rounded-full border-4 shadow-glow transition-transform",
+                "touch-none",
+                listening
+                  ? "scale-105 border-red-400 bg-red-500 text-white animate-pulse"
+                  : "border-primary bg-gradient-primary text-white active:scale-95",
+                (!canRecord || busy) && "cursor-not-allowed opacity-50",
+              )}
+              style={
+                listening
+                  ? {
+                      boxShadow: `0 0 0 ${Math.round(micLevel * 24)}px rgba(239,68,68,0.25)`,
+                    }
+                  : undefined
+              }
+              aria-pressed={listening}
+              title={
+                micMode === "hold"
+                  ? "Segure para falar (ou barra de espaço)"
+                  : "Toque para falar, toque de novo para parar"
+              }
+            >
+              {busy ? (
+                <Loader2 className="h-10 w-10 animate-spin" />
+              ) : listening ? (
+                <Square className="h-10 w-10" />
+              ) : (
+                <Mic className="h-10 w-10" />
+              )}
+            </button>
           )}
-        </div>
-        <div className="mt-2 text-center text-xs text-muted-foreground">
-          {!canRecord
-            ? "Aguardando convidado…"
-            : liveTranslateOn
-              ? listening
-                ? "Ouvindo — pare de falar para enviar, ou toque em Enviar agora"
-                : "Tradução ao vivo ligada — pode falar"
-              : "Toque em “Ligar tradução ao vivo” para começar"}
+          <div className="text-center text-xs text-muted-foreground">
+            {!canRecord
+              ? "Aguardando convidado…"
+              : micMode === "hold"
+                ? listening
+                  ? "🎙 Ouvindo… solte para enviar"
+                  : "Segure o microfone e fale (ou barra de espaço)"
+                : micMode === "toggle"
+                  ? listening
+                    ? "🎙 Ouvindo… toque para parar e enviar"
+                    : "Toque no microfone para começar a falar"
+                  : liveTranslateOn
+                    ? listening
+                      ? "Ouvindo — pare de falar para enviar"
+                      : "Tradução automática ligada — pode falar"
+                    : "Toque em “Ligar tradução automática” para começar"}
+          </div>
         </div>
       </div>
+
     </div>
   );
 }
