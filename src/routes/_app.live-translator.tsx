@@ -300,7 +300,9 @@ async function playAudioFallback(text: string, lang: string) {
   let objectUrl: string | null = null;
   try {
     const url = `/api/public/tts?lang=${encodeURIComponent(lang)}&text=${encodeURIComponent(clean)}`;
-    const resp = await fetch(url, { credentials: "same-origin" });
+    const headers = await authedJsonHeaders();
+    delete headers["Content-Type"];
+    const resp = await fetch(url, { credentials: "same-origin", headers });
     if (!resp.ok) {
       throw new Error(`TTS ${resp.status}`);
     }
@@ -602,7 +604,9 @@ function useSpeechRecognition(lang: string, onFinal: (text: string) => void) {
           const ext = blobType.includes("mp4") ? "m4a" : blobType.includes("ogg") ? "ogg" : "webm";
           fd.append("audio", blob, `audio.${ext}`);
           fd.append("lang", lang);
-          const resp = await fetch("/api/public/stt", { method: "POST", body: fd });
+          const headers = await authedJsonHeaders();
+          delete headers["Content-Type"];
+          const resp = await fetch("/api/public/stt", { method: "POST", body: fd, headers });
           setInterim("");
           if (!resp.ok) {
             const err = await resp.text();

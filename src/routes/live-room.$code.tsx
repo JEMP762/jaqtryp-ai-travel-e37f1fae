@@ -14,6 +14,7 @@ import {
 } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 import { CallPanel, CallModeSelector, type CallMode } from "@/components/live-room/CallPanel";
+import { authedJsonHeaders } from "@/lib/authed-fetch";
 
 export const Route = createFileRoute("/live-room/$code")({
   component: LiveRoomPage,
@@ -79,6 +80,21 @@ function getOrCreateUserId() {
   sessionStorage.setItem(k, id);
   return id;
 }
+function saveUserId(id: string) {
+  if (typeof window === "undefined") return;
+  localStorage.setItem("jaq-live-room-uid", id);
+  sessionStorage.setItem("jaq-live-room-uid", id);
+}
+
+function isLikelyNoiseTranscript(text: string) {
+  const clean = text.trim();
+  if (clean.length < 3) return true;
+  const words = clean.split(/\s+/).filter(Boolean);
+  if (words.length === 1 && clean.length < 5) return true;
+  if (/^(ok|okay|hum|hmm|uh|um|ah|hã|é|oi|olá|sim|não)[.!?]*$/i.test(clean)) return true;
+  return false;
+}
+
 function getOrCreateName() {
   if (typeof window === "undefined") return "Convidado";
   const k = "jaq-live-room-name";
@@ -91,7 +107,7 @@ function saveName(n: string) {
 
 function LiveRoomPage() {
   const { code } = Route.useParams();
-  const [myId] = React.useState(getOrCreateUserId);
+  const [myId, setMyId] = React.useState(getOrCreateUserId);
   const [myName, setMyName] = React.useState(getOrCreateName);
   const [myLang, setMyLang] = React.useState("pt-BR");
   const [joined, setJoined] = React.useState(false);
@@ -106,6 +122,7 @@ function LiveRoomPage() {
   const [sharedVideoUrl, setSharedVideoUrl] = React.useState<string | null>(null);
   const [audioBlocked, setAudioBlocked] = React.useState(false);
   const [liveTranslateOn, setLiveTranslateOn] = React.useState(false);
+  const [voicePlaybackOn, setVoicePlaybackOn] = React.useState(true);
 
   const channelRef = React.useRef<RealtimeChannel | null>(null);
   const signalListenersRef = React.useRef<Set<(p: unknown) => void>>(new Set());
@@ -130,6 +147,10 @@ function LiveRoomPage() {
   const audioPlayingRef = React.useRef(false);
   const restartTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
   const discardNextRecordingRef = React.useRef(false);
+  const recordingStartedAtRef = React.useRef(0);
+  const vadSpeechMsRef = React.useRef(0);
+  const vadPeakRef = React.useRef(0);
+  const lastTranscriptRef = React.useRef<{ text: string; at: number }>({ text: "", at: 0 });
 
   React.useEffect(() => {
     participantsRef.current = participants;
@@ -196,9 +217,11 @@ function LiveRoomPage() {
     let objectUrl: string | null = null;
     try {
       audioPlayingRef.current = true;
+      const headers = await authedJsonHeaders();
+      delete headers["Content-Type"];
       const resp = await fetch(
         `/api/public/tts?lang=${encodeURIComponent(lang)}&text=${encodeURIComponent(clean)}`,
-        { credentials: "same-origin" },
+        { credentials: "same-origin", headers },
       );
       if (!resp.ok) throw new Error(`TTS ${resp.status}`);
       const blob = await resp.blob();
@@ -280,7 +303,7 @@ function LiveRoomPage() {
           mine: isMine,
         },
       ]);
-      if (!isMine && (audio || translated)) {
+      if (voicePlaybackOn && !isMine && (audio || translated)) {
         // Only pause playback when a new message arrives; DO NOT stop the
         // receiver's own recording — otherwise their speech gets discarded
         // whenever they talk at the same time as the sender.
@@ -288,7 +311,7 @@ function LiveRoomPage() {
         else void playTranslatedText(translated, forMe?.lang ?? myLang);
       }
     },
-    [code, myId, myLang, playBase64, playTranslatedText],
+    [code, myId, myLang, playBase64, playTranslatedText, voicePlaybackOn],
   );
 
   React.useEffect(() => {
@@ -475,6 +498,8 @@ function LiveRoomPage() {
     }
     vadSpokeRef.current = false;
     vadSilenceStartRef.current = null;
+    vadSpeechMsRef.current = 0;
+    vadPeakRef.current = 0;
   }, []);
 
   const others = participants.filter((p) => p.userId !== myId);
@@ -523,6 +548,9 @@ function LiveRoomPage() {
       }
       mimeRef.current = mime;
       chunksRef.current = [];
+      recordingStartedAtRef.current = performance.now();
+      vadSpeechMsRef.current = 0;
+      vadPeakRef.current = 0;
       const rec = mime ? new MediaRecorder(stream, { mimeType: mime }) : new MediaRecorder(stream);
       rec.ondataavailable = (e) => {
         if (e.data && e.data.size > 0) chunksRef.current.push(e.data);
@@ -552,6 +580,12 @@ function LiveRoomPage() {
           scheduleNextListening();
           return;
         }
+        const elapsed = performance.now() - recordingStartedAtRef.current;
+        if (elapsed < 900 || vadSpeechMsRef.current < 280 || vadPeakRef.current < 0.032) {
+          setStatus(liveTranslateOnRef.current ? "Aguardando fala clara…" : "");
+          scheduleNextListening(700);
+          return;
+        }
         await processAudio(blob, blobType);
       };
       recRef.current = rec;
@@ -573,10 +607,11 @@ function LiveRoomPage() {
           vadCtxRef.current = ctx;
           vadAnalyserRef.current = analyser;
           const buf = new Uint8Array(analyser.fftSize);
-          const SPEECH_THRESHOLD = 0.025; // RMS above this = speech
-          const SILENCE_MS = 1200; // stop after this much silence
-          const MIN_SPEECH_MS = 350; // require some speech first
+          const SPEECH_THRESHOLD = 0.032; // RMS above this = speech
+          const SILENCE_MS = 1450; // stop after this much silence
+          const MIN_SPEECH_MS = 600; // require real speech first
           let speechStart: number | null = null;
+          let lastTick = performance.now();
 
           const tick = () => {
             const a = vadAnalyserRef.current;
@@ -589,7 +624,11 @@ function LiveRoomPage() {
             }
             const rms = Math.sqrt(sumSq / buf.length);
             const now = performance.now();
+            const delta = Math.min(80, Math.max(0, now - lastTick));
+            lastTick = now;
+            vadPeakRef.current = Math.max(vadPeakRef.current, rms);
             if (rms > SPEECH_THRESHOLD) {
+              vadSpeechMsRef.current += delta;
               if (speechStart == null) speechStart = now;
               if (!vadSpokeRef.current && now - speechStart >= MIN_SPEECH_MS) {
                 vadSpokeRef.current = true;
@@ -606,10 +645,10 @@ function LiveRoomPage() {
           };
           vadRafRef.current = requestAnimationFrame(tick);
 
-          // Safety cap: never record more than 30s
+          // Safety cap: never record more than 24s
           vadMaxTimerRef.current = setTimeout(() => {
             if (recRef.current && recRef.current.state === "recording") stopRecording();
-          }, 30_000);
+          }, 24_000);
         }
       } catch {
         /* VAD is best-effort; manual stop still works */
@@ -682,18 +721,27 @@ function LiveRoomPage() {
       const ext = blobType.includes("mp4") ? "m4a" : blobType.includes("ogg") ? "ogg" : "webm";
       fd.append("audio", blob, `audio.${ext}`);
       fd.append("lang", myLang);
-      const sttResp = await fetch("/api/public/stt", { method: "POST", body: fd });
+      const sttHeaders = await authedJsonHeaders();
+      delete sttHeaders["Content-Type"];
+      const sttResp = await fetch("/api/public/stt", { method: "POST", body: fd, headers: sttHeaders });
       if (!sttResp.ok) {
         const e = await sttResp.text();
         throw new Error(`STT: ${e.slice(0, 120)}`);
       }
       const { text } = (await sttResp.json()) as { text?: string };
       const original = (text || "").trim();
-      if (!original) {
+      if (!original || isLikelyNoiseTranscript(original)) {
         setStatus("");
-        toast.info("Nada foi captado");
+        if (!liveTranslateOnRef.current) toast.info("Nada foi captado");
         return;
       }
+      const normalized = original.toLocaleLowerCase().replace(/\s+/g, " ");
+      const now = Date.now();
+      if (lastTranscriptRef.current.text === normalized && now - lastTranscriptRef.current.at < 10_000) {
+        setStatus(liveTranslateOnRef.current ? "Aguardando nova fala…" : "");
+        return;
+      }
+      lastTranscriptRef.current = { text: normalized, at: now };
 
       const currentOthers = participantsRef.current.filter((p) => p.userId !== myId);
       if (currentOthers.length === 0) {
@@ -705,7 +753,7 @@ function LiveRoomPage() {
       setStatus("Traduzindo e gerando voz…");
       const tResp = await fetch("/api/public/translate-broadcast", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: await authedJsonHeaders(),
         body: JSON.stringify({
           fromLang: myLang,
           text: original,
@@ -723,13 +771,14 @@ function LiveRoomPage() {
       const result = (await tResp.json()) as {
         originalText?: string;
         fromLang?: string;
+        fromUserId?: string;
         perRecipient?: PerRecipientMap;
         messageId?: string | null;
       };
       const row: MessageRow = {
         id: result.messageId || crypto.randomUUID(),
         room_code: code,
-        from_user_id: myId,
+        from_user_id: result.fromUserId || myId,
         from_name: myName || "Eu",
         from_lang: result.fromLang || myLang,
         original_text: result.originalText || original,
@@ -865,6 +914,8 @@ function LiveRoomPage() {
                   const { data: userRes } = await supabase.auth.getUser();
                   const uid = userRes.user?.id;
                   if (!uid) throw new Error("No auth user");
+                  saveUserId(uid);
+                  setMyId(uid);
                   const { error: memErr } = await (supabase as any)
                     .from("room_participants")
                     .upsert({ room_code: code, user_id: uid }, { onConflict: "room_code,user_id" });
@@ -987,6 +1038,17 @@ function LiveRoomPage() {
               ))}
             </SelectContent>
           </Select>
+          <Button
+            type="button"
+            variant={voicePlaybackOn ? "default" : "outline"}
+            size="sm"
+            onClick={() => setVoicePlaybackOn((v) => !v)}
+            className="h-9 shrink-0"
+            title="Ativa ou silencia a voz traduzida recebida"
+          >
+            <Volume2 className="mr-1 h-3.5 w-3.5" />
+            {voicePlaybackOn ? "Voz traduzida ON" : "Voz traduzida OFF"}
+          </Button>
         </div>
         <div className="mt-3">
           <CallModeSelector mode={callMode} onChange={changeCallMode} disabled={!canRecord} />
@@ -1043,10 +1105,10 @@ function LiveRoomPage() {
               <span>
                 {langFlag(m.fromLang)} <span className="font-medium">{m.fromName}</span>
               </span>
-              {m.audio && (
+              {!m.mine && (
                 <button
                   className="text-primary hover:underline"
-                  onClick={() => playBase64(m.audio!)}
+                  onClick={() => (m.audio ? playBase64(m.audio) : void playTranslatedText(m.translatedText, myLang))}
                 >
                   <Volume2 className="inline h-3 w-3" /> Reouvir
                 </button>

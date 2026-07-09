@@ -1,4 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { requireAuthFromRequest } from "@/lib/auth-route.server";
+import { chargeFeature, checkBalance, insufficientCreditsResponse } from "@/lib/credit-charge.server";
 
 const LANG_NAME: Record<string, string> = {
   "pt-BR": "Portuguese (Brazil)",
@@ -27,6 +29,8 @@ type Body = {
   fromUserId?: string;
   fromName?: string;
 };
+
+const FEATURE_KEY = "translate_voice";
 
 
 async function translate(text: string, fromLang: string, toLang: string, apiKey: string) {
@@ -58,6 +62,9 @@ export const Route = createFileRoute("/api/public/translate-broadcast")({
   server: {
     handlers: {
       POST: async ({ request }) => {
+        const auth = await requireAuthFromRequest(request);
+        if (!auth.ok) return auth.response;
+
         const aiKey = process.env.LOVABLE_API_KEY;
         if (!aiKey) {
           return new Response(JSON.stringify({ error: "AI not configured" }), {
@@ -74,6 +81,7 @@ export const Route = createFileRoute("/api/public/translate-broadcast")({
         const text = (body.text || "").trim();
         const fromLang = body.fromLang || "";
         const targets = Array.isArray(body.targets) ? body.targets : [];
+        const fromUserId = auth.userId;
         if (!text || !fromLang || targets.length === 0) {
           return new Response(JSON.stringify({ error: "Missing text/fromLang/targets" }), {
             status: 400,
@@ -86,6 +94,15 @@ export const Route = createFileRoute("/api/public/translate-broadcast")({
         if (targets.length > 6) {
           return new Response(JSON.stringify({ error: "Too many targets" }), { status: 400 });
         }
+        if (body.fromUserId && body.fromUserId !== fromUserId) {
+          return new Response(JSON.stringify({ error: "Participant identity mismatch" }), {
+            status: 403,
+            headers: { "content-type": "application/json" },
+          });
+        }
+
+        const balance = await checkBalance(fromUserId, FEATURE_KEY);
+        if (!balance.ok) return insufficientCreditsResponse(balance as any);
 
         // Dedupe by target language
         const uniqueLangs = Array.from(
@@ -93,6 +110,23 @@ export const Route = createFileRoute("/api/public/translate-broadcast")({
         );
 
         try {
+          const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+          if (body.roomCode) {
+            const { data: member, error: memberErr } = await (supabaseAdmin as any)
+              .from("room_participants")
+              .select("user_id")
+              .eq("room_code", body.roomCode)
+              .eq("user_id", fromUserId)
+              .maybeSingle();
+            if (memberErr) throw new Error(`Room membership check failed: ${memberErr.message}`);
+            if (!member) {
+              return new Response(JSON.stringify({ error: "Join the room before translating" }), {
+                status: 403,
+                headers: { "content-type": "application/json" },
+              });
+            }
+          }
+
           const perLang: Record<string, { text: string; audio?: string }> = {};
           await Promise.all(
             uniqueLangs.map(async (lang) => {
@@ -113,13 +147,12 @@ export const Route = createFileRoute("/api/public/translate-broadcast")({
 
           // Persist to live_room_messages so all participants receive via realtime
           let messageId: string | null = null;
-          if (body.roomCode && body.fromUserId) {
-            const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+          if (body.roomCode) {
             const { data: inserted, error: insErr } = await (supabaseAdmin as any)
               .from("live_room_messages")
               .insert({
                 room_code: body.roomCode,
-                from_user_id: body.fromUserId,
+                from_user_id: fromUserId,
                 from_name: body.fromName || "Convidado",
                 from_lang: fromLang,
                 original_text: text,
@@ -137,8 +170,18 @@ export const Route = createFileRoute("/api/public/translate-broadcast")({
             messageId = (inserted as { id?: string } | null)?.id ?? null;
           }
 
+          const charged = await chargeFeature(fromUserId, FEATURE_KEY, {
+            route: "api.public.translate-broadcast",
+            room_code: body.roomCode || null,
+            from_lang: fromLang,
+            target_count: targets.length,
+            target_langs: uniqueLangs,
+            mode: body.withAudio ? "live_audio" : "live_text",
+          });
+          if (!charged.ok) return insufficientCreditsResponse(charged as any);
+
           return new Response(
-            JSON.stringify({ originalText: text, fromLang, perRecipient, messageId }),
+            JSON.stringify({ originalText: text, fromLang, fromUserId, perRecipient, messageId }),
             { headers: { "content-type": "application/json" } },
           );
         } catch (e) {

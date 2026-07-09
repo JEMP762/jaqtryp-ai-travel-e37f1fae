@@ -1,4 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { requireAuthFromRequest } from "@/lib/auth-route.server";
+import { checkBalance, insufficientCreditsResponse } from "@/lib/credit-charge.server";
 
 // ElevenLabs Scribe language codes (ISO 639-3). Map our BCP-47 codes to them.
 const LANG_MAP: Record<string, string> = {
@@ -22,6 +24,9 @@ export const Route = createFileRoute("/api/public/stt")({
   server: {
     handlers: {
       POST: async ({ request }) => {
+        const auth = await requireAuthFromRequest(request);
+        if (!auth.ok) return auth.response;
+
         const apiKey = process.env.ELEVENLABS_API_KEY;
         if (!apiKey) {
           return new Response(JSON.stringify({ error: "ElevenLabs not configured" }), {
@@ -53,6 +58,9 @@ export const Route = createFileRoute("/api/public/stt")({
             headers: { "content-type": "application/json" },
           });
         }
+
+        const balance = await checkBalance(auth.userId, "translate_voice");
+        if (!balance.ok) return insufficientCreditsResponse(balance as any);
 
         const langRaw = (inForm.get("lang") as string) || "";
         const langCode = LANG_MAP[langRaw];
