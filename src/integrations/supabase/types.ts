@@ -1092,10 +1092,7 @@ export type Database = {
         }
         Returns: undefined
       }
-      claim_room_host: {
-        Args: { _code: string; _user: string }
-        Returns: string
-      }
+      claim_room_host: { Args: { _code: string }; Returns: string }
       grant_monthly_credits: {
         Args: { _amount: number; _user: string }
         Returns: undefined
