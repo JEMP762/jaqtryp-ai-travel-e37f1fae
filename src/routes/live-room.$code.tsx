@@ -686,9 +686,7 @@ function LiveRoomPage() {
         /* level meter/VAD is best-effort */
       }
 
-      } catch {
-        /* VAD is best-effort; manual stop still works */
-      }
+
     } catch (e) {
       const err = e as DOMException;
       if (err.name === "NotAllowedError") toast.error("Permissão de microfone negada");
