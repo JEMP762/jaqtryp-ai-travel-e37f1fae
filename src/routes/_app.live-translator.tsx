@@ -300,7 +300,9 @@ async function playAudioFallback(text: string, lang: string) {
   let objectUrl: string | null = null;
   try {
     const url = `/api/public/tts?lang=${encodeURIComponent(lang)}&text=${encodeURIComponent(clean)}`;
-    const resp = await fetch(url, { credentials: "same-origin" });
+    const headers = await authedJsonHeaders();
+    delete headers["Content-Type"];
+    const resp = await fetch(url, { credentials: "same-origin", headers });
     if (!resp.ok) {
       throw new Error(`TTS ${resp.status}`);
     }
