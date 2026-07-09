@@ -913,19 +913,39 @@ function LiveRoomPage() {
                   const { data: sess } = await supabase.auth.getSession();
                   if (!sess.session) {
                     const { error: signErr } = await supabase.auth.signInAnonymously();
-                    if (signErr) throw signErr;
+                    if (signErr) {
+                      console.error("live room anonymous sign-in failed", signErr);
+                      toast.error("Não foi possível autenticar sua entrada. Tente novamente.");
+                      return;
+                    }
                   }
                   const { data: userRes } = await supabase.auth.getUser();
                   const uid = userRes.user?.id;
-                  if (!uid) throw new Error("No auth user");
+                  if (!uid) {
+                    console.error("live room join failed: missing authenticated user");
+                    toast.error("Não foi possível confirmar seu usuário. Tente novamente.");
+                    return;
+                  }
                   saveUserId(uid);
                   setMyId(uid);
                   const { error: memErr } = await (supabase as any)
                     .from("room_participants")
                     .upsert({ room_code: code, user_id: uid }, { onConflict: "room_code,user_id" });
-                  if (memErr) throw memErr;
+                  if (memErr) {
+                    console.error("live room participant upsert failed", memErr);
+                    toast.error("Não foi possível registrar sua entrada na sala. Tente novamente.");
+                    return;
+                  }
                   // Claim the host slot (first joiner becomes the host and pays for translations)
-                  await (supabase as any).rpc("claim_room_host", { _code: code, _user: uid });
+                  const { data: hostId, error: hostErr } = await (supabase as any).rpc("claim_room_host", { _code: code });
+                  if (hostErr) {
+                    // Do not block the room if the participant is already registered; host billing can recover
+                    // when the state is loaded/subscribed, and this keeps guests from being locked out.
+                    console.warn("live room host claim failed", hostErr);
+                    toast.warning("Você entrou na sala, mas o anfitrião ainda está sincronizando.");
+                  } else if (hostId) {
+                    setRoomHostId(String(hostId));
+                  }
                 } catch (e) {
                   toast.error("Não foi possível entrar na sala. Tente novamente.");
                   console.error("join room failed", e);
