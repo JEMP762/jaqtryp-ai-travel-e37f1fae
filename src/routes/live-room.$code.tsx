@@ -721,6 +721,7 @@ function LiveRoomPage() {
       const ext = blobType.includes("mp4") ? "m4a" : blobType.includes("ogg") ? "ogg" : "webm";
       fd.append("audio", blob, `audio.${ext}`);
       fd.append("lang", myLang);
+      fd.append("roomCode", code);
       const sttHeaders = await authedJsonHeaders();
       delete sttHeaders["Content-Type"];
       const sttResp = await fetch("/api/public/stt", { method: "POST", body: fd, headers: sttHeaders });
@@ -920,6 +921,8 @@ function LiveRoomPage() {
                     .from("room_participants")
                     .upsert({ room_code: code, user_id: uid }, { onConflict: "room_code,user_id" });
                   if (memErr) throw memErr;
+                  // Claim the host slot (first joiner becomes the host and pays for translations)
+                  await (supabase as any).rpc("claim_room_host", { _code: code, _user: uid });
                 } catch (e) {
                   toast.error("Não foi possível entrar na sala. Tente novamente.");
                   console.error("join room failed", e);
