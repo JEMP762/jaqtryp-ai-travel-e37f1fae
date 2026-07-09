@@ -145,16 +145,6 @@ export const Route = createFileRoute("/api/public/translate-broadcast")({
             perRecipient[t.userId] = { text: r.text, audio: r.audio, lang: t.lang };
           }
 
-          const charged = await chargeFeature(fromUserId, FEATURE_KEY, {
-            route: "api.public.translate-broadcast",
-            room_code: body.roomCode || null,
-            from_lang: fromLang,
-            target_count: targets.length,
-            target_langs: uniqueLangs,
-            mode: body.withAudio ? "live_audio" : "live_text",
-          });
-          if (!charged.ok) return insufficientCreditsResponse(charged as any);
-
           // Persist to live_room_messages so all participants receive via realtime
           let messageId: string | null = null;
           if (body.roomCode) {
@@ -179,6 +169,16 @@ export const Route = createFileRoute("/api/public/translate-broadcast")({
             }
             messageId = (inserted as { id?: string } | null)?.id ?? null;
           }
+
+          const charged = await chargeFeature(fromUserId, FEATURE_KEY, {
+            route: "api.public.translate-broadcast",
+            room_code: body.roomCode || null,
+            from_lang: fromLang,
+            target_count: targets.length,
+            target_langs: uniqueLangs,
+            mode: body.withAudio ? "live_audio" : "live_text",
+          });
+          if (!charged.ok) return insufficientCreditsResponse(charged as any);
 
           return new Response(
             JSON.stringify({ originalText: text, fromLang, fromUserId, perRecipient, messageId }),
