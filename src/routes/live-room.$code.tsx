@@ -210,7 +210,7 @@ function LiveRoomPage() {
   }, []);
 
   const playTranslatedText = React.useCallback(async (text: string, lang: string) => {
-    const clean = text.trim().slice(0, 220);
+    const clean = text.trim().slice(0, 1200);
     if (!clean) return;
     if (!audioRef.current) {
       audioRef.current = new Audio();
