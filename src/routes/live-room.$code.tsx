@@ -125,6 +125,12 @@ function LiveRoomPage() {
   const [audioBlocked, setAudioBlocked] = React.useState(false);
   const [liveTranslateOn, setLiveTranslateOn] = React.useState(false);
   const [voicePlaybackOn, setVoicePlaybackOn] = React.useState(true);
+  const [micMode, setMicMode] = React.useState<"hold" | "toggle" | "auto">("hold");
+  const [micLevel, setMicLevel] = React.useState(0);
+  const [pttActive, setPttActive] = React.useState(false);
+  const micModeRef = React.useRef<"hold" | "toggle" | "auto">("hold");
+  React.useEffect(() => { micModeRef.current = micMode; }, [micMode]);
+
 
   const channelRef = React.useRef<RealtimeChannel | null>(null);
   const signalListenersRef = React.useRef<Set<(p: unknown) => void>>(new Set());
