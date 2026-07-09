@@ -853,14 +853,33 @@ function LiveRoomPage() {
             </div>
             <Button
               className="w-full bg-gradient-primary shadow-glow"
-              onClick={() => {
+              onClick={async () => {
                 if (myName.trim()) saveName(myName.trim());
                 unlockAudio();
+                try {
+                  const { data: sess } = await supabase.auth.getSession();
+                  if (!sess.session) {
+                    const { error: signErr } = await supabase.auth.signInAnonymously();
+                    if (signErr) throw signErr;
+                  }
+                  const { data: userRes } = await supabase.auth.getUser();
+                  const uid = userRes.user?.id;
+                  if (!uid) throw new Error("No auth user");
+                  const { error: memErr } = await (supabase as any)
+                    .from("room_participants")
+                    .upsert({ room_code: code, user_id: uid }, { onConflict: "room_code,user_id" });
+                  if (memErr) throw memErr;
+                } catch (e) {
+                  toast.error("Não foi possível entrar na sala. Tente novamente.");
+                  console.error("join room failed", e);
+                  return;
+                }
                 setJoined(true);
               }}
             >
               Entrar
             </Button>
+
           </div>
         </div>
       </div>
