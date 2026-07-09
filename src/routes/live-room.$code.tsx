@@ -14,6 +14,7 @@ import {
 } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 import { CallPanel, CallModeSelector, type CallMode } from "@/components/live-room/CallPanel";
+import { authedJsonHeaders } from "@/lib/authed-fetch";
 
 export const Route = createFileRoute("/live-room/$code")({
   component: LiveRoomPage,
@@ -79,6 +80,21 @@ function getOrCreateUserId() {
   sessionStorage.setItem(k, id);
   return id;
 }
+function saveUserId(id: string) {
+  if (typeof window === "undefined") return;
+  localStorage.setItem("jaq-live-room-uid", id);
+  sessionStorage.setItem("jaq-live-room-uid", id);
+}
+
+function isLikelyNoiseTranscript(text: string) {
+  const clean = text.trim();
+  if (clean.length < 3) return true;
+  const words = clean.split(/\s+/).filter(Boolean);
+  if (words.length === 1 && clean.length < 5) return true;
+  if (/^(ok|okay|hum|hmm|uh|um|ah|hã|é|oi|olá|sim|não)[.!?]*$/i.test(clean)) return true;
+  return false;
+}
+
 function getOrCreateName() {
   if (typeof window === "undefined") return "Convidado";
   const k = "jaq-live-room-name";
@@ -91,7 +107,7 @@ function saveName(n: string) {
 
 function LiveRoomPage() {
   const { code } = Route.useParams();
-  const [myId] = React.useState(getOrCreateUserId);
+  const [myId, setMyId] = React.useState(getOrCreateUserId);
   const [myName, setMyName] = React.useState(getOrCreateName);
   const [myLang, setMyLang] = React.useState("pt-BR");
   const [joined, setJoined] = React.useState(false);
@@ -130,6 +146,10 @@ function LiveRoomPage() {
   const audioPlayingRef = React.useRef(false);
   const restartTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
   const discardNextRecordingRef = React.useRef(false);
+  const recordingStartedAtRef = React.useRef(0);
+  const vadSpeechMsRef = React.useRef(0);
+  const vadPeakRef = React.useRef(0);
+  const lastTranscriptRef = React.useRef<{ text: string; at: number }>({ text: "", at: 0 });
 
   React.useEffect(() => {
     participantsRef.current = participants;
@@ -196,9 +216,11 @@ function LiveRoomPage() {
     let objectUrl: string | null = null;
     try {
       audioPlayingRef.current = true;
+      const headers = await authedJsonHeaders();
+      delete headers["Content-Type"];
       const resp = await fetch(
         `/api/public/tts?lang=${encodeURIComponent(lang)}&text=${encodeURIComponent(clean)}`,
-        { credentials: "same-origin" },
+        { credentials: "same-origin", headers },
       );
       if (!resp.ok) throw new Error(`TTS ${resp.status}`);
       const blob = await resp.blob();
@@ -475,6 +497,8 @@ function LiveRoomPage() {
     }
     vadSpokeRef.current = false;
     vadSilenceStartRef.current = null;
+    vadSpeechMsRef.current = 0;
+    vadPeakRef.current = 0;
   }, []);
 
   const others = participants.filter((p) => p.userId !== myId);
