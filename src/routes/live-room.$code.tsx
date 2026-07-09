@@ -721,7 +721,9 @@ function LiveRoomPage() {
       const ext = blobType.includes("mp4") ? "m4a" : blobType.includes("ogg") ? "ogg" : "webm";
       fd.append("audio", blob, `audio.${ext}`);
       fd.append("lang", myLang);
-      const sttResp = await fetch("/api/public/stt", { method: "POST", body: fd });
+      const sttHeaders = await authedJsonHeaders();
+      delete sttHeaders["Content-Type"];
+      const sttResp = await fetch("/api/public/stt", { method: "POST", body: fd, headers: sttHeaders });
       if (!sttResp.ok) {
         const e = await sttResp.text();
         throw new Error(`STT: ${e.slice(0, 120)}`);
