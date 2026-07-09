@@ -66,6 +66,7 @@ type RoomStateRow = {
   call_mode: CallMode;
   video_host_id: string | null;
   daily_url: string | null;
+  host_user_id?: string | null;
   updated_at?: string;
 };
 
@@ -120,6 +121,7 @@ function LiveRoomPage() {
   const [callMode, setCallMode] = React.useState<CallMode>("none");
   const [videoHostId, setVideoHostId] = React.useState<string | null>(null);
   const [sharedVideoUrl, setSharedVideoUrl] = React.useState<string | null>(null);
+  const [roomHostId, setRoomHostId] = React.useState<string | null>(null);
   const [audioBlocked, setAudioBlocked] = React.useState(false);
   const [liveTranslateOn, setLiveTranslateOn] = React.useState(false);
   const [voicePlaybackOn, setVoicePlaybackOn] = React.useState(true);
