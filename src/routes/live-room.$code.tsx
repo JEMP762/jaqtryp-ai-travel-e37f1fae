@@ -1016,6 +1016,13 @@ function LiveRoomPage() {
             })
           )}
         </div>
+        {roomHostId && (
+          <div className="mt-2 text-xs text-muted-foreground">
+            💳 Créditos pagos pelo anfitrião
+            {roomHostId === myId ? " (você)" : ` (${participants.find((p) => p.userId === roomHostId)?.name ?? "outro participante"})`}
+            . Convidados usam a sala sem gastar créditos próprios.
+          </div>
+        )}
         {others.length === 0 && (
           <div className="mt-2 text-xs text-amber-500">
             Aguardando alguém entrar com o link…
