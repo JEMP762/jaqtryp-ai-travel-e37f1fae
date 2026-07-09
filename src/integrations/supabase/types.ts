@@ -492,6 +492,7 @@ export type Database = {
         Row: {
           call_mode: string
           daily_url: string | null
+          host_user_id: string | null
           room_code: string
           updated_at: string
           video_host_id: string | null
@@ -499,6 +500,7 @@ export type Database = {
         Insert: {
           call_mode?: string
           daily_url?: string | null
+          host_user_id?: string | null
           room_code: string
           updated_at?: string
           video_host_id?: string | null
@@ -506,6 +508,7 @@ export type Database = {
         Update: {
           call_mode?: string
           daily_url?: string | null
+          host_user_id?: string | null
           room_code?: string
           updated_at?: string
           video_host_id?: string | null
@@ -1088,6 +1091,10 @@ export type Database = {
           _user: string
         }
         Returns: undefined
+      }
+      claim_room_host: {
+        Args: { _code: string; _user: string }
+        Returns: string
       }
       grant_monthly_credits: {
         Args: { _amount: number; _user: string }
