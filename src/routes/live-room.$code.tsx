@@ -572,31 +572,40 @@ function LiveRoomPage() {
       };
       rec.onstop = async () => {
         setListening(false);
+        setPttActive(false);
+        setMicLevel(0);
         stopVad();
         stopTracks();
         const blobType = mimeRef.current || rec.mimeType || "audio/webm";
         const blob = new Blob(chunksRef.current, { type: blobType });
         chunksRef.current = [];
         recRef.current = null;
+        const isAuto = micModeRef.current === "auto";
+        const elapsed = performance.now() - recordingStartedAtRef.current;
         if (discardNextRecordingRef.current) {
           discardNextRecordingRef.current = false;
-          setStatus(liveTranslateOnRef.current ? "Ouvindo tradução recebida…" : "");
-          scheduleNextListening(900);
+          setStatus(isAuto && liveTranslateOnRef.current ? "Ouvindo tradução recebida…" : "");
+          if (isAuto) scheduleNextListening(900);
+          return;
+        }
+        // Push-to-talk: discard accidental taps (< 400ms)
+        if (!isAuto && elapsed < 400) {
+          setStatus("Segure por mais tempo para falar");
           return;
         }
         if (blob.size < 1200) {
           setStatus("");
-          scheduleNextListening();
+          if (isAuto) scheduleNextListening();
           return;
         }
-        const elapsed = performance.now() - recordingStartedAtRef.current;
-        if (elapsed < 900 || vadSpeechMsRef.current < 280 || vadPeakRef.current < 0.032) {
+        if (isAuto && (elapsed < 900 || vadSpeechMsRef.current < 280 || vadPeakRef.current < 0.032)) {
           setStatus(liveTranslateOnRef.current ? "Aguardando fala clara…" : "");
           scheduleNextListening(700);
           return;
         }
         await processAudio(blob, blobType);
       };
+
       recRef.current = rec;
       rec.start();
       setListening(true);
