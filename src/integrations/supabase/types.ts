@@ -596,6 +596,27 @@ export type Database = {
         }
         Relationships: []
       }
+      room_participants: {
+        Row: {
+          id: string
+          joined_at: string
+          room_code: string
+          user_id: string
+        }
+        Insert: {
+          id?: string
+          joined_at?: string
+          room_code: string
+          user_id: string
+        }
+        Update: {
+          id?: string
+          joined_at?: string
+          room_code?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       stay_orders: {
         Row: {
           accommodation_name: string | null
@@ -1084,6 +1105,7 @@ export type Database = {
         }
         Returns: boolean
       }
+      is_room_member: { Args: { _code: string }; Returns: boolean }
       process_monthly_resets: { Args: never; Returns: number }
       spend_credits: {
         Args: { _amount: number; _meta?: Json; _reason: string; _user: string }
