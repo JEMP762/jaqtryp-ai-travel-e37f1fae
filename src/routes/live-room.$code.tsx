@@ -443,11 +443,13 @@ function LiveRoomPage() {
     };
   }, [joined, code, myId, myLang, myName, applyRoomState, handleIncomingRow]);
 
-  // Update presence when language/name/liveOn changes
+  // Update presence when language/name/liveOn/micMode changes
   React.useEffect(() => {
     if (!joined || !channelRef.current) return;
-    channelRef.current.track({ userId: myId, lang: myLang, name: myName || "Convidado", liveOn: liveTranslateOn });
-  }, [joined, myId, myLang, myName, liveTranslateOn]);
+    const liveNow = micMode === "auto" ? liveTranslateOn : true;
+    channelRef.current.track({ userId: myId, lang: myLang, name: myName || "Convidado", liveOn: liveNow });
+  }, [joined, myId, myLang, myName, liveTranslateOn, micMode]);
+
 
   const nudgePeer = React.useCallback(
     (peerId: string) => {
