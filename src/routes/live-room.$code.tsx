@@ -911,6 +911,8 @@ function LiveRoomPage() {
                   const { data: userRes } = await supabase.auth.getUser();
                   const uid = userRes.user?.id;
                   if (!uid) throw new Error("No auth user");
+                  saveUserId(uid);
+                  setMyId(uid);
                   const { error: memErr } = await (supabase as any)
                     .from("room_participants")
                     .upsert({ room_code: code, user_id: uid }, { onConflict: "room_code,user_id" });
