@@ -547,6 +547,9 @@ function LiveRoomPage() {
       }
       mimeRef.current = mime;
       chunksRef.current = [];
+      recordingStartedAtRef.current = performance.now();
+      vadSpeechMsRef.current = 0;
+      vadPeakRef.current = 0;
       const rec = mime ? new MediaRecorder(stream, { mimeType: mime }) : new MediaRecorder(stream);
       rec.ondataavailable = (e) => {
         if (e.data && e.data.size > 0) chunksRef.current.push(e.data);
@@ -576,6 +579,12 @@ function LiveRoomPage() {
           scheduleNextListening();
           return;
         }
+        const elapsed = performance.now() - recordingStartedAtRef.current;
+        if (elapsed < 900 || vadSpeechMsRef.current < 280 || vadPeakRef.current < 0.032) {
+          setStatus(liveTranslateOnRef.current ? "Aguardando fala clara…" : "");
+          scheduleNextListening(700);
+          return;
+        }
         await processAudio(blob, blobType);
       };
       recRef.current = rec;
@@ -597,10 +606,11 @@ function LiveRoomPage() {
           vadCtxRef.current = ctx;
           vadAnalyserRef.current = analyser;
           const buf = new Uint8Array(analyser.fftSize);
-          const SPEECH_THRESHOLD = 0.025; // RMS above this = speech
-          const SILENCE_MS = 1200; // stop after this much silence
-          const MIN_SPEECH_MS = 350; // require some speech first
+          const SPEECH_THRESHOLD = 0.032; // RMS above this = speech
+          const SILENCE_MS = 1450; // stop after this much silence
+          const MIN_SPEECH_MS = 600; // require real speech first
           let speechStart: number | null = null;
+          let lastTick = performance.now();
 
           const tick = () => {
             const a = vadAnalyserRef.current;
@@ -613,7 +623,11 @@ function LiveRoomPage() {
             }
             const rms = Math.sqrt(sumSq / buf.length);
             const now = performance.now();
+            const delta = Math.min(80, Math.max(0, now - lastTick));
+            lastTick = now;
+            vadPeakRef.current = Math.max(vadPeakRef.current, rms);
             if (rms > SPEECH_THRESHOLD) {
+              vadSpeechMsRef.current += delta;
               if (speechStart == null) speechStart = now;
               if (!vadSpokeRef.current && now - speechStart >= MIN_SPEECH_MS) {
                 vadSpokeRef.current = true;
@@ -630,10 +644,10 @@ function LiveRoomPage() {
           };
           vadRafRef.current = requestAnimationFrame(tick);
 
-          // Safety cap: never record more than 30s
+          // Safety cap: never record more than 24s
           vadMaxTimerRef.current = setTimeout(() => {
             if (recRef.current && recRef.current.state === "recording") stopRecording();
-          }, 30_000);
+          }, 24_000);
         }
       } catch {
         /* VAD is best-effort; manual stop still works */
