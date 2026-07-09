@@ -122,6 +122,7 @@ function LiveRoomPage() {
   const [sharedVideoUrl, setSharedVideoUrl] = React.useState<string | null>(null);
   const [audioBlocked, setAudioBlocked] = React.useState(false);
   const [liveTranslateOn, setLiveTranslateOn] = React.useState(false);
+  const [voicePlaybackOn, setVoicePlaybackOn] = React.useState(true);
 
   const channelRef = React.useRef<RealtimeChannel | null>(null);
   const signalListenersRef = React.useRef<Set<(p: unknown) => void>>(new Set());
@@ -302,7 +303,7 @@ function LiveRoomPage() {
           mine: isMine,
         },
       ]);
-      if (!isMine && (audio || translated)) {
+      if (voicePlaybackOn && !isMine && (audio || translated)) {
         // Only pause playback when a new message arrives; DO NOT stop the
         // receiver's own recording — otherwise their speech gets discarded
         // whenever they talk at the same time as the sender.
@@ -310,7 +311,7 @@ function LiveRoomPage() {
         else void playTranslatedText(translated, forMe?.lang ?? myLang);
       }
     },
-    [code, myId, myLang, playBase64, playTranslatedText],
+    [code, myId, myLang, playBase64, playTranslatedText, voicePlaybackOn],
   );
 
   React.useEffect(() => {
