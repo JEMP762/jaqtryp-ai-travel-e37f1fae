@@ -1038,6 +1038,17 @@ function LiveRoomPage() {
               ))}
             </SelectContent>
           </Select>
+          <Button
+            type="button"
+            variant={voicePlaybackOn ? "default" : "outline"}
+            size="sm"
+            onClick={() => setVoicePlaybackOn((v) => !v)}
+            className="h-9 shrink-0"
+            title="Ativa ou silencia a voz traduzida recebida"
+          >
+            <Volume2 className="mr-1 h-3.5 w-3.5" />
+            {voicePlaybackOn ? "Voz traduzida ON" : "Voz traduzida OFF"}
+          </Button>
         </div>
         <div className="mt-3">
           <CallModeSelector mode={callMode} onChange={changeCallMode} disabled={!canRecord} />
@@ -1094,10 +1105,10 @@ function LiveRoomPage() {
               <span>
                 {langFlag(m.fromLang)} <span className="font-medium">{m.fromName}</span>
               </span>
-              {m.audio && (
+              {!m.mine && (
                 <button
                   className="text-primary hover:underline"
-                  onClick={() => playBase64(m.audio!)}
+                  onClick={() => (m.audio ? playBase64(m.audio) : void playTranslatedText(m.translatedText, myLang))}
                 >
                   <Volume2 className="inline h-3 w-3" /> Reouvir
                 </button>
