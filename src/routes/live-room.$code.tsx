@@ -425,7 +425,9 @@ function LiveRoomPage() {
     channel.subscribe(async (st) => {
       if (st === "SUBSCRIBED") {
         setChannelStatus("connected");
-        await channel.track({ userId: myId, lang: myLang, name: myName || "Convidado", liveOn: liveTranslateOnRef.current });
+        const liveNow = micModeRef.current === "auto" ? liveTranslateOnRef.current : true;
+        await channel.track({ userId: myId, lang: myLang, name: myName || "Convidado", liveOn: liveNow });
+
       } else if (st === "CHANNEL_ERROR" || st === "TIMED_OUT") {
         setChannelStatus("error");
       } else {
