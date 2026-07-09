@@ -32,7 +32,6 @@ type Body = {
 
 const FEATURE_KEY = "translate_voice";
 
-
 async function translate(text: string, fromLang: string, toLang: string, apiKey: string) {
   if (fromLang === toLang) return text;
   const from = LANG_NAME[fromLang] ?? fromLang;
@@ -101,9 +100,6 @@ export const Route = createFileRoute("/api/public/translate-broadcast")({
           });
         }
 
-        const balance = await checkBalance(fromUserId, FEATURE_KEY);
-        if (!balance.ok) return insufficientCreditsResponse(balance as any);
-
         // Dedupe by target language
         const uniqueLangs = Array.from(
           new Set(targets.map((t) => t.lang).filter((l): l is string => typeof l === "string")),
@@ -127,12 +123,25 @@ export const Route = createFileRoute("/api/public/translate-broadcast")({
             }
           }
 
+          // Determine who pays: the room host. Fallback to caller when no room.
+          let payerId = fromUserId;
+          if (body.roomCode) {
+            const { data: state } = await (supabaseAdmin as any)
+              .from("live_room_state")
+              .select("host_user_id")
+              .eq("room_code", body.roomCode)
+              .maybeSingle();
+            const host = (state as { host_user_id?: string } | null)?.host_user_id;
+            if (host) payerId = host;
+          }
+
+          const balance = await checkBalance(payerId, FEATURE_KEY);
+          if (!balance.ok) return insufficientCreditsResponse(balance as any);
+
           const perLang: Record<string, { text: string; audio?: string }> = {};
           await Promise.all(
             uniqueLangs.map(async (lang) => {
               const tr = await translate(text, fromLang, lang, aiKey);
-              // Keep realtime/database payload small and reliable. The receiver generates
-              // speech locally from the translated text via /api/public/tts.
               perLang[lang] = { text: tr };
             }),
           );
@@ -145,7 +154,6 @@ export const Route = createFileRoute("/api/public/translate-broadcast")({
             perRecipient[t.userId] = { text: r.text, audio: r.audio, lang: t.lang };
           }
 
-          // Persist to live_room_messages so all participants receive via realtime
           let messageId: string | null = null;
           if (body.roomCode) {
             const { data: inserted, error: insErr } = await (supabaseAdmin as any)
@@ -170,9 +178,11 @@ export const Route = createFileRoute("/api/public/translate-broadcast")({
             messageId = (inserted as { id?: string } | null)?.id ?? null;
           }
 
-          const charged = await chargeFeature(fromUserId, FEATURE_KEY, {
+          const charged = await chargeFeature(payerId, FEATURE_KEY, {
             route: "api.public.translate-broadcast",
             room_code: body.roomCode || null,
+            from_user_id: fromUserId,
+            paid_by_host: payerId !== fromUserId,
             from_lang: fromLang,
             target_count: targets.length,
             target_langs: uniqueLangs,
@@ -181,7 +191,7 @@ export const Route = createFileRoute("/api/public/translate-broadcast")({
           if (!charged.ok) return insufficientCreditsResponse(charged as any);
 
           return new Response(
-            JSON.stringify({ originalText: text, fromLang, fromUserId, perRecipient, messageId }),
+            JSON.stringify({ originalText: text, fromLang, fromUserId, perRecipient, messageId, hostUserId: payerId }),
             { headers: { "content-type": "application/json" } },
           );
         } catch (e) {
@@ -194,4 +204,3 @@ export const Route = createFileRoute("/api/public/translate-broadcast")({
     },
   },
 });
-

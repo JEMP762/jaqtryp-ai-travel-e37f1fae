@@ -66,6 +66,7 @@ type RoomStateRow = {
   call_mode: CallMode;
   video_host_id: string | null;
   daily_url: string | null;
+  host_user_id?: string | null;
   updated_at?: string;
 };
 
@@ -120,6 +121,7 @@ function LiveRoomPage() {
   const [callMode, setCallMode] = React.useState<CallMode>("none");
   const [videoHostId, setVideoHostId] = React.useState<string | null>(null);
   const [sharedVideoUrl, setSharedVideoUrl] = React.useState<string | null>(null);
+  const [roomHostId, setRoomHostId] = React.useState<string | null>(null);
   const [audioBlocked, setAudioBlocked] = React.useState(false);
   const [liveTranslateOn, setLiveTranslateOn] = React.useState(false);
   const [voicePlaybackOn, setVoicePlaybackOn] = React.useState(true);
@@ -277,6 +279,7 @@ function LiveRoomPage() {
       setCallMode(nextMode);
       setVideoHostId(row.video_host_id ?? null);
       setSharedVideoUrl(row.daily_url ?? null);
+      if (row.host_user_id) setRoomHostId(row.host_user_id);
     },
     [code],
   );
@@ -320,7 +323,7 @@ function LiveRoomPage() {
       try {
         const { data } = await (supabase as any)
           .from("live_room_state")
-          .select("room_code, call_mode, video_host_id, daily_url, updated_at")
+          .select("room_code, call_mode, video_host_id, daily_url, host_user_id, updated_at")
           .eq("room_code", code)
           .maybeSingle();
         if (data) applyRoomState(data as RoomStateRow);
@@ -721,6 +724,7 @@ function LiveRoomPage() {
       const ext = blobType.includes("mp4") ? "m4a" : blobType.includes("ogg") ? "ogg" : "webm";
       fd.append("audio", blob, `audio.${ext}`);
       fd.append("lang", myLang);
+      fd.append("roomCode", code);
       const sttHeaders = await authedJsonHeaders();
       delete sttHeaders["Content-Type"];
       const sttResp = await fetch("/api/public/stt", { method: "POST", body: fd, headers: sttHeaders });
@@ -920,6 +924,8 @@ function LiveRoomPage() {
                     .from("room_participants")
                     .upsert({ room_code: code, user_id: uid }, { onConflict: "room_code,user_id" });
                   if (memErr) throw memErr;
+                  // Claim the host slot (first joiner becomes the host and pays for translations)
+                  await (supabase as any).rpc("claim_room_host", { _code: code, _user: uid });
                 } catch (e) {
                   toast.error("Não foi possível entrar na sala. Tente novamente.");
                   console.error("join room failed", e);
@@ -1010,6 +1016,13 @@ function LiveRoomPage() {
             })
           )}
         </div>
+        {roomHostId && (
+          <div className="mt-2 text-xs text-muted-foreground">
+            💳 Créditos pagos pelo anfitrião
+            {roomHostId === myId ? " (você)" : ` (${participants.find((p) => p.userId === roomHostId)?.name ?? "outro participante"})`}
+            . Convidados usam a sala sem gastar créditos próprios.
+          </div>
+        )}
         {others.length === 0 && (
           <div className="mt-2 text-xs text-amber-500">
             Aguardando alguém entrar com o link…
