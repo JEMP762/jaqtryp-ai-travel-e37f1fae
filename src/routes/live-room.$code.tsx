@@ -727,11 +727,18 @@ function LiveRoomPage() {
       }
       const { text } = (await sttResp.json()) as { text?: string };
       const original = (text || "").trim();
-      if (!original) {
+      if (!original || isLikelyNoiseTranscript(original)) {
         setStatus("");
-        toast.info("Nada foi captado");
+        if (!liveTranslateOnRef.current) toast.info("Nada foi captado");
         return;
       }
+      const normalized = original.toLocaleLowerCase().replace(/\s+/g, " ");
+      const now = Date.now();
+      if (lastTranscriptRef.current.text === normalized && now - lastTranscriptRef.current.at < 10_000) {
+        setStatus(liveTranslateOnRef.current ? "Aguardando nova fala…" : "");
+        return;
+      }
+      lastTranscriptRef.current = { text: normalized, at: now };
 
       const currentOthers = participantsRef.current.filter((p) => p.userId !== myId);
       if (currentOthers.length === 0) {
@@ -743,7 +750,7 @@ function LiveRoomPage() {
       setStatus("Traduzindo e gerando voz…");
       const tResp = await fetch("/api/public/translate-broadcast", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: await authedJsonHeaders(),
         body: JSON.stringify({
           fromLang: myLang,
           text: original,
@@ -761,13 +768,14 @@ function LiveRoomPage() {
       const result = (await tResp.json()) as {
         originalText?: string;
         fromLang?: string;
+        fromUserId?: string;
         perRecipient?: PerRecipientMap;
         messageId?: string | null;
       };
       const row: MessageRow = {
         id: result.messageId || crypto.randomUUID(),
         room_code: code,
-        from_user_id: myId,
+        from_user_id: result.fromUserId || myId,
         from_name: myName || "Eu",
         from_lang: result.fromLang || myLang,
         original_text: result.originalText || original,
