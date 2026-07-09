@@ -1,21 +1,30 @@
-Plano para corrigir o erro “Não foi possível entrar na sala”:
+## Objetivo
+Trocar o gatilho atual de tradução por um **botão de microfone grande e óbvio**, estilo walkie-talkie, fácil de usar no celular durante a conversa. Acabar com as alucinações do modo automático.
 
-1. Corrigir a causa provável no backend da sala
-- Ajustar a função `claim_room_host` para aceitar apenas o usuário autenticado real, em vez de confiar no `_user` enviado pelo cliente.
-- Trocar `host_user_id` para tipo `uuid`, compatível com os IDs reais de autenticação.
-- Garantir que a função rode após o usuário entrar como participante, sem quebrar as políticas de segurança.
+## Como vai funcionar (para o usuário)
 
-2. Melhorar a entrada/reentrada na sala
-- No botão “Entrar”, capturar separadamente falha de login anônimo, registro do participante e reserva do anfitrião.
-- Se a reserva de anfitrião falhar, permitir entrar na sala mesmo assim quando a participação já foi registrada, para não bloquear convidado por erro secundário.
-- Salvar o `host_user_id` retornado pela função quando disponível.
+- Um **botão redondo grande de microfone** fixo no rodapé da sala, sempre visível.
+- **Segurar para falar**: pressiona → grava enquanto segura → solta → traduz e envia.
+  - No celular funciona com o dedo; no computador funciona com o mouse ou barra de espaço.
+- Feedback visual claro: botão fica vermelho pulsando enquanto grava, mostra "🎙 Ouvindo..." + um medidor de nível de voz para o usuário ver que está captando.
+- Se soltar antes de ~0,4s, cancela (evita toque acidental sem enviar áudio curtinho inútil que gera alucinação).
+- Um pequeno seletor discreto acima do botão permite trocar para **"Toque p/ falar, toque p/ parar"** (mãos livres) para quem preferir. O modo automático por voz sai como padrão porque é o que estava alucinando.
 
-3. Melhorar o diagnóstico para não ficar genérico
-- Trocar o toast único genérico por mensagens mais úteis, por exemplo: autenticação, permissão da sala ou conexão.
-- Manter logs técnicos no console para confirmar rapidamente se o bloqueio foi na autenticação, tabela de participantes ou host.
+## Onde ativar (bem visível)
 
-4. Validar o fluxo principal
-- Testar abrir uma sala, entrar, sair e entrar novamente.
-- Confirmar que a sala carrega, o participante é registrado e o estado da sala é lido após entrar.
+1. **Botão principal**: fixo no rodapé da sala ao vivo, centralizado, tamanho grande (~96px), acompanhado do texto "Segure para falar".
+2. **Indicador no topo**: o 🎙 ON/OFF ao lado do seu nome continua, mas agora reflete "gravando agora" em tempo real.
+3. **Primeira vez**: um balão curto aparece apontando pro botão: "Segure aqui e fale. Solte para traduzir." Fecha ao primeiro uso.
 
-Observação técnica: o erro nasce no clique de “Entrar” em `live-room.$code.tsx`. A parte mais suspeita é a nova RPC `claim_room_host`, porque ela recebe `_user text` e grava em `live_room_state.host_user_id`, enquanto a participação usa `uuid`. Isso pode falhar no backend e impedir o `setJoined(true)`, bloqueando a entrada inteira.
+## Mudanças técnicas (curtas)
+
+- `src/routes/live-room.$code.tsx`:
+  - Remover os botões atuais "🎙 Ligar tradução" / "📨 Enviar agora" e o auto-VAD como padrão.
+  - Novo componente `MicPushToTalkButton` fixo no rodapé com handlers `pointerdown`/`pointerup`/`pointercancel` + suporte a `keydown/keyup` na barra de espaço.
+  - Estado: `recording`, `level` (medidor), `mode` ("hold" | "toggle" | "auto").
+  - Descartar clipes < 400ms; manter o filtro `isLikelyNoiseTranscript` e limites de duração máx (~15s) para não estourar custo.
+- Cobrança segue igual: **só o anfitrião paga** (já implementado em `translate-broadcast` e `stt`).
+- Sem mudança de backend, RLS, ou tabelas.
+
+## Fora de escopo
+- Não mexe em chamada de vídeo/áudio (Daily), TTS, ou lógica de tradução — apenas o gatilho de captura do microfone.

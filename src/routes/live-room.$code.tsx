@@ -125,6 +125,12 @@ function LiveRoomPage() {
   const [audioBlocked, setAudioBlocked] = React.useState(false);
   const [liveTranslateOn, setLiveTranslateOn] = React.useState(false);
   const [voicePlaybackOn, setVoicePlaybackOn] = React.useState(true);
+  const [micMode, setMicMode] = React.useState<"hold" | "toggle" | "auto">("hold");
+  const [micLevel, setMicLevel] = React.useState(0);
+  const [pttActive, setPttActive] = React.useState(false);
+  const micModeRef = React.useRef<"hold" | "toggle" | "auto">("hold");
+  React.useEffect(() => { micModeRef.current = micMode; }, [micMode]);
+
 
   const channelRef = React.useRef<RealtimeChannel | null>(null);
   const signalListenersRef = React.useRef<Set<(p: unknown) => void>>(new Set());
@@ -419,7 +425,9 @@ function LiveRoomPage() {
     channel.subscribe(async (st) => {
       if (st === "SUBSCRIBED") {
         setChannelStatus("connected");
-        await channel.track({ userId: myId, lang: myLang, name: myName || "Convidado", liveOn: liveTranslateOnRef.current });
+        const liveNow = micModeRef.current === "auto" ? liveTranslateOnRef.current : true;
+        await channel.track({ userId: myId, lang: myLang, name: myName || "Convidado", liveOn: liveNow });
+
       } else if (st === "CHANNEL_ERROR" || st === "TIMED_OUT") {
         setChannelStatus("error");
       } else {
@@ -435,11 +443,13 @@ function LiveRoomPage() {
     };
   }, [joined, code, myId, myLang, myName, applyRoomState, handleIncomingRow]);
 
-  // Update presence when language/name/liveOn changes
+  // Update presence when language/name/liveOn/micMode changes
   React.useEffect(() => {
     if (!joined || !channelRef.current) return;
-    channelRef.current.track({ userId: myId, lang: myLang, name: myName || "Convidado", liveOn: liveTranslateOn });
-  }, [joined, myId, myLang, myName, liveTranslateOn]);
+    const liveNow = micMode === "auto" ? liveTranslateOn : true;
+    channelRef.current.track({ userId: myId, lang: myLang, name: myName || "Convidado", liveOn: liveNow });
+  }, [joined, myId, myLang, myName, liveTranslateOn, micMode]);
+
 
   const nudgePeer = React.useCallback(
     (peerId: string) => {
@@ -566,37 +576,53 @@ function LiveRoomPage() {
       };
       rec.onstop = async () => {
         setListening(false);
+        setPttActive(false);
+        setMicLevel(0);
         stopVad();
         stopTracks();
         const blobType = mimeRef.current || rec.mimeType || "audio/webm";
         const blob = new Blob(chunksRef.current, { type: blobType });
         chunksRef.current = [];
         recRef.current = null;
+        const isAuto = micModeRef.current === "auto";
+        const elapsed = performance.now() - recordingStartedAtRef.current;
         if (discardNextRecordingRef.current) {
           discardNextRecordingRef.current = false;
-          setStatus(liveTranslateOnRef.current ? "Ouvindo tradução recebida…" : "");
-          scheduleNextListening(900);
+          setStatus(isAuto && liveTranslateOnRef.current ? "Ouvindo tradução recebida…" : "");
+          if (isAuto) scheduleNextListening(900);
+          return;
+        }
+        // Push-to-talk: discard accidental taps (< 400ms)
+        if (!isAuto && elapsed < 400) {
+          setStatus("Segure por mais tempo para falar");
           return;
         }
         if (blob.size < 1200) {
           setStatus("");
-          scheduleNextListening();
+          if (isAuto) scheduleNextListening();
           return;
         }
-        const elapsed = performance.now() - recordingStartedAtRef.current;
-        if (elapsed < 900 || vadSpeechMsRef.current < 280 || vadPeakRef.current < 0.032) {
+        if (isAuto && (elapsed < 900 || vadSpeechMsRef.current < 280 || vadPeakRef.current < 0.032)) {
           setStatus(liveTranslateOnRef.current ? "Aguardando fala clara…" : "");
           scheduleNextListening(700);
           return;
         }
         await processAudio(blob, blobType);
       };
+
       recRef.current = rec;
       rec.start();
       setListening(true);
-      setStatus("Gravando… (pare de falar para enviar)");
+      const modeNow = micModeRef.current;
+      setStatus(
+        modeNow === "hold"
+          ? "🎙 Ouvindo… solte para enviar"
+          : modeNow === "toggle"
+            ? "🎙 Ouvindo… toque para parar"
+            : "Gravando… (pare de falar para enviar)",
+      );
 
-      // ---- VAD: auto-stop on silence ----
+      // ---- Level meter + optional VAD auto-stop ----
       try {
         const AC =
           window.AudioContext ||
@@ -610,11 +636,12 @@ function LiveRoomPage() {
           vadCtxRef.current = ctx;
           vadAnalyserRef.current = analyser;
           const buf = new Uint8Array(analyser.fftSize);
-          const SPEECH_THRESHOLD = 0.032; // RMS above this = speech
-          const SILENCE_MS = 1450; // stop after this much silence
-          const MIN_SPEECH_MS = 600; // require real speech first
+          const SPEECH_THRESHOLD = 0.032;
+          const SILENCE_MS = 1450;
+          const MIN_SPEECH_MS = 600;
           let speechStart: number | null = null;
           let lastTick = performance.now();
+          let lastLevelPush = 0;
 
           const tick = () => {
             const a = vadAnalyserRef.current;
@@ -630,18 +657,24 @@ function LiveRoomPage() {
             const delta = Math.min(80, Math.max(0, now - lastTick));
             lastTick = now;
             vadPeakRef.current = Math.max(vadPeakRef.current, rms);
-            if (rms > SPEECH_THRESHOLD) {
-              vadSpeechMsRef.current += delta;
-              if (speechStart == null) speechStart = now;
-              if (!vadSpokeRef.current && now - speechStart >= MIN_SPEECH_MS) {
-                vadSpokeRef.current = true;
-              }
-              vadSilenceStartRef.current = null;
-            } else if (vadSpokeRef.current) {
-              if (vadSilenceStartRef.current == null) vadSilenceStartRef.current = now;
-              else if (now - vadSilenceStartRef.current >= SILENCE_MS) {
-                stopRecording();
-                return;
+            if (now - lastLevelPush > 80) {
+              lastLevelPush = now;
+              setMicLevel(Math.min(1, rms * 6));
+            }
+            if (micModeRef.current === "auto") {
+              if (rms > SPEECH_THRESHOLD) {
+                vadSpeechMsRef.current += delta;
+                if (speechStart == null) speechStart = now;
+                if (!vadSpokeRef.current && now - speechStart >= MIN_SPEECH_MS) {
+                  vadSpokeRef.current = true;
+                }
+                vadSilenceStartRef.current = null;
+              } else if (vadSpokeRef.current) {
+                if (vadSilenceStartRef.current == null) vadSilenceStartRef.current = now;
+                else if (now - vadSilenceStartRef.current >= SILENCE_MS) {
+                  stopRecording();
+                  return;
+                }
               }
             }
             vadRafRef.current = requestAnimationFrame(tick);
@@ -654,8 +687,10 @@ function LiveRoomPage() {
           }, 24_000);
         }
       } catch {
-        /* VAD is best-effort; manual stop still works */
+        /* level meter/VAD is best-effort */
       }
+
+
     } catch (e) {
       const err = e as DOMException;
       if (err.name === "NotAllowedError") toast.error("Permissão de microfone negada");
@@ -674,6 +709,67 @@ function LiveRoomPage() {
       recRef.current.stop();
     }
   };
+
+  const cancelRecording = () => {
+    discardNextRecordingRef.current = true;
+    stopRecording();
+  };
+
+  const pressPTT = () => {
+    unlockAudio();
+    if (!canRecord) {
+      toast.info("Aguardando alguém entrar com o link…");
+      return;
+    }
+    if (recRef.current && recRef.current.state !== "inactive") return;
+    setPttActive(true);
+    void startRecording();
+  };
+
+  const releasePTT = () => {
+    if (micModeRef.current !== "hold") return;
+    setPttActive(false);
+    if (recRef.current && recRef.current.state !== "inactive") stopRecording();
+  };
+
+  const toggleTapMic = () => {
+    if (recRef.current && recRef.current.state !== "inactive") {
+      stopRecording();
+    } else {
+      pressPTT();
+    }
+  };
+
+  // Spacebar as push-to-talk on desktop
+  React.useEffect(() => {
+    if (!joined) return;
+    const isTypingTarget = (t: EventTarget | null) => {
+      const el = t as HTMLElement | null;
+      if (!el) return false;
+      const tag = el.tagName;
+      return tag === "INPUT" || tag === "TEXTAREA" || (el as HTMLElement).isContentEditable;
+    };
+    const down = (e: KeyboardEvent) => {
+      if (e.code !== "Space" || e.repeat || isTypingTarget(e.target)) return;
+      if (micModeRef.current !== "hold") return;
+      e.preventDefault();
+      pressPTT();
+    };
+    const up = (e: KeyboardEvent) => {
+      if (e.code !== "Space" || isTypingTarget(e.target)) return;
+      if (micModeRef.current !== "hold") return;
+      e.preventDefault();
+      releasePTT();
+    };
+    window.addEventListener("keydown", down);
+    window.addEventListener("keyup", up);
+    return () => {
+      window.removeEventListener("keydown", down);
+      window.removeEventListener("keyup", up);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [joined, canRecord]);
+
 
   const stopLiveTranslation = () => {
     liveTranslateOnRef.current = false;
@@ -1048,16 +1144,17 @@ function LiveRoomPage() {
             Aguardando alguém entrar com o link…
           </div>
         )}
-        {others.length > 0 && others.some((p) => !p.liveOn) && (
+        {others.length > 0 && micMode === "auto" && others.some((p) => !p.liveOn) && (
           <div className="mt-2 rounded-lg border border-amber-500/40 bg-amber-500/10 p-2 text-xs text-amber-600">
-            ⚠️ {others.filter((p) => !p.liveOn).map((p) => p.name).join(", ")} está sem tradução ativa. Peça para tocar em <b>“Ligar tradução ao vivo”</b> para você ouvir a fala traduzida.
+            ⚠️ {others.filter((p) => !p.liveOn).map((p) => p.name).join(", ")} está sem tradução automática ligada.
           </div>
         )}
-        {!liveTranslateOn && others.length > 0 && (
+        {micMode !== "auto" && others.length > 0 && (
           <div className="mt-2 rounded-lg border border-primary/40 bg-primary/10 p-2 text-xs text-primary">
-            👉 Toque em <b>“Ligar tradução ao vivo”</b> abaixo para começar a enviar sua fala traduzida.
+            👉 {micMode === "hold" ? "Segure o botão do microfone abaixo e fale." : "Toque no microfone abaixo para começar a falar."}
           </div>
         )}
+
         <div className="mt-3 flex flex-col gap-2 sm:flex-row">
           <Select value={myLang} onValueChange={setMyLang}>
             <SelectTrigger className="h-9 text-sm">
@@ -1155,53 +1252,131 @@ function LiveRoomPage() {
         ))}
       </div>
 
-      {/* Mic controls */}
+      {/* Mic controls — big push-to-talk button */}
       <div className="border-t border-border pt-4">
         {status && (
           <div className="mb-2 text-center text-xs text-muted-foreground">{status}</div>
         )}
-        <div className="flex flex-col items-stretch gap-2 sm:flex-row sm:justify-center">
-          <Button
-            size="lg"
-            disabled={!liveTranslateOn && !canRecord}
-            onClick={liveTranslateOn ? stopLiveTranslation : startLiveTranslation}
-            className={cn(
-              "h-14 flex-1 rounded-xl px-6 text-base font-semibold shadow-glow sm:flex-none",
-              liveTranslateOn ? "bg-red-500 hover:bg-red-600" : "bg-gradient-primary",
-            )}
-          >
-            {busy ? (
-              <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-            ) : liveTranslateOn ? (
-              <Square className="mr-2 h-5 w-5" />
-            ) : (
-              <Mic className="mr-2 h-5 w-5" />
-            )}
-            {liveTranslateOn ? "Desligar tradução ao vivo" : "🎙 Ligar tradução ao vivo"}
-          </Button>
-          {liveTranslateOn && (
+
+        {/* Mode selector */}
+        <div className="mb-3 flex items-center justify-center gap-1 text-xs">
+          <span className="text-muted-foreground">Modo:</span>
+          {([
+            { id: "hold", label: "Segurar p/ falar" },
+            { id: "toggle", label: "Toque p/ falar" },
+            { id: "auto", label: "Automático" },
+          ] as const).map((opt) => (
+            <button
+              key={opt.id}
+              type="button"
+              onClick={() => {
+                if (liveTranslateOn) stopLiveTranslation();
+                if (recRef.current && recRef.current.state !== "inactive") cancelRecording();
+                setMicMode(opt.id);
+              }}
+              className={cn(
+                "rounded-full border px-2 py-0.5",
+                micMode === opt.id
+                  ? "border-primary bg-primary/15 text-primary"
+                  : "border-border text-muted-foreground hover:text-foreground",
+              )}
+            >
+              {opt.label}
+            </button>
+          ))}
+        </div>
+
+        <div className="flex flex-col items-center gap-2">
+          {micMode === "auto" ? (
             <Button
               size="lg"
-              variant="outline"
-              disabled={!listening || busy}
-              onClick={stopRecording}
-              className="h-14 rounded-xl px-4 text-sm"
-              title="Encerra a gravação atual e envia agora"
+              disabled={!liveTranslateOn && !canRecord}
+              onClick={liveTranslateOn ? stopLiveTranslation : startLiveTranslation}
+              className={cn(
+                "h-14 w-full max-w-sm rounded-xl px-6 text-base font-semibold shadow-glow",
+                liveTranslateOn ? "bg-red-500 hover:bg-red-600" : "bg-gradient-primary",
+              )}
             >
-              📨 Enviar agora
+              {busy ? (
+                <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+              ) : liveTranslateOn ? (
+                <Square className="mr-2 h-5 w-5" />
+              ) : (
+                <Mic className="mr-2 h-5 w-5" />
+              )}
+              {liveTranslateOn ? "Desligar tradução automática" : "🎙 Ligar tradução automática"}
             </Button>
+          ) : (
+            <button
+              type="button"
+              disabled={!canRecord || busy}
+              onPointerDown={(e) => {
+                e.preventDefault();
+                if (micMode === "hold") pressPTT();
+                else toggleTapMic();
+              }}
+              onPointerUp={(e) => {
+                e.preventDefault();
+                if (micMode === "hold") releasePTT();
+              }}
+              onPointerCancel={() => {
+                if (micMode === "hold") releasePTT();
+              }}
+              onPointerLeave={() => {
+                if (micMode === "hold" && pttActive) releasePTT();
+              }}
+              onContextMenu={(e) => e.preventDefault()}
+              className={cn(
+                "relative grid h-28 w-28 select-none place-items-center rounded-full border-4 shadow-glow transition-transform",
+                "touch-none",
+                listening
+                  ? "scale-105 border-red-400 bg-red-500 text-white animate-pulse"
+                  : "border-primary bg-gradient-primary text-white active:scale-95",
+                (!canRecord || busy) && "cursor-not-allowed opacity-50",
+              )}
+              style={
+                listening
+                  ? {
+                      boxShadow: `0 0 0 ${Math.round(micLevel * 24)}px rgba(239,68,68,0.25)`,
+                    }
+                  : undefined
+              }
+              aria-pressed={listening}
+              title={
+                micMode === "hold"
+                  ? "Segure para falar (ou barra de espaço)"
+                  : "Toque para falar, toque de novo para parar"
+              }
+            >
+              {busy ? (
+                <Loader2 className="h-10 w-10 animate-spin" />
+              ) : listening ? (
+                <Square className="h-10 w-10" />
+              ) : (
+                <Mic className="h-10 w-10" />
+              )}
+            </button>
           )}
-        </div>
-        <div className="mt-2 text-center text-xs text-muted-foreground">
-          {!canRecord
-            ? "Aguardando convidado…"
-            : liveTranslateOn
-              ? listening
-                ? "Ouvindo — pare de falar para enviar, ou toque em Enviar agora"
-                : "Tradução ao vivo ligada — pode falar"
-              : "Toque em “Ligar tradução ao vivo” para começar"}
+          <div className="text-center text-xs text-muted-foreground">
+            {!canRecord
+              ? "Aguardando convidado…"
+              : micMode === "hold"
+                ? listening
+                  ? "🎙 Ouvindo… solte para enviar"
+                  : "Segure o microfone e fale (ou barra de espaço)"
+                : micMode === "toggle"
+                  ? listening
+                    ? "🎙 Ouvindo… toque para parar e enviar"
+                    : "Toque no microfone para começar a falar"
+                  : liveTranslateOn
+                    ? listening
+                      ? "Ouvindo — pare de falar para enviar"
+                      : "Tradução automática ligada — pode falar"
+                    : "Toque em “Ligar tradução automática” para começar"}
+          </div>
         </div>
       </div>
+
     </div>
   );
 }
