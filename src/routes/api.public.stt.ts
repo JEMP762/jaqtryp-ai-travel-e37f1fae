@@ -59,7 +59,25 @@ export const Route = createFileRoute("/api/public/stt")({
           });
         }
 
-        const balance = await checkBalance(auth.userId, "translate_voice");
+        // For live rooms, credits are billed to the host, not the caller.
+        // Resolve the host and check their balance so guests aren't blocked here.
+        const roomCode = (inForm.get("roomCode") as string) || "";
+        let payerId = auth.userId;
+        if (roomCode) {
+          try {
+            const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+            const { data: state } = await (supabaseAdmin as any)
+              .from("live_room_state")
+              .select("host_user_id")
+              .eq("room_code", roomCode)
+              .maybeSingle();
+            const host = (state as { host_user_id?: string } | null)?.host_user_id;
+            if (host) payerId = host;
+          } catch {
+            /* best effort — fall back to caller */
+          }
+        }
+        const balance = await checkBalance(payerId, "translate_voice");
         if (!balance.ok) return insufficientCreditsResponse(balance as any);
 
         const langRaw = (inForm.get("lang") as string) || "";
