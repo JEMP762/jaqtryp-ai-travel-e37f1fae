@@ -609,9 +609,16 @@ function LiveRoomPage() {
       recRef.current = rec;
       rec.start();
       setListening(true);
-      setStatus("Gravando… (pare de falar para enviar)");
+      const modeNow = micModeRef.current;
+      setStatus(
+        modeNow === "hold"
+          ? "🎙 Ouvindo… solte para enviar"
+          : modeNow === "toggle"
+            ? "🎙 Ouvindo… toque para parar"
+            : "Gravando… (pare de falar para enviar)",
+      );
 
-      // ---- VAD: auto-stop on silence ----
+      // ---- Level meter + optional VAD auto-stop ----
       try {
         const AC =
           window.AudioContext ||
@@ -625,11 +632,12 @@ function LiveRoomPage() {
           vadCtxRef.current = ctx;
           vadAnalyserRef.current = analyser;
           const buf = new Uint8Array(analyser.fftSize);
-          const SPEECH_THRESHOLD = 0.032; // RMS above this = speech
-          const SILENCE_MS = 1450; // stop after this much silence
-          const MIN_SPEECH_MS = 600; // require real speech first
+          const SPEECH_THRESHOLD = 0.032;
+          const SILENCE_MS = 1450;
+          const MIN_SPEECH_MS = 600;
           let speechStart: number | null = null;
           let lastTick = performance.now();
+          let lastLevelPush = 0;
 
           const tick = () => {
             const a = vadAnalyserRef.current;
@@ -645,18 +653,24 @@ function LiveRoomPage() {
             const delta = Math.min(80, Math.max(0, now - lastTick));
             lastTick = now;
             vadPeakRef.current = Math.max(vadPeakRef.current, rms);
-            if (rms > SPEECH_THRESHOLD) {
-              vadSpeechMsRef.current += delta;
-              if (speechStart == null) speechStart = now;
-              if (!vadSpokeRef.current && now - speechStart >= MIN_SPEECH_MS) {
-                vadSpokeRef.current = true;
-              }
-              vadSilenceStartRef.current = null;
-            } else if (vadSpokeRef.current) {
-              if (vadSilenceStartRef.current == null) vadSilenceStartRef.current = now;
-              else if (now - vadSilenceStartRef.current >= SILENCE_MS) {
-                stopRecording();
-                return;
+            if (now - lastLevelPush > 80) {
+              lastLevelPush = now;
+              setMicLevel(Math.min(1, rms * 6));
+            }
+            if (micModeRef.current === "auto") {
+              if (rms > SPEECH_THRESHOLD) {
+                vadSpeechMsRef.current += delta;
+                if (speechStart == null) speechStart = now;
+                if (!vadSpokeRef.current && now - speechStart >= MIN_SPEECH_MS) {
+                  vadSpokeRef.current = true;
+                }
+                vadSilenceStartRef.current = null;
+              } else if (vadSpokeRef.current) {
+                if (vadSilenceStartRef.current == null) vadSilenceStartRef.current = now;
+                else if (now - vadSilenceStartRef.current >= SILENCE_MS) {
+                  stopRecording();
+                  return;
+                }
               }
             }
             vadRafRef.current = requestAnimationFrame(tick);
@@ -668,6 +682,10 @@ function LiveRoomPage() {
             if (recRef.current && recRef.current.state === "recording") stopRecording();
           }, 24_000);
         }
+      } catch {
+        /* level meter/VAD is best-effort */
+      }
+
       } catch {
         /* VAD is best-effort; manual stop still works */
       }
