@@ -1144,16 +1144,17 @@ function LiveRoomPage() {
             Aguardando alguém entrar com o link…
           </div>
         )}
-        {others.length > 0 && others.some((p) => !p.liveOn) && (
+        {others.length > 0 && micMode === "auto" && others.some((p) => !p.liveOn) && (
           <div className="mt-2 rounded-lg border border-amber-500/40 bg-amber-500/10 p-2 text-xs text-amber-600">
-            ⚠️ {others.filter((p) => !p.liveOn).map((p) => p.name).join(", ")} está sem tradução ativa. Peça para tocar em <b>“Ligar tradução ao vivo”</b> para você ouvir a fala traduzida.
+            ⚠️ {others.filter((p) => !p.liveOn).map((p) => p.name).join(", ")} está sem tradução automática ligada.
           </div>
         )}
-        {!liveTranslateOn && others.length > 0 && (
+        {micMode !== "auto" && others.length > 0 && (
           <div className="mt-2 rounded-lg border border-primary/40 bg-primary/10 p-2 text-xs text-primary">
-            👉 Toque em <b>“Ligar tradução ao vivo”</b> abaixo para começar a enviar sua fala traduzida.
+            👉 {micMode === "hold" ? "Segure o botão do microfone abaixo e fale." : "Toque no microfone abaixo para começar a falar."}
           </div>
         )}
+
         <div className="mt-3 flex flex-col gap-2 sm:flex-row">
           <Select value={myLang} onValueChange={setMyLang}>
             <SelectTrigger className="h-9 text-sm">
