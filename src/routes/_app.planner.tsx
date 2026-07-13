@@ -205,14 +205,27 @@ function PlannerPage() {
     try {
       const symbol = CURRENCIES.find((c) => c.code === currency)?.symbol ?? currency;
       const budgetText = budget ? `${symbol} ${budget} (${currency})` : (lang === "en" ? "not specified" : "não informado");
+      let dateBlockEn = "";
+      let dateBlockPt = "";
+      if (startDate) {
+        const start = new Date(`${startDate}T00:00:00`);
+        if (!isNaN(start.getTime())) {
+          const end = new Date(start);
+          end.setDate(end.getDate() + Math.max(0, nDays - 1));
+          const fmt = (d: Date, locale: string) => d.toLocaleDateString(locale, { weekday: "long", day: "2-digit", month: "long", year: "numeric" });
+          dateBlockEn = ` The trip starts on ${fmt(start, "en-US")} and ends on ${fmt(end, "en-US")}. Label each day with its real date and weekday (e.g., "## Day 1 — ${fmt(start, "en-US")}").`;
+          dateBlockPt = ` A viagem começa em ${fmt(start, "pt-BR")} e termina em ${fmt(end, "pt-BR")}. Rotule cada dia com a data real e o dia da semana (ex.: "## Dia 1 — ${fmt(start, "pt-BR")}").`;
+        }
+      }
       const system =
         lang === "en"
-          ? `You are an expert travel planner. Build a clear, well-structured day-by-day itinerary in English using markdown (## Day 1, bullet lists). Include morning/afternoon/evening, restaurant ideas, transport tips, and a budget summary at the end. ALL prices and the budget summary MUST be in ${currency} (${symbol}).`
-          : `Você é um planejador de viagens especialista. Monte um roteiro dia a dia claro e bem estruturado em português usando markdown (## Dia 1, listas). Inclua manhã/tarde/noite, ideias de restaurantes, dicas de transporte e um resumo de orçamento no final. TODOS os preços e o resumo de orçamento DEVEM estar em ${currency} (${symbol}).`;
+          ? `You are an expert travel planner. Build a clear, well-structured day-by-day itinerary in English using markdown (## Day 1, bullet lists). Include morning/afternoon/evening, restaurant ideas, transport tips, and a budget summary at the end. ALL prices and the budget summary MUST be in ${currency} (${symbol}).${dateBlockEn}`
+          : `Você é um planejador de viagens especialista. Monte um roteiro dia a dia claro e bem estruturado em português usando markdown (## Dia 1, listas). Inclua manhã/tarde/noite, ideias de restaurantes, dicas de transporte e um resumo de orçamento no final. TODOS os preços e o resumo de orçamento DEVEM estar em ${currency} (${symbol}).${dateBlockPt}`;
       const prompt =
         lang === "en"
-          ? `Plan a ${nDays}-day trip to ${destination}. Budget: ${budgetText}. Interests: ${interests || "general"}.`
-          : `Planeje uma viagem de ${nDays} dias para ${destination}. Orçamento: ${budgetText}. Interesses: ${interests || "geral"}.`;
+          ? `Plan a ${nDays}-day trip to ${destination}${startDate ? ` starting ${startDate}` : ""}. Budget: ${budgetText}. Interests: ${interests || "general"}.`
+          : `Planeje uma viagem de ${nDays} dias para ${destination}${startDate ? ` começando em ${startDate}` : ""}. Orçamento: ${budgetText}. Interesses: ${interests || "geral"}.`;
+
 
 
       const resp = await fetch("/api/ai", {
