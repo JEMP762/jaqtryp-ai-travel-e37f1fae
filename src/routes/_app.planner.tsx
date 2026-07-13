@@ -126,6 +126,7 @@ function PlannerPage() {
   const { lang } = useI18n();
   const [destination, setDestination] = React.useState("");
   const [days, setDays] = React.useState<string>("");
+  const [startDate, setStartDate] = React.useState<string>("");
   const [budget, setBudget] = React.useState("");
   const [currency, setCurrency] = React.useState("BRL");
   const [interests, setInterests] = React.useState("");
@@ -133,6 +134,7 @@ function PlannerPage() {
   const [plan, setPlan] = React.useState("");
   const [exporting, setExporting] = React.useState(false);
   const [isPro, setIsPro] = React.useState<boolean | null>(null);
+
 
   React.useEffect(() => {
     async function checkPremium() {
