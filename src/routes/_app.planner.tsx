@@ -279,20 +279,28 @@ function PlannerPage() {
               />
             </div>
             <div className="space-y-1.5">
-              <Label>Moeda</Label>
-              <Select value={currency} onValueChange={setCurrency}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {CURRENCIES.map((c) => (
-                    <SelectItem key={c.code} value={c.code}>
-                      {c.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <Label>Data de início</Label>
+              <Input
+                type="date"
+                value={startDate}
+                onChange={(e) => setStartDate(e.target.value)}
+              />
             </div>
+          </div>
+          <div className="space-y-1.5">
+            <Label>Moeda</Label>
+            <Select value={currency} onValueChange={setCurrency}>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {CURRENCIES.map((c) => (
+                  <SelectItem key={c.code} value={c.code}>
+                    {c.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
           <div className="space-y-1.5">
             <Label>Orçamento ({CURRENCIES.find((c) => c.code === currency)?.symbol})</Label>
@@ -303,6 +311,7 @@ function PlannerPage() {
               inputMode="numeric"
             />
           </div>
+
 
           <div className="space-y-1.5">
             <Label>Interesses</Label>
