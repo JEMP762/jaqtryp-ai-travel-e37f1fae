@@ -16,8 +16,11 @@ export const Route = createFileRoute("/signup")({
   component: SignupPage,
   validateSearch: (search: Record<string, unknown>) => ({
     intent: typeof search.intent === "string" ? search.intent : undefined,
+    ref: typeof search.ref === "string" ? search.ref : undefined,
   }),
 });
+
+const REF_STORAGE_KEY = "jq_pending_ref";
 
 function SignupPage() {
   const { t } = useI18n();

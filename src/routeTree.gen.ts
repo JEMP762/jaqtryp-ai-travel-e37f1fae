@@ -25,6 +25,7 @@ import { Route as AppWalletRouteImport } from './routes/_app.wallet'
 import { Route as AppTranslatorRouteImport } from './routes/_app.translator'
 import { Route as AppStaysRouteImport } from './routes/_app.stays'
 import { Route as AppShieldRouteImport } from './routes/_app.shield'
+import { Route as AppReferralsRouteImport } from './routes/_app.referrals'
 import { Route as AppPlannerRouteImport } from './routes/_app.planner'
 import { Route as AppLiveTranslatorRouteImport } from './routes/_app.live-translator'
 import { Route as AppFlightsRouteImport } from './routes/_app.flights'
@@ -119,6 +120,11 @@ const AppStaysRoute = AppStaysRouteImport.update({
 const AppShieldRoute = AppShieldRouteImport.update({
   id: '/shield',
   path: '/shield',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppReferralsRoute = AppReferralsRouteImport.update({
+  id: '/referrals',
+  path: '/referrals',
   getParentRoute: () => AppRoute,
 } as any)
 const AppPlannerRoute = AppPlannerRouteImport.update({
@@ -220,6 +226,7 @@ export interface FileRoutesByFullPath {
   '/flights': typeof AppFlightsRoute
   '/live-translator': typeof AppLiveTranslatorRoute
   '/planner': typeof AppPlannerRoute
+  '/referrals': typeof AppReferralsRoute
   '/shield': typeof AppShieldRoute
   '/stays': typeof AppStaysRoute
   '/translator': typeof AppTranslatorRoute
@@ -253,6 +260,7 @@ export interface FileRoutesByTo {
   '/flights': typeof AppFlightsRoute
   '/live-translator': typeof AppLiveTranslatorRoute
   '/planner': typeof AppPlannerRoute
+  '/referrals': typeof AppReferralsRoute
   '/shield': typeof AppShieldRoute
   '/stays': typeof AppStaysRoute
   '/translator': typeof AppTranslatorRoute
@@ -288,6 +296,7 @@ export interface FileRoutesById {
   '/_app/flights': typeof AppFlightsRoute
   '/_app/live-translator': typeof AppLiveTranslatorRoute
   '/_app/planner': typeof AppPlannerRoute
+  '/_app/referrals': typeof AppReferralsRoute
   '/_app/shield': typeof AppShieldRoute
   '/_app/stays': typeof AppStaysRoute
   '/_app/translator': typeof AppTranslatorRoute
@@ -323,6 +332,7 @@ export interface FileRouteTypes {
     | '/flights'
     | '/live-translator'
     | '/planner'
+    | '/referrals'
     | '/shield'
     | '/stays'
     | '/translator'
@@ -356,6 +366,7 @@ export interface FileRouteTypes {
     | '/flights'
     | '/live-translator'
     | '/planner'
+    | '/referrals'
     | '/shield'
     | '/stays'
     | '/translator'
@@ -390,6 +401,7 @@ export interface FileRouteTypes {
     | '/_app/flights'
     | '/_app/live-translator'
     | '/_app/planner'
+    | '/_app/referrals'
     | '/_app/shield'
     | '/_app/stays'
     | '/_app/translator'
@@ -541,6 +553,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppShieldRouteImport
       parentRoute: typeof AppRoute
     }
+    '/_app/referrals': {
+      id: '/_app/referrals'
+      path: '/referrals'
+      fullPath: '/referrals'
+      preLoaderRoute: typeof AppReferralsRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/_app/planner': {
       id: '/_app/planner'
       path: '/planner'
@@ -666,6 +685,7 @@ interface AppRouteChildren {
   AppFlightsRoute: typeof AppFlightsRoute
   AppLiveTranslatorRoute: typeof AppLiveTranslatorRoute
   AppPlannerRoute: typeof AppPlannerRoute
+  AppReferralsRoute: typeof AppReferralsRoute
   AppShieldRoute: typeof AppShieldRoute
   AppStaysRoute: typeof AppStaysRoute
   AppTranslatorRoute: typeof AppTranslatorRoute
@@ -685,6 +705,7 @@ const AppRouteChildren: AppRouteChildren = {
   AppFlightsRoute: AppFlightsRoute,
   AppLiveTranslatorRoute: AppLiveTranslatorRoute,
   AppPlannerRoute: AppPlannerRoute,
+  AppReferralsRoute: AppReferralsRoute,
   AppShieldRoute: AppShieldRoute,
   AppStaysRoute: AppStaysRoute,
   AppTranslatorRoute: AppTranslatorRoute,
