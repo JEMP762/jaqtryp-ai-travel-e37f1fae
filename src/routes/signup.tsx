@@ -10,6 +10,7 @@ import { lovable } from "@/integrations/lovable";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useI18n } from "@/lib/i18n/I18nProvider";
+import { applyReferralCode } from "@/lib/referrals.functions";
 
 export const Route = createFileRoute("/signup")({
   component: SignupPage,

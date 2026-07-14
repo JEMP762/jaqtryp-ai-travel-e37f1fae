@@ -23,6 +23,7 @@ import {
   Coins,
   FileText,
   Palette,
+  Gift,
 } from "lucide-react";
 
 
@@ -85,6 +86,7 @@ function AppShell() {
     { to: "/shield", icon: ShieldCheck, label: "JAQ Shield" },
     { to: "/billing", icon: CreditCard, label: "Minha Assinatura" },
     { to: "/settings/appearance", icon: Palette, label: "Aparência" },
+    { to: "/referrals", icon: Gift, label: "Indique e ganhe" },
   ] as const;
 
   const onSignOut = async () => {
