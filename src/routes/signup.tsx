@@ -10,27 +10,56 @@ import { lovable } from "@/integrations/lovable";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useI18n } from "@/lib/i18n/I18nProvider";
+import { applyReferralCode } from "@/lib/referrals.functions";
 
 export const Route = createFileRoute("/signup")({
   component: SignupPage,
   validateSearch: (search: Record<string, unknown>) => ({
     intent: typeof search.intent === "string" ? search.intent : undefined,
+    ref: typeof search.ref === "string" ? search.ref : undefined,
   }),
 });
+
+const REF_STORAGE_KEY = "jq_pending_ref";
 
 function SignupPage() {
   const { t } = useI18n();
   const { user } = useAuth();
   const nav = useNavigate();
+  const search = Route.useSearch();
   const [name, setName] = React.useState("");
   const [email, setEmail] = React.useState("");
   const [password, setPassword] = React.useState("");
   const [loading, setLoading] = React.useState(false);
   const [errorMsg, setErrorMsg] = React.useState<string | null>(null);
 
+  // Persist ?ref= for signup flows that pass through Google OAuth
   React.useEffect(() => {
-    if (user) nav({ to: "/dashboard" });
-  }, [user, nav]);
+    if (typeof window === "undefined") return;
+    if (search.ref) {
+      window.sessionStorage.setItem(REF_STORAGE_KEY, search.ref);
+    }
+  }, [search.ref]);
+
+  const consumeRefAndApply = React.useCallback(async () => {
+    if (typeof window === "undefined") return;
+    const code = window.sessionStorage.getItem(REF_STORAGE_KEY);
+    if (!code) return;
+    try {
+      const res = await applyReferralCode({ data: { code } });
+      if ((res as any)?.ok) toast.success("Código de indicação aplicado!");
+    } catch {
+      /* ignore */
+    } finally {
+      window.sessionStorage.removeItem(REF_STORAGE_KEY);
+    }
+  }, []);
+
+  React.useEffect(() => {
+    if (user) {
+      consumeRefAndApply().finally(() => nav({ to: "/dashboard" }));
+    }
+  }, [user, nav, consumeRefAndApply]);
 
   const friendlyError = (err: any): string => {
     const code = err?.code || err?.error_code;
@@ -67,9 +96,11 @@ function SignupPage() {
       toast.error(msg);
     } else {
       toast.success("Conta criada com sucesso!");
+      await consumeRefAndApply();
       nav({ to: "/dashboard" });
     }
   };
+
 
   const onGoogle = async () => {
     const result = await lovable.auth.signInWithOAuth("google", {

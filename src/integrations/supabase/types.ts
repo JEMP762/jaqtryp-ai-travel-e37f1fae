@@ -577,6 +577,8 @@ export type Database = {
           id: string
           preferred_currency: string
           preferred_language: string
+          referral_code: string | null
+          referred_by: string | null
           updated_at: string
         }
         Insert: {
@@ -586,6 +588,8 @@ export type Database = {
           id: string
           preferred_currency?: string
           preferred_language?: string
+          referral_code?: string | null
+          referred_by?: string | null
           updated_at?: string
         }
         Update: {
@@ -595,7 +599,42 @@ export type Database = {
           id?: string
           preferred_currency?: string
           preferred_language?: string
+          referral_code?: string | null
+          referred_by?: string | null
           updated_at?: string
+        }
+        Relationships: []
+      }
+      referral_rewards: {
+        Row: {
+          created_at: string
+          credits: number
+          id: string
+          metadata: Json
+          referred_id: string
+          referrer_id: string
+          source: string
+          stripe_ref: string | null
+        }
+        Insert: {
+          created_at?: string
+          credits: number
+          id?: string
+          metadata?: Json
+          referred_id: string
+          referrer_id: string
+          source: string
+          stripe_ref?: string | null
+        }
+        Update: {
+          created_at?: string
+          credits?: number
+          id?: string
+          metadata?: Json
+          referred_id?: string
+          referrer_id?: string
+          source?: string
+          stripe_ref?: string | null
         }
         Relationships: []
       }
@@ -1092,7 +1131,9 @@ export type Database = {
         }
         Returns: undefined
       }
+      apply_referral_code: { Args: { _code: string }; Returns: Json }
       claim_room_host: { Args: { _code: string }; Returns: string }
+      generate_referral_code: { Args: { _uid: string }; Returns: string }
       grant_monthly_credits: {
         Args: { _amount: number; _user: string }
         Returns: undefined
@@ -1111,6 +1152,15 @@ export type Database = {
       }
       is_room_member: { Args: { _code: string }; Returns: boolean }
       process_monthly_resets: { Args: never; Returns: number }
+      reward_referrer: {
+        Args: {
+          _kind: string
+          _pack_credits: number
+          _paid_user: string
+          _stripe_ref: string
+        }
+        Returns: Json
+      }
       spend_credits: {
         Args: { _amount: number; _meta?: Json; _reason: string; _user: string }
         Returns: boolean

@@ -291,6 +291,17 @@ async function handleSubscriptionEvent(event: any, env: "sandbox" | "live") {
             stripe_session_id: grantKey,
             metadata: { bucket: "monthly", subscription_id: obj.id, price_id: priceId } as any,
           });
+
+          // Referral reward per paid period (idempotent by stripe_ref)
+          const refKind = role === "ultra" ? "sub_ultra" : role === "premium" ? "sub_pro" : null;
+          if (refKind) {
+            await supabaseAdmin.rpc("reward_referrer", {
+              _paid_user: userId,
+              _kind: refKind,
+              _pack_credits: 0,
+              _stripe_ref: `ref:sub:${obj.id}:${periodStart ?? "now"}`,
+            });
+          }
         }
       }
     }
@@ -428,6 +439,19 @@ async function handleCreditPackEvent(event: any, env: "sandbox" | "live") {
     throw new Error(error.message);
   }
   console.log("[credit_pack] credited", { userId, credits, pi: paymentIntentId, via: resolvedVia });
+
+  // Referral bonus for the referrer (idempotent by stripe_ref)
+  try {
+    const { error: refErr } = await supabaseAdmin.rpc("reward_referrer", {
+      _paid_user: userId,
+      _kind: "pack",
+      _pack_credits: credits,
+      _stripe_ref: `ref:pack:${paymentIntentId}`,
+    });
+    if (refErr) console.warn("[credit_pack] referral reward error", refErr.message);
+  } catch (e: any) {
+    console.warn("[credit_pack] referral reward threw", e?.message || e);
+  }
 }
 
 

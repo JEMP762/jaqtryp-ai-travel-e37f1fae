@@ -24,8 +24,8 @@ export const APPEARANCE_MODES: AppearanceModeDef[] = [
   },
   {
     id: "light-lovable",
-    name: "Claro Lovable",
-    description: "Branco com toque rosa Lovable",
+    name: "Claro Adorável",
+    description: "Branco com toque rosa suave",
     swatch: ["#ffffff", "#ffe4ef", "#ff6db3"],
   },
 ];
