@@ -1,41 +1,43 @@
-## 1) Planejador IA — adicionar data de início
+## 1) Programa de Indicação (10% em créditos)
 
-Em `src/routes/_app.planner.tsx`:
-- Novo campo **Data de início** (input `type="date"`) ao lado de "Dias".
-- Novo estado `startDate`. Ao gerar o roteiro, calcular `endDate = startDate + (dias-1)` e injetar no prompt/system para que a IA rotule cada dia com a data real (ex.: `## Dia 1 — 20/07/2026 (segunda)`), sem mudar mais nada da lógica atual.
-- Campo é opcional: se não preenchido, o comportamento fica igual ao de hoje.
-- No título do export (`renderPrintWindow`) incluir o intervalo de datas quando preenchido.
+**Regra**
+- Cada usuário recebe um **código de indicação** único (ex.: `JOSE7A2X`) e um link `https://jaqtryp.com/?ref=JOSE7A2X`.
+- Quando alguém se cadastra com esse código/link e depois **compra créditos ou assina**, o indicador ganha:
+  - **Pacotes avulsos:** 10% em créditos (700 → 70; 2.000 → 200; 4.000 → 400).
+  - **Assinatura Pro (recorrente):** 100 créditos a cada renovação paga.
+  - **Assinatura Ultra (recorrente):** 200 créditos a cada renovação paga.
+- Vínculo é **permanente** (uma vez indicado, sempre daquele indicador).
+- Auto‑indicação bloqueada; cada pagamento gera no máximo uma recompensa (idempotente por `stripe_session_id` / `invoice_id`).
 
-Sem mudanças em backend, créditos ou tabelas.
+**Backend (migration)**
+- `profiles.referral_code text unique` + trigger que gera código no signup.
+- `profiles.referred_by uuid references auth.users` (nullable, imutável após set).
+- `referral_rewards` (id, referrer_id, referred_id, source `pack|sub_pro|sub_ultra`, credits, stripe_ref, created_at) — RLS: dono lê o próprio.
+- RPC `apply_referral_code(_code text)` — vincula o usuário logado ao indicador se `referred_by` ainda é null e código ≠ self.
+- RPC `reward_referrer(_paid_user uuid, _kind text, _pack_credits int, _stripe_ref text)` — SECURITY DEFINER, idempotente, credita via `add_credits(..., bucket='topup', reason='referral_bonus')`.
 
-## 2) Sala ao vivo — permitir reentrar com o mesmo código
+**Webhook Stripe (`api.public.payments.webhook`)**
+- Em `checkout.session.completed` (kind=credit_pack): após creditar o comprador, chamar `reward_referrer` com 10% do pack.
+- Em `invoice.paid` (subscription): identificar tier pelo price/lookup (`pro` → 100, `ultra` → 200) e chamar `reward_referrer`.
 
-Sintoma: usuário sai da sala e não consegue voltar usando o mesmo código de convite.
+**Frontend**
+- Nova página `_app.referrals.tsx`: mostra código, link copiável, total de indicados, créditos ganhos, histórico (`referral_rewards`), CTA de compartilhar (WhatsApp/copiar).
+- Link no sidebar "Indique e ganhe".
+- Signup (`/signup`): ler `?ref=` do querystring, guardar em `sessionStorage`, e após criar conta chamar `apply_referral_code`.
+- Banner leve no dashboard: "Ganhe créditos indicando amigos".
 
-Correções em `src/routes/live-room.$code.tsx` (fluxo do botão "Entrar", linhas ~1005–1051):
-- Antes do `signInAnonymously`/`getUser`, chamar `supabase.auth.refreshSession()` de forma tolerante para garantir que o token esteja válido antes do RPC (evita "Not authenticated" na 2ª entrada).
-- `room_participants.upsert` já é idempotente; garantir que erros de duplicidade (`23505`) sejam tratados como sucesso.
-- `claim_room_host`: se retornar erro `Join the room before claiming host`, aguardar 300 ms e repetir uma vez (corrige corrida entre commit do upsert e leitura do RPC via SECURITY DEFINER).
-- Pré-carregar `live_room_state` **depois** do join (não antes), evitando bloqueio por RLS `is_room_member` quando o usuário ainda não é membro.
-- Adicionar botão discreto "Sair da sala" que apenas reseta `setJoined(false)` no cliente (sem apagar `room_participants`), para que a próxima entrada pelo mesmo código funcione sem recarregar.
-- Toast amigável no catch: "Não foi possível entrar. Toque em Entrar novamente." + botão de nova tentativa.
+## 2) Aparência — renomear "Claro Lovable" → "Claro Adorável"
 
-Sem mudanças de schema.
+- Trocar label em `src/lib/theme/AppearanceModeProvider.tsx` e `src/components/AppearanceModeSwitcher.tsx` (só o texto exibido; `id` do modo continua `light-lovable` para não invalidar preferências salvas).
+- Atualizar textos em `src/routes/_app.settings.appearance.tsx`.
 
-## 3) 3 meses grátis de todos os recursos para ana.jucs22@gmail.com
+## 3) Cortesia para joseedimilsonmessiaspassos@gmail.com
 
-Usuário confirmado: `id = 7984e75c-a4f7-42ac-a48a-db72e6a99f4a`.
-
-A checagem do app (`has_premium_access`) libera **todos os recursos premium** quando existe uma assinatura ativa. Vou:
-
-1. Inserir uma linha em `public.subscriptions` (via ferramenta de insert) para esse usuário com:
-   - `status = 'active'`
-   - `environment = 'live'`
-   - `current_period_end = now() + interval '3 months'`
-   - marcação `metadata = { grant: 'courtesy_3_months', granted_by: 'admin' }`
-2. Conceder um bônus de créditos avulsos (ex.: 5.000 no bucket `topup`) via RPC `add_credits` para cobrir traduções ao vivo (que são pagas pelo anfitrião) durante o período, também com marcação de cortesia.
-
-Nenhum código de UI muda — o `has_premium_access` já lê essa assinatura e destrava Planner, File Translator, Live Translator etc. Os créditos cobrem chamadas medidas por feature (STT/TTS/live).
+- Localizar `user_id` pelo email e creditar **10.000 créditos grátis** via `add_credits(..., bucket='topup', reason='courtesy_grant', metadata={granted_by:'admin', note:'cortesia'})`.
+- Sem assinatura de cortesia (só créditos, como pedido).
 
 ## Fora de escopo
-- Não mexer em Daily/CallPanel, cobrança do host, RLS existentes, nem no gatilho de microfone (walkie‑talkie).
+- Não mexer no fluxo de sala ao vivo, tradutor, Duffel, TTS/STT.
+- Sem mudança visual além do rename.
+
+Pode aprovar que já implemento.
