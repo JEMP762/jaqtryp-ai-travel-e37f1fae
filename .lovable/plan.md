@@ -1,43 +1,27 @@
-## 1) Programa de Indicação (10% em créditos)
+## Plano
 
-**Regra**
-- Cada usuário recebe um **código de indicação** único (ex.: `JOSE7A2X`) e um link `https://jaqtryp.com/?ref=JOSE7A2X`.
-- Quando alguém se cadastra com esse código/link e depois **compra créditos ou assina**, o indicador ganha:
-  - **Pacotes avulsos:** 10% em créditos (700 → 70; 2.000 → 200; 4.000 → 400).
-  - **Assinatura Pro (recorrente):** 100 créditos a cada renovação paga.
-  - **Assinatura Ultra (recorrente):** 200 créditos a cada renovação paga.
-- Vínculo é **permanente** (uma vez indicado, sempre daquele indicador).
-- Auto‑indicação bloqueada; cada pagamento gera no máximo uma recompensa (idempotente por `stripe_session_id` / `invoice_id`).
+1. **Corrigir o erro de permissão da sala ao vivo**
+   - Aplicar uma migração pequena na tabela `room_participants` para conceder ao app as permissões necessárias de leitura/criação/remoção para usuários autenticados.
+   - Manter as regras de segurança atuais: cada usuário só consegue registrar/ver/remover a própria participação.
+   - Garantir acesso administrativo do backend para rotinas internas.
 
-**Backend (migration)**
-- `profiles.referral_code text unique` + trigger que gera código no signup.
-- `profiles.referred_by uuid references auth.users` (nullable, imutável após set).
-- `referral_rewards` (id, referrer_id, referred_id, source `pack|sub_pro|sub_ultra`, credits, stripe_ref, created_at) — RLS: dono lê o próprio.
-- RPC `apply_referral_code(_code text)` — vincula o usuário logado ao indicador se `referred_by` ainda é null e código ≠ self.
-- RPC `reward_referrer(_paid_user uuid, _kind text, _pack_credits int, _stripe_ref text)` — SECURITY DEFINER, idempotente, credita via `add_credits(..., bucket='topup', reason='referral_bonus')`.
+2. **Melhorar a reentrada em salas existentes**
+   - Ajustar o fluxo de “Entrar” para tratar reentrada como operação segura/idempotente.
+   - Se o usuário já estiver registrado na sala, a entrada deve continuar normalmente em vez de mostrar erro.
 
-**Webhook Stripe (`api.public.payments.webhook`)**
-- Em `checkout.session.completed` (kind=credit_pack): após creditar o comprador, chamar `reward_referrer` com 10% do pack.
-- Em `invoice.paid` (subscription): identificar tier pelo price/lookup (`pro` → 100, `ultra` → 200) e chamar `reward_referrer`.
+3. **Adicionar os créditos solicitados**
+   - Localizar os usuários pelos emails:
+     - `ana.jucs22@gmail.com`: adicionar 5.000 créditos.
+     - `joseedimilsonmessiaspassos@gmail.com`: adicionar 10.000 créditos.
+   - Registrar os créditos no histórico com motivo de cortesia/admin para ficar rastreável.
 
-**Frontend**
-- Nova página `_app.referrals.tsx`: mostra código, link copiável, total de indicados, créditos ganhos, histórico (`referral_rewards`), CTA de compartilhar (WhatsApp/copiar).
-- Link no sidebar "Indique e ganhe".
-- Signup (`/signup`): ler `?ref=` do querystring, guardar em `sessionStorage`, e após criar conta chamar `apply_referral_code`.
-- Banner leve no dashboard: "Ganhe créditos indicando amigos".
+4. **Validação**
+   - Conferir no banco que as permissões da tabela foram aplicadas.
+   - Conferir que os créditos foram adicionados aos saldos corretos.
+   - Revisar o fluxo da tela `/live-room/:code` para confirmar que a mensagem “Não foi possível registrar sua entrada na sala” não será exibida em reentrada normal.
 
-## 2) Aparência — renomear "Claro Lovable" → "Claro Adorável"
+## Detalhes técnicos
 
-- Trocar label em `src/lib/theme/AppearanceModeProvider.tsx` e `src/components/AppearanceModeSwitcher.tsx` (só o texto exibido; `id` do modo continua `light-lovable` para não invalidar preferências salvas).
-- Atualizar textos em `src/routes/_app.settings.appearance.tsx`.
-
-## 3) Cortesia para joseedimilsonmessiaspassos@gmail.com
-
-- Localizar `user_id` pelo email e creditar **10.000 créditos grátis** via `add_credits(..., bucket='topup', reason='courtesy_grant', metadata={granted_by:'admin', note:'cortesia'})`.
-- Sem assinatura de cortesia (só créditos, como pedido).
-
-## Fora de escopo
-- Não mexer no fluxo de sala ao vivo, tradutor, Duffel, TTS/STT.
-- Sem mudança visual além do rename.
-
-Pode aprovar que já implemento.
+- O diagnóstico atual mostra que `room_participants` possui políticas de segurança, mas não possui permissões concedidas para `authenticated`/`service_role` na camada de acesso do banco. Isso causa rejeição antes mesmo das regras por usuário funcionarem.
+- A correção principal será uma migração com `GRANT` em `room_participants`, sem abrir acesso público anônimo.
+- Os créditos serão uma alteração de dados, não de estrutura, usando a função existente de créditos para manter saldo e histórico consistentes.
