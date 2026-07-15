@@ -1026,9 +1026,12 @@ function LiveRoomPage() {
                   }
                   saveUserId(uid);
                   setMyId(uid);
+                  // Use INSERT instead of UPSERT: on rejoin, an existing membership
+                  // should be treated as success. UPSERT requires UPDATE permission
+                  // on conflict, which this table intentionally does not grant.
                   const { error: memErr } = await (supabase as any)
                     .from("room_participants")
-                    .upsert({ room_code: code, user_id: uid }, { onConflict: "room_code,user_id" });
+                    .insert({ room_code: code, user_id: uid });
                   if (memErr && (memErr as any).code !== "23505") {
                     console.error("live room participant upsert failed", memErr);
                     toast.error("Não foi possível registrar sua entrada na sala. Tente novamente.");
