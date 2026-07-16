@@ -20,7 +20,7 @@ async function callLovableAI(opts: {
       ]
     : opts.prompt;
   const body: any = {
-    model: opts.model || (opts.image ? "google/gemini-2.5-flash" : "google/gemini-3-flash-preview"),
+    model: opts.model || (opts.image ? "google/gemini-2.5-flash" : "google/gemini-3.5-flash"),
     messages: [
       ...(opts.system ? [{ role: "system", content: opts.system }] : []),
       { role: "user", content: userContent },

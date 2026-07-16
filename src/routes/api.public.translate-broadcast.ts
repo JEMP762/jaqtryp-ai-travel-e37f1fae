@@ -42,7 +42,7 @@ async function translate(text: string, fromLang: string, toLang: string, apiKey:
     method: "POST",
     headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
     body: JSON.stringify({
-      model: "google/gemini-3-flash-preview",
+      model: "google/gemini-3.5-flash",
       messages: [
         { role: "system", content: system },
         { role: "user", content: text },
