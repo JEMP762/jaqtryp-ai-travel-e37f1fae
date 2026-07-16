@@ -1,7 +1,7 @@
 {
-  "name": "Jaqtryp AI — Smart travel powered by AI",
+  "name": "Jaqtryp — Viagens com IA",
   "short_name": "Jaqtryp",
-  "description": "Global travel super app: AI itineraries, flights, live translation and real-time guide.",
+  "description": "Super app de viagens com IA: roteiros, voos, tradução ao vivo e assistente em tempo real.",
   "start_url": "/",
   "id": "/",
   "scope": "/",
@@ -12,8 +12,13 @@
   "lang": "pt-BR",
   "categories": ["travel", "productivity", "utilities"],
   "icons": [
-    { "src": "/favicon.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
-    { "src": "/favicon.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
-    { "src": "/favicon.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+    { "src": "/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ],
+  "shortcuts": [
+    { "name": "Tradução ao vivo", "short_name": "Traduzir", "url": "/live-translate", "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }] },
+    { "name": "Planejador", "short_name": "Planejar", "url": "/planner", "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }] },
+    { "name": "Carteira", "short_name": "Carteira", "url": "/wallet", "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }] }
   ]
 }
