@@ -60,6 +60,23 @@ function AppShell() {
     }
   }, [loading, user, nav]);
 
+  // Apply pending referral code after any authenticated arrival (incl. Google OAuth
+  // which redirects to `${origin}/` and never re-mounts /signup).
+  React.useEffect(() => {
+    if (!user || typeof window === "undefined") return;
+    const code = window.sessionStorage.getItem(REF_STORAGE_KEY);
+    if (!code) return;
+    window.sessionStorage.removeItem(REF_STORAGE_KEY);
+    applyReferralCode({ data: { code } })
+      .then((res: any) => {
+        if (res?.ok) toast.success("Código de indicação aplicado!");
+      })
+      .catch(() => {
+        /* ignore */
+      });
+  }, [user]);
+
+
   // Close drawer on route change
   React.useEffect(() => {
     setMobileOpen(false);
