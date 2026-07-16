@@ -37,6 +37,11 @@ import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { CreditLowBalanceBanner } from "@/components/CreditLowBalanceBanner";
 import { ThemeQuickSwatches } from "@/components/ThemeSwitcher";
 import { AppearanceModeQuickToggle } from "@/components/AppearanceModeSwitcher";
+import { applyReferralCode } from "@/lib/referrals.functions";
+import { toast } from "sonner";
+
+const REF_STORAGE_KEY = "jq_pending_ref";
+
 
 export const Route = createFileRoute("/_app")({
   component: AppShell,
