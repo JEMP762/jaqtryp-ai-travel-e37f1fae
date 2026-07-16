@@ -1,0 +1,19 @@
+{
+  "name": "Jaqtryp AI — Smart travel powered by AI",
+  "short_name": "Jaqtryp",
+  "description": "Global travel super app: AI itineraries, flights, live translation and real-time guide.",
+  "start_url": "/",
+  "id": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0b0b12",
+  "theme_color": "#0b0b12",
+  "lang": "pt-BR",
+  "categories": ["travel", "productivity", "utilities"],
+  "icons": [
+    { "src": "/favicon.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/favicon.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/favicon.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}
