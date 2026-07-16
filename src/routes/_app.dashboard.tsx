@@ -3,6 +3,7 @@ import { ArrowRight, Sparkles, MessageSquare, Languages, Plane, Mic } from "luci
 import { useAuth } from "@/hooks/useAuth";
 import { useI18n } from "@/lib/i18n/I18nProvider";
 import { DashboardCreditsCard } from "@/components/DashboardCreditsCard";
+import { PushOptIn } from "@/components/PushOptIn";
 
 export const Route = createFileRoute("/_app/dashboard")({
   component: DashboardHome,
@@ -63,6 +64,12 @@ function DashboardHome() {
           Para onde sua próxima aventura vai te levar?
         </p>
       </div>
+
+      <div className="mt-6">
+        <PushOptIn />
+      </div>
+
+
 
       <div className="mt-8 grid gap-4 lg:grid-cols-2">
         <DashboardCreditsCard />

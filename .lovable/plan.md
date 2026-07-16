@@ -1,72 +1,64 @@
-# Plano de Escala — JaqTryp (Web-first, sem Play Store)
+## Plano: Ajustar PWA + Adicionar Web Push
 
-Objetivo: crescer usuários, receita e estabilidade mantendo o app 100% na web (domínio próprio + PWA instalável), sem custo/burocracia de lojas de app.
+Vou executar as duas frentes em paralelo.
 
-## 1. Distribuição sem loja
+### Parte 1 — Polir PWA
 
-- **PWA instalável real**: manifest.json + service worker + ícones (maskable 512/192) → botão "Instalar app" no Android/iOS/Desktop. Vira ícone na tela inicial igual app nativo.
-- **Deep links / share targets**: registrar `share_target` no manifest pra receber texto/imagem de outros apps (útil pro tradutor e planner).
-- **Domínio próprio** (`jaqtryp.com` já ativo) + subdomínios: `app.` (produto), `blog.` (SEO), `status.` (uptime).
-- **QR nas materiais**: cartão + landing `/install` com instruções por SO.
+- **Ícones dedicados** (gerados por IA, estilo do app — azul/roxo com avião/globo estilizado):
+  - `public/icon-192.png` (192×192)
+  - `public/icon-512.png` (512×512)
+  - `public/icon-maskable-512.png` (512×512 com safe zone para Android adaptativo)
+  - `public/apple-touch-icon.png` (180×180)
+- **`public/manifest.webmanifest`** atualizado:
+  - `name`: "Jaqtryp — Viagens com IA"
+  - `short_name`: "Jaqtryp"
+  - `theme_color`: `#0b0b12`, `background_color`: `#0b0b12`
+  - `display`: `standalone`, `orientation`: `portrait`
+  - `icons[]` referenciando os 3 PNGs (incluindo `purpose: "maskable"`)
+  - `shortcuts[]`: Live Translate, Planejador, Carteira
+- **`src/routes/__root.tsx`**: adicionar `<link rel="apple-touch-icon">` e garantir `theme-color` correto.
 
-## 2. Aquisição (canais que substituem a loja)
+### Parte 2 — Web Push Notifications
 
-- **SEO programático**: rotas dinâmicas para pares de idiomas, cidades e roteiros (ex.: `/traduzir/portugues-ingles`, `/roteiro/lisboa-3-dias`). Cada rota com `head()` único, JSON-LD e og:image gerada.
-- **Blog/conteúdo**: 2 posts/semana em `/blog` cobrindo dor real (viagem, tradução ao vivo, planejamento).
-- **Referral 10%** (já implementado) — adicionar tracking de conversão + leaderboard mensal com bônus pros top 3.
-- **Parcerias**: agências de viagem, professores de idioma, guias turísticos → link de indicação com override de comissão maior (15–20%).
+Push nativo do navegador (Web Push API + VAPID), sem depender de FCM/Firebase. Funciona em Android/Chrome/Edge/Firefox e iOS 16.4+ (após instalar o PWA).
 
-## 3. Ativação e retenção
+**Backend (Supabase + TanStack server functions):**
+- Migração SQL: tabela `push_subscriptions` (`user_id`, `endpoint` unique, `p256dh`, `auth`, `user_agent`, `created_at`) com RLS (usuário só vê/gerencia as próprias) + GRANTs.
+- Secrets: `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT` (gerados por mim e adicionados via add_secret). `VITE_VAPID_PUBLIC_KEY` exposto ao cliente.
+- `src/lib/push.functions.ts`:
+  - `subscribeToPush({ subscription })` — grava no banco.
+  - `unsubscribeFromPush({ endpoint })` — remove.
+  - `sendPushToUser({ userId, title, body, url })` — server-only, usa `web-push` para enviar.
+- Endpoint público `src/routes/api/public/push/send.ts` para gatilhos internos (protegido por secret).
 
-- **Onboarding em 60s**: 3 telas → escolher idioma nativo → testar tradução → convidar amigo pra sala ao vivo.
-- **Notificações Web Push**: crédito baixo, promoção, viagem próxima, resposta do chat. Cobre 90% do que "app nativo" oferece.
-- **E-mail transacional** (Lovable Email já disponível): boas-vindas, saldo baixo, recibo, recuperação de conta abandonada.
-- **Free trial guiado**: 5 traduções ao vivo grátis pra novo usuário sem cartão.
+**Service Worker de Push (isolado, não é app-shell — regra do skill PWA respeitada):**
+- `public/push-sw.js` apenas com handlers `push` e `notificationclick` (abre a `url` do payload). Sem cache de app, sem interceptação de fetch, sem quebra do preview do Lovable.
+- Guard: registro só em `import.meta.env.PROD` e fora dos hostnames de preview do Lovable.
 
-## 4. Confiabilidade e performance
+**UI:**
+- Componente `PushOptIn` no dashboard `_app.tsx`: botão "Ativar notificações" que pede permissão, cria subscription e envia ao backend. Estado: bloqueado / ativado / não suportado.
+- Página `/settings` (ou seção): listar/desativar dispositivos.
 
-- **Monitorar findings do Project Monitoring** semanalmente (já ativo — resolver antes de acumular).
-- **Cache/CDN**: rotas estáticas (blog, landing, pricing) pré-renderizadas; assets com hash + `Cache-Control: immutable`.
-- **Custo de IA**: métrica por feature, alerta quando margem < 40%. Fallback para modelo mais barato em usuários free.
-- **Compute Supabase**: acompanhar `db_health`; escalar instância só quando fila de conexões saturar.
-- **Rate limit por IP e por user_id** nas rotas públicas (`/api/public/*`) pra evitar abuso.
+**Gatilhos automáticos iniciais** (integrações leves):
+- Convite de sala ao vivo: quando o host cria a sala, envia push ao convidado (se ele já tiver ativado em sessão anterior).
+- Roteiro pronto: push quando o planejador termina de gerar.
+- Recompensa de indicação: push quando o indicado paga.
 
-## 5. Monetização
+### Detalhes técnicos
 
-- **3 planos já ativos** (Free / Pro / Ultra) — adicionar:
-  - **Pacote empresarial** (equipes, faturamento anual, SSO futuro).
-  - **Créditos avulsos com desconto por volume** (700, 3.000, 10.000).
-- **Upsell contextual**: quando usuário atinge 80% dos créditos, banner "Assine Pro e pague 60% menos por crédito".
-- **Cupom de reativação**: usuário inativo 30 dias recebe 20% off no próximo pacote.
+- Biblioteca: `web-push` (Node) — usada apenas dentro de handlers de server function (nunca no client bundle). Compatível com o Worker runtime via `nodejs_compat` (usa `crypto`).
+- Formato do payload: `{ title, body, url, icon: "/icon-192.png", badge: "/icon-192.png" }`.
+- VAPID keys geradas uma vez com `web-push generate-vapid-keys` e persistidas como secrets.
+- Cleanup: quando `send` recebe 404/410 do endpoint, remove a subscription do banco.
 
-## 6. Roadmap de features com maior alavanca
+### Ordem de execução
 
-Prioridade por ROI (impacto ÷ esforço):
+1. Gerar ícones + atualizar manifest + `__root.tsx`.
+2. `bun add web-push` + gerar/salvar VAPID keys.
+3. Migração `push_subscriptions`.
+4. Server functions + rota pública.
+5. `public/push-sw.js` + registrar com guards.
+6. UI de opt-in no dashboard.
+7. Gatilhos (sala ao vivo, planejador, referral).
 
-1. **PWA install + push notifications** — trava usuário no ecossistema sem loja.
-2. **SEO programático (idiomas + cidades)** — tráfego orgânico grátis contínuo.
-3. **Leaderboard de indicação + bônus** — turbina o programa já existente.
-4. **Modo offline básico** (últimas traduções, roteiros salvos) via service worker.
-5. **Compartilhar sala ao vivo por link curto** (`jaqtryp.com/j/ABC`) com preview rico (og:image dinâmica).
-6. **Widget embutível** ("Traduza no seu site" — B2B leve, gera backlink).
-
-## 7. Métricas pra acompanhar semanalmente
-
-- Instalações PWA (evento `beforeinstallprompt` + `appinstalled`).
-- MAU / WAU / DAU.
-- Custo médio de IA por usuário ativo.
-- Taxa de conversão free → pago.
-- Receita por indicação vs receita direta.
-- Erros do Project Monitoring abertos.
-
-## Detalhes técnicos (referência)
-
-- PWA: `vite-plugin-pwa` ou service worker manual em `public/sw.js` + `<link rel="manifest">` no `__root.tsx`.
-- Push: Web Push API + VAPID keys guardadas como secret; tabela `push_subscriptions` (user_id, endpoint, keys) com RLS.
-- SEO programático: rotas paramétricas em `src/routes/` + dados de loader com `ensureQueryData`.
-- Rate limit: middleware nas rotas `/api/public/*` usando tabela `rate_limit_buckets` (ip/user_id, count, window_start) ou KV.
-- Analytics: `analytics--read_project_analytics` semanal + evento custom por conversão.
-
----
-
-Se aprovar, eu implemento na ordem: **(1) PWA instalável + manifest** → **(2) Web Push + tabela de subscrições** → **(3) primeira leva de SEO programático** → resto por etapas.
+Confirma que sigo com esses dois pacotes juntos?
