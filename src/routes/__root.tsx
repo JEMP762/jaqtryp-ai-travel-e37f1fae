@@ -97,9 +97,15 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { name: "twitter:description", content: "Jaqtryp AI is a futuristic SaaS travel super app with advanced AI for trip planning and real-time assistance." },
       { property: "og:image", content: "https://storage.googleapis.com/gpt-engineer-file-uploads/m8cwtqwuDjhZcMht2I21avsM2vY2/social-images/social-1780410271313-imagem-1780410253772.webp" },
       { name: "twitter:image", content: "https://storage.googleapis.com/gpt-engineer-file-uploads/m8cwtqwuDjhZcMht2I21avsM2vY2/social-images/social-1780410271313-imagem-1780410253772.webp" },
+      { name: "theme-color", content: "#0b0b12" },
+      { name: "apple-mobile-web-app-capable", content: "yes" },
+      { name: "apple-mobile-web-app-status-bar-style", content: "black-translucent" },
+      { name: "apple-mobile-web-app-title", content: "Jaqtryp" },
+      { name: "mobile-web-app-capable", content: "yes" },
     ],
     links: [
       { rel: "stylesheet", href: appCss },
+      { rel: "manifest", href: "/manifest.webmanifest" },
       { rel: "icon", type: "image/png", href: "/favicon.png" },
       { rel: "apple-touch-icon", href: "/favicon.png" },
       {
