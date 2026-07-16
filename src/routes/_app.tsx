@@ -37,6 +37,11 @@ import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { CreditLowBalanceBanner } from "@/components/CreditLowBalanceBanner";
 import { ThemeQuickSwatches } from "@/components/ThemeSwitcher";
 import { AppearanceModeQuickToggle } from "@/components/AppearanceModeSwitcher";
+import { applyReferralCode } from "@/lib/referrals.functions";
+import { toast } from "sonner";
+
+const REF_STORAGE_KEY = "jq_pending_ref";
+
 
 export const Route = createFileRoute("/_app")({
   component: AppShell,
@@ -54,6 +59,23 @@ function AppShell() {
       nav({ to: "/login" });
     }
   }, [loading, user, nav]);
+
+  // Apply pending referral code after any authenticated arrival (incl. Google OAuth
+  // which redirects to `${origin}/` and never re-mounts /signup).
+  React.useEffect(() => {
+    if (!user || typeof window === "undefined") return;
+    const code = window.sessionStorage.getItem(REF_STORAGE_KEY);
+    if (!code) return;
+    window.sessionStorage.removeItem(REF_STORAGE_KEY);
+    applyReferralCode({ data: { code } })
+      .then((res: any) => {
+        if (res?.ok) toast.success("Código de indicação aplicado!");
+      })
+      .catch(() => {
+        /* ignore */
+      });
+  }, [user]);
+
 
   // Close drawer on route change
   React.useEffect(() => {
