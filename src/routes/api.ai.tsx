@@ -65,7 +65,7 @@ export const Route = createFileRoute("/api/ai")({
             "Content-Type": "application/json",
           },
           body: JSON.stringify({
-            model: body.model || (body.image ? "google/gemini-2.5-flash" : "google/gemini-3-flash-preview"),
+            model: body.model || (body.image ? "google/gemini-2.5-flash" : "google/gemini-3.5-flash"),
             messages: [
               ...(body.system ? [{ role: "system", content: body.system }] : []),
               { role: "user", content: userContent },
