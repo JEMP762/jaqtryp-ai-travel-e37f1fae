@@ -117,12 +117,19 @@ function SignupPage() {
     <AuthShell
       title={t("auth.signup.title")}
       footer={
-        <>
-          {t("auth.have")}{" "}
-          <Link to="/login" className="text-primary hover:underline">
-            {t("auth.signin")}
-          </Link>
-        </>
+        <div className="space-y-1 text-center">
+          <div>
+            {t("auth.have")}{" "}
+            <Link to="/login" className="text-primary hover:underline">
+              {t("auth.signin")}
+            </Link>
+          </div>
+          <div className="text-xs text-muted-foreground">
+            <Link to="/forgot-password" className="hover:underline">
+              Esqueceu a senha?
+            </Link>
+          </div>
+        </div>
       }
     >
       <Button onClick={onGoogle} variant="outline" className="w-full">

@@ -10,6 +10,7 @@ import {
   listCreditHistory,
 } from "@/lib/credits.functions";
 import { CreditPackCheckoutDialog } from "@/components/CreditPackCheckout";
+import { CreditLowBalanceBanner } from "@/components/CreditLowBalanceBanner";
 
 export const Route = createFileRoute("/_app/credits")({
   component: CreditsPage,
@@ -60,7 +61,10 @@ function CreditsPage() {
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-10 md:px-8">
-      <div className="mb-8 flex items-center gap-3">
+      <div className="-mx-4 md:-mx-8">
+        <CreditLowBalanceBanner />
+      </div>
+      <div className="mb-8 mt-4 flex items-center gap-3">
         <div className="grid h-10 w-10 place-items-center rounded-xl bg-gradient-primary shadow-glow">
           <Coins className="h-5 w-5 text-primary-foreground" />
         </div>
