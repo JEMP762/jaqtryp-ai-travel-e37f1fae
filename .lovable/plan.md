@@ -1,64 +1,74 @@
-## Plano: Ajustar PWA + Adicionar Web Push
+## Problema
 
-Vou executar as duas frentes em paralelo.
+Novos usuários recebem "database error" ao tentar criar conta. A mensagem indica que o Supabase Auth cria o registro em `auth.users`, mas o trigger `handle_new_user` falha ao popular as tabelas do `public`, e por isso a sessão nunca é finalizada.
 
-### Parte 1 — Polir PWA
+## Causas prováveis (em ordem)
 
-- **Ícones dedicados** (gerados por IA, estilo do app — azul/roxo com avião/globo estilizado):
-  - `public/icon-192.png` (192×192)
-  - `public/icon-512.png` (512×512)
-  - `public/icon-maskable-512.png` (512×512 com safe zone para Android adaptativo)
-  - `public/apple-touch-icon.png` (180×180)
-- **`public/manifest.webmanifest`** atualizado:
-  - `name`: "Jaqtryp — Viagens com IA"
-  - `short_name`: "Jaqtryp"
-  - `theme_color`: `#0b0b12`, `background_color`: `#0b0b12`
-  - `display`: `standalone`, `orientation`: `portrait`
-  - `icons[]` referenciando os 3 PNGs (incluindo `purpose: "maskable"`)
-  - `shortcuts[]`: Live Translate, Planejador, Carteira
-- **`src/routes/__root.tsx`**: adicionar `<link rel="apple-touch-icon">` e garantir `theme-color` correto.
+1. **Proteção de senha vazada (HIBP)** — ativamos recentemente `password_hibp_enabled=true`. Senhas comuns/vazadas retornam erro 422 que na UI aparece como falha genérica de "database".
+2. **Trigger `handle_new_user`** — insere em `profiles`, `user_roles`, `user_credits`, `credit_ledger`. Se qualquer INSERT falhar (ex.: conflito de `referral_code` gerado, coluna `balance` legada, RLS/GRANT ausente no `service_role`), o signup inteiro cai com "Database error saving new user".
+3. **Trigger `set_referral_code_on_profile`** — gera código com `gen_random_bytes`; se o retry >10 estourar por colisão improvável, ainda funciona (usa fallback), mas vale garantir idempotência.
 
-### Parte 2 — Web Push Notifications
+## Ações
 
-Push nativo do navegador (Web Push API + VAPID), sem depender de FCM/Firebase. Funciona em Android/Chrome/Edge/Firefox e iOS 16.4+ (após instalar o PWA).
+### 1. Instrumentar o trigger para nunca derrubar o signup
+Reescrever `public.handle_new_user` envolvendo cada INSERT em `BEGIN ... EXCEPTION WHEN OTHERS THEN RAISE WARNING ...`. O objetivo é:
+- Registrar o erro no log do Postgres (visível em analytics) sem impedir o `auth.users` de ser criado.
+- Garantir `ON CONFLICT DO NOTHING` em `profiles`, `user_roles`, `user_credits`.
+- Usar defaults corretos e não depender da coluna legada `balance`.
 
-**Backend (Supabase + TanStack server functions):**
-- Migração SQL: tabela `push_subscriptions` (`user_id`, `endpoint` unique, `p256dh`, `auth`, `user_agent`, `created_at`) com RLS (usuário só vê/gerencia as próprias) + GRANTs.
-- Secrets: `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT` (gerados por mim e adicionados via add_secret). `VITE_VAPID_PUBLIC_KEY` exposto ao cliente.
-- `src/lib/push.functions.ts`:
-  - `subscribeToPush({ subscription })` — grava no banco.
-  - `unsubscribeFromPush({ endpoint })` — remove.
-  - `sendPushToUser({ userId, title, body, url })` — server-only, usa `web-push` para enviar.
-- Endpoint público `src/routes/api/public/push/send.ts` para gatilhos internos (protegido por secret).
+### 2. Melhorar mensagens no cliente
+Em `src/routes/signup.tsx`, mapear:
+- `unexpected_failure` / `Database error saving new user` → "Não foi possível concluir o cadastro. Tente novamente em instantes ou use outro e-mail."
+- `weak_password` (HIBP) → mensagem atual já cobre.
 
-**Service Worker de Push (isolado, não é app-shell — regra do skill PWA respeitada):**
-- `public/push-sw.js` apenas com handlers `push` e `notificationclick` (abre a `url` do payload). Sem cache de app, sem interceptação de fetch, sem quebra do preview do Lovable.
-- Guard: registro só em `import.meta.env.PROD` e fora dos hostnames de preview do Lovable.
+### 3. Verificação pós-migração
+- Ler `postgres_logs` para confirmar qual INSERT estava falhando (agora aparecerá como WARNING sem quebrar).
+- Testar cadastro real com e-mail novo + senha forte.
 
-**UI:**
-- Componente `PushOptIn` no dashboard `_app.tsx`: botão "Ativar notificações" que pede permissão, cria subscription e envia ao backend. Estado: bloqueado / ativado / não suportado.
-- Página `/settings` (ou seção): listar/desativar dispositivos.
+## Detalhes técnicos
 
-**Gatilhos automáticos iniciais** (integrações leves):
-- Convite de sala ao vivo: quando o host cria a sala, envia push ao convidado (se ele já tiver ativado em sessão anterior).
-- Roteiro pronto: push quando o planejador termina de gerar.
-- Recompensa de indicação: push quando o indicado paga.
+Migração proposta:
 
-### Detalhes técnicos
+```sql
+CREATE OR REPLACE FUNCTION public.handle_new_user()
+RETURNS trigger LANGUAGE plpgsql SECURITY DEFINER SET search_path=public AS $$
+BEGIN
+  BEGIN
+    INSERT INTO public.profiles (id, full_name, avatar_url)
+    VALUES (NEW.id,
+            COALESCE(NEW.raw_user_meta_data->>'full_name',
+                     NEW.raw_user_meta_data->>'name',
+                     split_part(NEW.email,'@',1)),
+            NEW.raw_user_meta_data->>'avatar_url')
+    ON CONFLICT (id) DO NOTHING;
+  EXCEPTION WHEN OTHERS THEN
+    RAISE WARNING 'handle_new_user profiles: %', SQLERRM;
+  END;
 
-- Biblioteca: `web-push` (Node) — usada apenas dentro de handlers de server function (nunca no client bundle). Compatível com o Worker runtime via `nodejs_compat` (usa `crypto`).
-- Formato do payload: `{ title, body, url, icon: "/icon-192.png", badge: "/icon-192.png" }`.
-- VAPID keys geradas uma vez com `web-push generate-vapid-keys` e persistidas como secrets.
-- Cleanup: quando `send` recebe 404/410 do endpoint, remove a subscription do banco.
+  BEGIN
+    INSERT INTO public.user_roles (user_id, role)
+    VALUES (NEW.id, 'free') ON CONFLICT DO NOTHING;
+  EXCEPTION WHEN OTHERS THEN
+    RAISE WARNING 'handle_new_user user_roles: %', SQLERRM;
+  END;
 
-### Ordem de execução
+  BEGIN
+    INSERT INTO public.user_credits (user_id, free_balance, lifetime_purchased)
+    VALUES (NEW.id, 100, 0) ON CONFLICT (user_id) DO NOTHING;
 
-1. Gerar ícones + atualizar manifest + `__root.tsx`.
-2. `bun add web-push` + gerar/salvar VAPID keys.
-3. Migração `push_subscriptions`.
-4. Server functions + rota pública.
-5. `public/push-sw.js` + registrar com guards.
-6. UI de opt-in no dashboard.
-7. Gatilhos (sala ao vivo, planejador, referral).
+    INSERT INTO public.credit_ledger (user_id, delta, reason, metadata)
+    VALUES (NEW.id, 100, 'signup_bonus',
+            '{"bucket":"free","note":"Welcome bonus"}'::jsonb);
+  EXCEPTION WHEN OTHERS THEN
+    RAISE WARNING 'handle_new_user credits: %', SQLERRM;
+  END;
 
-Confirma que sigo com esses dois pacotes juntos?
+  RETURN NEW;
+END $$;
+```
+
+Depois valido nos logs qual passo estava travando e ajusto especificamente (por exemplo, adicionando GRANT faltante ou default).
+
+## Fora do escopo
+- Não alterar configuração de HIBP (o usuário quer manter contas seguras).
+- Não mexer em referrals, salas ao vivo ou outras features.
