@@ -70,6 +70,8 @@ function SignupPage() {
       return "Já existe uma conta com este e-mail. Tente entrar.";
     if (/invalid.*email/i.test(msg)) return "E-mail inválido.";
     if (/password.*should be at least/i.test(msg)) return "Senha muito curta — use no mínimo 8 caracteres.";
+    if (code === "unexpected_failure" || /database error saving new user|database error/i.test(msg))
+      return "Não foi possível concluir o cadastro agora. Aguarde alguns segundos e tente novamente, ou use outro e-mail.";
     return msg || "Não foi possível criar sua conta. Tente novamente.";
   };
 
