@@ -43,3 +43,14 @@ export function handleCreditResult(result: any): boolean {
   }
   return false;
 }
+
+// Shows a credit-exhausted toast when applicable, otherwise a plain error toast
+// with the provided fallback message. Use inside catch blocks around any
+// paid-feature call so users always see a clear message.
+export function notifyError(err: unknown, fallback = "Erro"): void {
+  if (handleCreditError(err)) return;
+  const msg = (err as any)?.message || (typeof err === "string" ? err : fallback);
+  // Late import to avoid a hard dep at module init on non-toast paths.
+  import("sonner").then(({ toast }) => toast.error(msg || fallback));
+}
+
