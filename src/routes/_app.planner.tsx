@@ -4,6 +4,7 @@ import * as React from "react";
 import ReactMarkdown from "react-markdown";
 import { toast } from "sonner";
 import { authedJsonHeaders } from "@/lib/authed-fetch";
+import { handleCreditError } from "@/lib/credit-error";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -183,7 +184,7 @@ function PlannerPage() {
       renderPrintWindow(w, title, content);
     } catch (e) {
       try { w.close(); } catch {}
-      toast.error((e as Error).message);
+      if (!handleCreditError(e)) toast.error((e as Error).message);
     } finally {
       setExporting(false);
     }
@@ -238,7 +239,7 @@ function PlannerPage() {
       if (!resp.ok) throw new Error(data.error || "Erro");
       setPlan(data.text as string);
     } catch (e) {
-      toast.error((e as Error).message);
+      if (!handleCreditError(e)) toast.error((e as Error).message);
     } finally {
       setLoading(false);
     }

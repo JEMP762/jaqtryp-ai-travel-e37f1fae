@@ -4,6 +4,7 @@ import * as React from "react";
 import ReactMarkdown from "react-markdown";
 import { toast } from "sonner";
 import { authedJsonHeaders } from "@/lib/authed-fetch";
+import { handleCreditError } from "@/lib/credit-error";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { useI18n } from "@/lib/i18n/I18nProvider";
@@ -70,7 +71,8 @@ function ChatPage() {
 
       if (!resp.ok || !resp.body) {
         const data = await resp.json().catch(() => ({}));
-        toast.error(data.error || t("common.error"));
+        const errObj = { status: resp.status, message: data.error, reason: data.code };
+        if (!handleCreditError(errObj)) toast.error(data.error || t("common.error"));
         setStreaming(false);
         return;
       }
@@ -107,7 +109,7 @@ function ChatPage() {
       }
     } catch (e) {
       console.error(e);
-      toast.error(t("common.error"));
+      if (!handleCreditError(e)) toast.error(t("common.error"));
     } finally {
       setStreaming(false);
     }

@@ -1,6 +1,7 @@
 import * as React from "react";
 import { Bluetooth, Loader2, Play, Square, Timer, Coins } from "lucide-react";
 import { toast } from "sonner";
+import { handleCreditError } from "@/lib/credit-error";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -79,7 +80,7 @@ export function BluetoothTranslatorSession({ open, onClose }: Props) {
       setPhase("running");
       toast.success(`Sessão iniciada · ${t.minutes} min`, { description: `${t.credits} créditos debitados` });
     } catch (e: any) {
-      toast.error(e?.message || "Erro ao iniciar");
+      if (!handleCreditError(e)) toast.error(e?.message || "Erro ao iniciar");
     } finally {
       setBusy(false);
     }

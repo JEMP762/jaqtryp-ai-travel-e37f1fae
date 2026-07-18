@@ -2,6 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import * as React from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
+import { handleCreditError } from "@/lib/credit-error";
 import {
   Wallet,
   Plus,
@@ -158,7 +159,7 @@ function WalletPage() {
       setActiveId(res.wallet.id);
       await refresh();
     } catch (e: any) {
-      toast.error(e?.message || "Erro ao criar carteira");
+      if (!handleCreditError(e)) toast.error(e?.message || "Erro ao criar carteira");
     }
   };
 
@@ -170,7 +171,7 @@ function WalletPage() {
       if (activeId === id) setActiveId(null);
       await refresh();
     } catch (e: any) {
-      toast.error(e?.message || "Erro");
+      if (!handleCreditError(e)) toast.error(e?.message || "Erro");
     }
   };
 
@@ -531,7 +532,7 @@ function ExpensesPanel({
       await refresh();
       onChange();
     } catch (e: any) {
-      toast.error(e?.message || "Erro");
+      if (!handleCreditError(e)) toast.error(e?.message || "Erro");
     }
   };
 
@@ -567,7 +568,7 @@ function ExpensesPanel({
       setScanOpen(false);
       toast.success("Recibo analisado — confira e salve.");
     } catch (e: any) {
-      toast.error(e?.message || "Falha ao ler recibo");
+      if (!handleCreditError(e)) toast.error(e?.message || "Falha ao ler recibo");
     } finally {
       setScanning(false);
     }
@@ -768,7 +769,7 @@ function FxPanel({ wallet }: { wallet: any }) {
       const r = await _ask({ data: { prompt } });
       setAiResult(r);
     } catch (e: any) {
-      toast.error(e?.message || "Erro");
+      if (!handleCreditError(e)) toast.error(e?.message || "Erro");
     } finally {
       setLoading(false);
     }
@@ -921,7 +922,7 @@ function BudgetPanel({
       toast.success("Orçamento salvo");
       onChange();
     } catch (e: any) {
-      toast.error(e?.message || "Erro");
+      if (!handleCreditError(e)) toast.error(e?.message || "Erro");
     } finally {
       setSaving(false);
     }
@@ -944,7 +945,7 @@ function BudgetPanel({
       setReserve(String(r.emergency_reserve));
       toast.success("Sugestão gerada — revise e salve.");
     } catch (e: any) {
-      toast.error(e?.message || "Erro");
+      if (!handleCreditError(e)) toast.error(e?.message || "Erro");
     } finally {
       setSaving(false);
     }
@@ -1042,7 +1043,7 @@ function AdvisorPanel({ wallet, isPro }: { wallet: any; isPro: boolean }) {
       const r = await _ask({ data: { wallet_id: wallet.id, prompt: userMsg } });
       setMessages((m) => [...m, { role: "ai", text: r.text }]);
     } catch (e: any) {
-      toast.error(e?.message || "Erro");
+      if (!handleCreditError(e)) toast.error(e?.message || "Erro");
     } finally {
       setLoading(false);
     }
@@ -1054,7 +1055,7 @@ function AdvisorPanel({ wallet, isPro }: { wallet: any; isPro: boolean }) {
       const r = await _report({ data: { wallet_id: wallet.id } });
       setReport(r.report);
     } catch (e: any) {
-      toast.error(e?.message || "Erro");
+      if (!handleCreditError(e)) toast.error(e?.message || "Erro");
     } finally {
       setLoading(false);
     }

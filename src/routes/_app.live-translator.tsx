@@ -22,6 +22,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { authedJsonHeaders } from "@/lib/authed-fetch";
+import { handleCreditError } from "@/lib/credit-error";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import {
@@ -818,7 +819,7 @@ function LiveTranslatorPage() {
         addHistory(input, out, f, t);
         if (speakOut) speak(out, t, prepared);
       } catch (e) {
-        toast.error((e as Error).message);
+        if (!handleCreditError(e)) toast.error((e as Error).message);
       } finally {
         setLoading(false);
       }
@@ -888,7 +889,7 @@ function LiveTranslatorPage() {
         addHistory(original || "[imagem]", tr, from, to);
         if (autoSpeak && tr) speak(tr, to);
       } catch (e) {
-        toast.error((e as Error).message);
+        if (!handleCreditError(e)) toast.error((e as Error).message);
       } finally {
         setOcrLoading(false);
       }
@@ -940,7 +941,7 @@ function LiveTranslatorPage() {
       const arr = JSON.parse(raw);
       if (Array.isArray(arr)) setPhrases(arr.slice(0, 12).map(String));
     } catch (e) {
-      toast.error((e as Error).message);
+      if (!handleCreditError(e)) toast.error((e as Error).message);
     } finally {
       setPhrasesLoading(false);
     }
