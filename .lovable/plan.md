@@ -1,67 +1,58 @@
-## O que encontrei agora
+## Objetivo
+Resolver os 4 problemas críticos reportados e melhorar o aviso ao usuário para ele só aparecer **quando os créditos realmente acabarem** durante o uso de uma função (não como banner permanente).
 
-Eu verifiquei publicamente neste momento:
+---
 
-- `jaqtryp.com` → `185.158.133.1`
-- `www.jaqtryp.com` → `185.158.133.1`
-- `https://jaqtryp.com` abriu com status `200`
-- `https://www.jaqtryp.com` redirecionou corretamente para `https://jaqtryp.com/`
-- Não apareceu mais resposta da Vercel nos resolvedores principais testados.
+## 1. Cadastro/Login 500 — `gen_random_bytes` ausente
 
-## Motivo provável do problema no mobile
+**Causa confirmada:** o gatilho `on_auth_user_created` roda `handle_new_user` → insere em `profiles` → dispara o trigger que chama `set_referral_code_on_profile` → `generate_referral_code`. Embora `generate_referral_code` já esteja qualificada com `extensions.gen_random_bytes`, o log ainda mostra a falha, indicando que existe uma versão antiga cacheada ou outro caminho (ex.: `set_referral_code_on_profile` sem `search_path` correto quando executada dentro do trigger `SECURITY DEFINER` do `handle_new_user`).
 
-Como no celular ainda aparece `404 DEPLOYMENT_NOT_FOUND · gru1`, o mais provável é **cache/propagação DNS antiga** ainda apontando para a Vercel em algum caminho do celular, operadora, roteador ou DNS local.
+**Correção (migração):**
+- Reinstalar `pgcrypto` no schema `extensions` (idempotente: `CREATE EXTENSION IF NOT EXISTS pgcrypto SCHEMA extensions`).
+- Recriar `generate_referral_code` e `set_referral_code_on_profile` com `SET search_path = public, extensions` e usar sempre `extensions.gen_random_bytes(...)`.
+- Recriar `handle_new_user` mantendo os blocos `EXCEPTION` mas garantindo `search_path = public, extensions`.
 
-Isso explica exatamente o comportamento:
+## 2. Recursos pagos de IA falham com "Falha ao debitar créditos"
 
-1. Você corrigiu o DNS.
-2. O app voltou no mobile por um momento.
-3. Depois parou de novo.
-4. O erro continua sendo da Vercel.
+**Causa confirmada:** a migração `20260716005330` fez `REVOKE EXECUTE ON FUNCTION public.spend_for_feature ... FROM anon, PUBLIC` sem `GRANT ... TO authenticated`. Como o RPC é chamado pelo client autenticado (RLS as user) em `credits.functions.ts`, `wallet-ai.functions.ts`, `file-translator.functions.ts` e `BluetoothTranslatorSession.tsx`, todos recebem `permission denied`.
 
-Isso geralmente acontece quando:
+**Correção (migração):**
+- `GRANT EXECUTE ON FUNCTION public.spend_for_feature(uuid, text, jsonb) TO authenticated;`
+- Revisar funções irmãs afetadas pela mesma revogação (`add_credits`, `grant_monthly_credits`, `spend_credits`) — manter `add_credits`/`grant_monthly_credits`/`spend_credits` só para `service_role` (são internas), pois só `spend_for_feature` é chamada pelo client.
 
-- Alguns servidores DNS já atualizaram e outros ainda não.
-- O celular/operadora guardou o IP antigo da Vercel em cache.
-- O navegador ou o app instalado/PWA ainda está preso no domínio antigo.
-- Ainda existe algum registro antigo duplicado no painel DNS, principalmente `AAAA`, `CNAME` ou outro `A` escondido.
+## 3. Aviso de crédito esgotado — mostrar só quando faltar em uma ação
 
-## Plano de correção sem mexer no código
+O `CreditLowBalanceBanner` foi retirado do layout `_app` (a pedido anterior). Agora o pedido é: avisar **quando o usuário tentar executar uma função e não tiver créditos**. Isso é mais preciso e menos poluído que um banner permanente.
 
-### 1. Conferir novamente no DNS do domínio
-No painel da Hostinger, confirmar que não existe nenhum registro antigo:
+**Correção (frontend):**
+- Criar utilitário `handleCreditError(err)` em `src/lib/credit-error.ts` que detecta:
+  - resposta `{ ok:false, reason:"insufficient", needed, have }`
+  - erros HTTP 402
+  - mensagens contendo "Créditos insuficientes" / "Falha ao debitar créditos"
+- Ao detectar, exibir `toast.error` com botão "Comprar créditos" que navega para `/credits`.
+- Aplicar em todos os pontos de chamada de features pagas: `BluetoothTranslatorSession`, `file-translator`, `wallet-ai` (scanReceipt, askWalletAi, advisorReport, fxAsk), `translator`, `planner`, `chat`, `live-translator`.
+- **Não** re-adicionar o banner global; manter só no `/credits`.
 
-Remover se existir:
+## 4. Atalho PWA "Tradução ao vivo" → 404
 
-- `A @` apontando para `216.198.79.1`
-- `A @` apontando para `2.57.91.91`
-- qualquer `A @` apontando para `76.76.x.x`
-- `CNAME www` apontando para `vercel-dns.com`
-- qualquer registro `AAAA` antigo para `@` ou `www`
+**Causa:** `public/manifest.webmanifest` aponta shortcut para `/live-translate`, mas a rota é `/live-translator`.
 
-Deixar apenas:
+**Correção:** ajustar shortcut URL para `/live-translator`.
 
-| Tipo | Nome | Valor |
-|---|---|---|
-| A | `@` | `185.158.133.1` |
-| A | `www` | `185.158.133.1` |
-| TXT | `_lovable` | valor de verificação da Lovable |
+---
 
-### 2. Testar no celular sem cache
-No celular:
+## Arquivos a editar
+- **Nova migração SQL** — corrigir funções + GRANT do `spend_for_feature`.
+- `src/lib/credit-error.ts` (novo) — helper de detecção + toast padronizado.
+- `src/components/BluetoothTranslatorSession.tsx`
+- `src/lib/file-translator.functions.ts` (retornar erro tipado; UI aplica helper)
+- `src/routes/_app.file-translator.tsx`
+- `src/routes/_app.wallet.tsx` (e/ou componentes que chamam wallet-ai)
+- `src/routes/_app.translator.tsx`, `_app.planner.tsx`, `_app.chat.tsx`, `_app.live-translator.tsx`, `live-room.$code.tsx` — aplicar helper nos catches.
+- `public/manifest.webmanifest` — corrigir shortcut.
 
-- Abrir em aba anônima.
-- Testar `https://jaqtryp.com`.
-- Desligar Wi-Fi e testar no 4G/5G.
-- Depois religar Wi-Fi e testar de novo.
-- Se estiver usando o app instalado na tela inicial, remover e instalar novamente depois que o DNS estabilizar.
-
-### 3. Aguardar propagação completa
-Mesmo quando alguns testes já mostram correto, pode levar até 24–72h para sumir totalmente o cache antigo em operadoras móveis.
-
-### 4. Se voltar a falhar depois de 24h
-Aí o mais provável é existir **registro duplicado ou zona DNS duplicada** no provedor. Nesse caso, preciso que você me envie um print da tela DNS completa da Hostinger para eu apontar exatamente qual registro remover.
-
-## Conclusão
-
-O app está respondendo certo agora pela Lovable. O erro no mobile ainda é resto de DNS/cache da Vercel, não erro do aplicativo.
+## Verificação
+- Cadastrar novo usuário de teste → conferir logs sem `gen_random_bytes`.
+- Chamar `spend_for_feature` via translator → sem "permission denied".
+- Zerar saldo de um usuário e tentar traduzir → toast "Créditos esgotados — Comprar" aparece.
+- Instalar PWA e tocar no atalho "Tradução ao vivo" → abre `/live-translator`.
