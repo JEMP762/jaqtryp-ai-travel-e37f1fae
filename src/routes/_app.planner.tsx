@@ -184,7 +184,7 @@ function PlannerPage() {
       renderPrintWindow(w, title, content);
     } catch (e) {
       try { w.close(); } catch {}
-      toast.error((e as Error).message);
+      if (!handleCreditError(e)) toast.error((e as Error).message);
     } finally {
       setExporting(false);
     }
@@ -239,7 +239,7 @@ function PlannerPage() {
       if (!resp.ok) throw new Error(data.error || "Erro");
       setPlan(data.text as string);
     } catch (e) {
-      toast.error((e as Error).message);
+      if (!handleCreditError(e)) toast.error((e as Error).message);
     } finally {
       setLoading(false);
     }

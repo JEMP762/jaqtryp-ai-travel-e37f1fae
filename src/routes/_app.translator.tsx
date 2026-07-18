@@ -100,7 +100,7 @@ function TranslatorPage() {
       setOut(translation || cleaned);
       toast.success("Texto extraído e traduzido!");
     } catch (e) {
-      toast.error((e as Error).message);
+      if (!handleCreditError(e)) toast.error((e as Error).message);
     } finally {
       setOcrLoading(false);
     }
@@ -141,7 +141,7 @@ function TranslatorPage() {
       const res = await translateText(src, from, to);
       setOut(res);
     } catch (e) {
-      toast.error((e as Error).message);
+      if (!handleCreditError(e)) toast.error((e as Error).message);
     } finally {
       setLoading(false);
     }
@@ -253,7 +253,7 @@ function TranslatorPage() {
         // Auto fala a tradução
         setTimeout(() => speak(res, to), 200);
       } catch (err) {
-        toast.error((err as Error).message);
+        if (!handleCreditError(err)) toast.error((err as Error).message);
       } finally {
         setLoading(false);
       }

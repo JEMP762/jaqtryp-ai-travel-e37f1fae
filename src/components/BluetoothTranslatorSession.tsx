@@ -80,7 +80,7 @@ export function BluetoothTranslatorSession({ open, onClose }: Props) {
       setPhase("running");
       toast.success(`Sessão iniciada · ${t.minutes} min`, { description: `${t.credits} créditos debitados` });
     } catch (e: any) {
-      toast.error(e?.message || "Erro ao iniciar");
+      if (!handleCreditError(e)) toast.error(e?.message || "Erro ao iniciar");
     } finally {
       setBusy(false);
     }
