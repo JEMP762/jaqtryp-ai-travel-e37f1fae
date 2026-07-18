@@ -22,6 +22,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { authedJsonHeaders } from "@/lib/authed-fetch";
+import { handleCreditError } from "@/lib/credit-error";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import {

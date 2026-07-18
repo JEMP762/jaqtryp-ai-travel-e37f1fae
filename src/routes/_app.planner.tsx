@@ -4,6 +4,7 @@ import * as React from "react";
 import ReactMarkdown from "react-markdown";
 import { toast } from "sonner";
 import { authedJsonHeaders } from "@/lib/authed-fetch";
+import { handleCreditError } from "@/lib/credit-error";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";

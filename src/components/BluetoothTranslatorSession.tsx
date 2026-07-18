@@ -1,6 +1,7 @@
 import * as React from "react";
 import { Bluetooth, Loader2, Play, Square, Timer, Coins } from "lucide-react";
 import { toast } from "sonner";
+import { handleCreditError } from "@/lib/credit-error";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,

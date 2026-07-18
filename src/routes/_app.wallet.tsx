@@ -2,6 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import * as React from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
+import { handleCreditError } from "@/lib/credit-error";
 import {
   Wallet,
   Plus,
