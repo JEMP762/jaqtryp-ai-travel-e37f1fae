@@ -71,7 +71,8 @@ function ChatPage() {
 
       if (!resp.ok || !resp.body) {
         const data = await resp.json().catch(() => ({}));
-        toast.error(data.error || t("common.error"));
+        const errObj = { status: resp.status, message: data.error, reason: data.code };
+        if (!handleCreditError(errObj)) toast.error(data.error || t("common.error"));
         setStreaming(false);
         return;
       }
@@ -108,7 +109,7 @@ function ChatPage() {
       }
     } catch (e) {
       console.error(e);
-      toast.error(t("common.error"));
+      if (!handleCreditError(e)) toast.error(t("common.error"));
     } finally {
       setStreaming(false);
     }

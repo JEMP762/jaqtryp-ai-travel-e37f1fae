@@ -181,7 +181,7 @@ function FileTranslatorPage() {
         },
       });
       if (!res.ok) {
-        toast.error(res.message);
+        if (!handleCreditError(res)) toast.error(res.message);
         return;
       }
       setResult({
@@ -195,7 +195,7 @@ function FileTranslatorPage() {
       qc.invalidateQueries({ queryKey: ["user_credits_total"] });
       qc.invalidateQueries({ queryKey: ["file_translations"] });
     } catch (e: any) {
-      toast.error(e?.message ?? "Erro ao traduzir.");
+      if (!handleCreditError(e)) toast.error(e?.message ?? "Erro ao traduzir.");
     } finally {
       setSubmitting(false);
     }
