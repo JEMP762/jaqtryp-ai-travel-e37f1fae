@@ -276,15 +276,13 @@ function Landing() {
             {[
               {
                 key: "free" as const,
-                monthly: { price: "$0", period: "/mês" },
-                yearly: { price: "$0", period: "/ano" },
-                features: ["3 roteiros IA / mês", "Tradutor texto", "Clima e câmbio"],
+                badge: "Grátis para começar",
+                features: ["100 créditos de boas-vindas", "Tradutor texto", "Clima e câmbio"],
                 cta: "default",
               },
               {
                 key: "pro" as const,
-                monthly: { price: "$9", period: "/mês" },
-                yearly: { price: "$97.20", period: "/ano" },
+                badge: "Mais escolhido",
                 features: [
                   "Roteiros ilimitados",
                   "Tradutor voz + câmera",
@@ -295,8 +293,7 @@ function Landing() {
               },
               {
                 key: "ultra" as const,
-                monthly: { price: "$19", period: "/mês" },
-                yearly: { price: "$205.20", period: "/ano" },
+                badge: "Experiência completa",
                 features: [
                   "Tudo do Pro",
                   "Concierge IA prioritário",
@@ -307,8 +304,6 @@ function Landing() {
               },
             ].map((p) => {
               const isPro = p.cta === "primary";
-              const current = billing === "yearly" ? p.yearly : p.monthly;
-              const alt = billing === "yearly" ? p.monthly : p.yearly;
               return (
                 <div
                   key={p.key}
@@ -326,20 +321,11 @@ function Landing() {
                   <h3 className="text-lg font-semibold capitalize">
                     {t(`plans.${p.key}` as TKey)}
                   </h3>
-                  <div className="mt-4 flex items-baseline gap-1">
-                    <span className="text-5xl font-bold">{current.price}</span>
-                    <span className="text-muted-foreground">{current.period}</span>
+                  <div className="mt-4">
+                    <span className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-3 py-1 text-xs font-semibold text-primary">
+                      <Sparkles className="h-3 w-3" /> {p.badge}
+                    </span>
                   </div>
-                  {p.key !== "free" && (
-                    <p className="mt-2 text-sm text-primary">
-                      ou {alt.price}{alt.period}
-                      {billing === "monthly" && (
-                        <span className="ml-2 rounded-full bg-primary/10 px-2 py-0.5 text-xs font-semibold">
-                          −10%
-                        </span>
-                      )}
-                    </p>
-                  )}
                   <ul className="mt-6 space-y-3 text-sm">
                     {p.features.map((f) => (
                       <li key={f} className="flex items-start gap-2">
@@ -348,32 +334,23 @@ function Landing() {
                       </li>
                     ))}
                   </ul>
-                  {p.key === "free" ? (
-                    <Button
-                      asChild
-                      className="mt-8 w-full"
-                      variant="outline"
-                    >
-                      <Link to="/signup">{t("plans.cta")}</Link>
-                    </Button>
-                  ) : (
-                    <Button
-                      onClick={() => handleSubscribe(p.key as "pro" | "ultra")}
-                      className={`mt-8 w-full ${isPro ? "bg-gradient-primary shadow-glow" : ""}`}
-                      variant={isPro ? "default" : "outline"}
-                    >
-                      Assinar {p.key === "pro" ? "Pro" : "Ultra"}
-                    </Button>
-                  )}
+                  <Button
+                    asChild
+                    className={`mt-8 w-full ${isPro ? "bg-gradient-primary shadow-glow" : ""}`}
+                    variant={isPro ? "default" : "outline"}
+                  >
+                    <Link to="/signup">Começar grátis</Link>
+                  </Button>
                 </div>
               );
             })}
           </div>
           <p className="mt-8 text-center text-xs text-muted-foreground">
-            Assinaturas cobradas em dólar americano (USD) via Stripe. Reservas aéreas continuam em EURO (€).
+            Comece grátis com 100 créditos. Você escolhe recarga avulsa ou assinatura quando quiser.
           </p>
         </div>
       </section>
+
 
       {checkoutDialog}
 
