@@ -1,58 +1,48 @@
-## Objetivo
-Resolver os 4 problemas críticos reportados e melhorar o aviso ao usuário para ele só aparecer **quando os créditos realmente acabarem** durante o uso de uma função (não como banner permanente).
+# Plano: Voos e Hospedagens em modo Redirecionamento (links públicos)
 
----
+Enquanto Duffel produção não é liberada, o app **busca e compara preços** normalmente, mas **não finaliza reserva interna**. Redireciona para links públicos genéricos (Skyscanner, Google Flights, Booking). Depois basta trocar por links afiliados (com seu ID) ou reativar reserva direta.
 
-## 1. Cadastro/Login 500 — `gen_random_bytes` ausente
+## Comportamento para o usuário
 
-**Causa confirmada:** o gatilho `on_auth_user_created` roda `handle_new_user` → insere em `profiles` → dispara o trigger que chama `set_referral_code_on_profile` → `generate_referral_code`. Embora `generate_referral_code` já esteja qualificada com `extensions.gen_random_bytes`, o log ainda mostra a falha, indicando que existe uma versão antiga cacheada ou outro caminho (ex.: `set_referral_code_on_profile` sem `search_path` correto quando executada dentro do trigger `SECURITY DEFINER` do `handle_new_user`).
+### Voos (`/flights`)
+- Busca Duffel continua ativa (ofertas reais, cias, horários, preços).
+- Botão **"Reservar"** → **"Ver e reservar no parceiro"** com badge "Redireciona para site oficial".
+- Ao clicar: abre nova aba com link público (Skyscanner por padrão, fallback Google Flights) já preenchido (origem, destino, datas, passageiros, classe).
+- Banner discreto no topo: *"Reservas diretas em breve — por enquanto finalize no site parceiro."*
+- Fluxo Stripe/passageiros/`createFlightCheckoutSession` fica no código, oculto por flag.
 
-**Correção (migração):**
-- Reinstalar `pgcrypto` no schema `extensions` (idempotente: `CREATE EXTENSION IF NOT EXISTS pgcrypto SCHEMA extensions`).
-- Recriar `generate_referral_code` e `set_referral_code_on_profile` com `SET search_path = public, extensions` e usar sempre `extensions.gen_random_bytes(...)`.
-- Recriar `handle_new_user` mantendo os blocos `EXCEPTION` mas garantindo `search_path = public, extensions`.
+### Hospedagens (`/stays`)
+- Já usa fallback Booking.com. Vou reforçar:
+  - Cada hotel mostra 2 botões: **Booking.com** e **Hotels.com** (link público).
+  - Se `BOOKING_AFFILIATE_ID` estiver setado, usa afiliado; senão, link público (funciona igual, só sem comissão).
+- Mesmo banner explicativo.
 
-## 2. Recursos pagos de IA falham com "Falha ao debitar créditos"
+## O que vou implementar
 
-**Causa confirmada:** a migração `20260716005330` fez `REVOKE EXECUTE ON FUNCTION public.spend_for_feature ... FROM anon, PUBLIC` sem `GRANT ... TO authenticated`. Como o RPC é chamado pelo client autenticado (RLS as user) em `credits.functions.ts`, `wallet-ai.functions.ts`, `file-translator.functions.ts` e `BluetoothTranslatorSession.tsx`, todos recebem `permission denied`.
+1. **Flag** `BOOKING_MODE = "redirect" | "direct"` em `src/lib/pricing.ts` (default `"redirect"`). Trocar 1 linha ativa reserva direta.
+2. **Helper novo** `src/lib/affiliate-links.ts`:
+   - `buildFlightLink({ origin, destination, departure, return, adults, cabin })` → Skyscanner + Google Flights.
+   - `buildStayLink({ query, checkIn, checkOut, guests, rooms, partner })` → Booking + Hotels.com.
+   - Usa afiliado se secret existir; senão link público.
+3. **UI Voos** (`_app.flights.tsx` + card de oferta):
+   - Ocultar CTA de checkout interno quando `redirect`.
+   - Novo botão "Reservar no parceiro" (nova aba) + registrar clique.
+   - Banner topo.
+4. **UI Stays** (`_app.stays.tsx`):
+   - Dois botões por hotel (Booking, Hotels.com).
+   - Mesmo banner.
+5. **Tabela `affiliate_clicks`** (Supabase):
+   - `id, user_id, partner, kind (flight|stay), payload jsonb, estimated_value, clicked_at`.
+   - RLS: usuário lê os próprios; admin (`has_role`) lê tudo; GRANTs completos.
+6. **Painel admin** (`_app.admin.financial.tsx`):
+   - Aba "Cliques em parceiros" — total por parceiro/período.
+7. **Manter intacto**: busca Duffel, Stripe checkout, `pending_flight_bookings`, `flight_orders`, `createStayBooking`. Nada é apagado — só oculto atrás da flag.
 
-**Correção (migração):**
-- `GRANT EXECUTE ON FUNCTION public.spend_for_feature(uuid, text, jsonb) TO authenticated;`
-- Revisar funções irmãs afetadas pela mesma revogação (`add_credits`, `grant_monthly_credits`, `spend_credits`) — manter `add_credits`/`grant_monthly_credits`/`spend_credits` só para `service_role` (são internas), pois só `spend_for_feature` é chamada pelo client.
-
-## 3. Aviso de crédito esgotado — mostrar só quando faltar em uma ação
-
-O `CreditLowBalanceBanner` foi retirado do layout `_app` (a pedido anterior). Agora o pedido é: avisar **quando o usuário tentar executar uma função e não tiver créditos**. Isso é mais preciso e menos poluído que um banner permanente.
-
-**Correção (frontend):**
-- Criar utilitário `handleCreditError(err)` em `src/lib/credit-error.ts` que detecta:
-  - resposta `{ ok:false, reason:"insufficient", needed, have }`
-  - erros HTTP 402
-  - mensagens contendo "Créditos insuficientes" / "Falha ao debitar créditos"
-- Ao detectar, exibir `toast.error` com botão "Comprar créditos" que navega para `/credits`.
-- Aplicar em todos os pontos de chamada de features pagas: `BluetoothTranslatorSession`, `file-translator`, `wallet-ai` (scanReceipt, askWalletAi, advisorReport, fxAsk), `translator`, `planner`, `chat`, `live-translator`.
-- **Não** re-adicionar o banner global; manter só no `/credits`.
-
-## 4. Atalho PWA "Tradução ao vivo" → 404
-
-**Causa:** `public/manifest.webmanifest` aponta shortcut para `/live-translate`, mas a rota é `/live-translator`.
-
-**Correção:** ajustar shortcut URL para `/live-translator`.
-
----
-
-## Arquivos a editar
-- **Nova migração SQL** — corrigir funções + GRANT do `spend_for_feature`.
-- `src/lib/credit-error.ts` (novo) — helper de detecção + toast padronizado.
-- `src/components/BluetoothTranslatorSession.tsx`
-- `src/lib/file-translator.functions.ts` (retornar erro tipado; UI aplica helper)
-- `src/routes/_app.file-translator.tsx`
-- `src/routes/_app.wallet.tsx` (e/ou componentes que chamam wallet-ai)
-- `src/routes/_app.translator.tsx`, `_app.planner.tsx`, `_app.chat.tsx`, `_app.live-translator.tsx`, `live-room.$code.tsx` — aplicar helper nos catches.
-- `public/manifest.webmanifest` — corrigir shortcut.
+## Depois (quando você quiser)
+- Cadastrar em Skyscanner Partners / Booking Affiliate → me passa os IDs → adiciono como secrets → helper passa a usar afiliado automaticamente.
+- Duffel liberar produção → flipar `BOOKING_MODE = "direct"` → checkout interno volta.
 
 ## Verificação
-- Cadastrar novo usuário de teste → conferir logs sem `gen_random_bytes`.
-- Chamar `spend_for_feature` via translator → sem "permission denied".
-- Zerar saldo de um usuário e tentar traduzir → toast "Créditos esgotados — Comprar" aparece.
-- Instalar PWA e tocar no atalho "Tradução ao vivo" → abre `/live-translator`.
+- Buscar voo GRU→LIS → clicar "Reservar no parceiro" → abre Skyscanner com os campos preenchidos.
+- Buscar hotel Lisboa → clicar Booking → abre Booking.com com datas/hóspedes.
+- Registro aparece em `affiliate_clicks` e no painel admin.
