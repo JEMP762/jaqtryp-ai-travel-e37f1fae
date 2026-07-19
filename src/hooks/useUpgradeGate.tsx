@@ -37,34 +37,52 @@ export function useUpgradeGate() {
     if (typeof window === "undefined") return;
     if (window.sessionStorage.getItem(SESSION_KEY) === "1") return;
 
+    // Never auto-open on auth/public routes
+    const path = window.location.pathname;
+    const isAuthRoute =
+      path === "/" ||
+      path.startsWith("/login") ||
+      path.startsWith("/signup") ||
+      path.startsWith("/reset-password") ||
+      path.startsWith("/auth");
+    if (isAuthRoute) return;
+
     let cancelled = false;
     (async () => {
       try {
-        const [wallet, subRes] = await Promise.all([
-          getMyCredits().catch(() => null),
+        const [walletRes, subRes] = await Promise.allSettled([
+          getMyCredits(),
           supabase.rpc("has_premium_access", { user_uuid: user.id }),
         ]);
-        if (cancelled || !wallet) return;
+        if (cancelled) return;
+
+        // Fail-safe: if any query failed, do NOT open the modal
+        if (walletRes.status !== "fulfilled" || !walletRes.value) return;
+        if (subRes.status !== "fulfilled") return;
+
+        const wallet = walletRes.value;
+        const hasPremium = !!subRes.value.data;
+        if (hasPremium) return; // paying users never see the gate
 
         const zero =
           (wallet.free ?? 0) === 0 &&
           (wallet.monthly ?? 0) === 0 &&
           (wallet.topup ?? 0) === 0;
         const spentBefore = (wallet.lifetimeSpent ?? 0) >= 1;
-        const hasPremium = !!subRes.data;
 
-        if (zero && spentBefore && !hasPremium) {
+        if (zero && spentBefore) {
           window.sessionStorage.setItem(SESSION_KEY, "1");
           setOpen(true);
         }
       } catch {
-        /* ignore */
+        /* fail-safe: never open on error */
       }
     })();
     return () => {
       cancelled = true;
     };
   }, [user]);
+
 
   return { open, setOpen };
 }
