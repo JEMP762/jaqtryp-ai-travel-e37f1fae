@@ -14,6 +14,9 @@ import { PriceWithBrl } from "@/components/pricing/PriceWithBrl";
 import { UpsellSuggestions } from "@/components/pricing/UpsellSuggestions";
 import { SmartCheckoutSummary } from "@/components/pricing/SmartCheckoutSummary";
 import { useAuth } from "@/hooks/useAuth";
+import { buildFlightLink, FLIGHTS_BOOKING_MODE, PARTNER_LABEL } from "@/lib/affiliate-links";
+import { logAffiliateClick } from "@/lib/affiliate-clicks.functions";
+import { ExternalLink } from "lucide-react";
 
 const flightsSearchSchema = z.object({
   origin: fallback(z.string(), "").default(""),
