@@ -567,3 +567,54 @@ function tomorrowISO() {
   d.setDate(d.getDate() + 1);
   return d.toISOString().slice(0, 10);
 }
+
+function PartnerFlightButtons({ offer, form }: { offer: Offer; form: any }) {
+  const logFn = useServerFn(logAffiliateClick);
+  const firstSlice = offer.slices[0];
+  const lastSlice = offer.slices[offer.slices.length - 1];
+  const origin = firstSlice?.origin || form.origin;
+  const destination = lastSlice?.destination || form.destination;
+
+  function openPartner(partner: "skyscanner" | "google") {
+    const url = buildFlightLink(
+      {
+        origin,
+        destination,
+        departure_date: form.departure_date,
+        return_date: form.return_date || undefined,
+        adults: form.adults,
+        cabin_class: form.cabin_class,
+      },
+      partner,
+    );
+    window.open(url, "_blank", "noopener,noreferrer");
+    logFn({
+      data: {
+        partner,
+        kind: "flight",
+        payload: { origin, destination, offer_id: offer.id, cabin: form.cabin_class },
+        estimated_value: Number(offer.total_amount) || null,
+        currency: offer.total_currency,
+      },
+    }).catch(() => {});
+  }
+
+  return (
+    <div className="flex flex-col gap-2">
+      <button
+        onClick={() => openPartner("skyscanner")}
+        className="inline-flex items-center gap-1.5 rounded-xl bg-gradient-primary px-4 py-2 text-sm font-semibold text-primary-foreground shadow-glow hover:opacity-90"
+      >
+        Reservar no {PARTNER_LABEL.skyscanner}
+        <ExternalLink className="h-3.5 w-3.5" />
+      </button>
+      <button
+        onClick={() => openPartner("google")}
+        className="inline-flex items-center justify-center gap-1.5 rounded-xl border border-border/60 px-4 py-1.5 text-xs font-medium hover:border-primary/60"
+      >
+        Ver no {PARTNER_LABEL.google} <ExternalLink className="h-3 w-3" />
+      </button>
+    </div>
+  );
+}
+
