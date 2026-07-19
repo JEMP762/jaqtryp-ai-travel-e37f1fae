@@ -1,6 +1,6 @@
 import * as React from "react";
 import { getMyCredits } from "@/lib/credits.functions";
-import { getMySubscription } from "@/lib/subscription.functions";
+import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 
 const SESSION_KEY = "jq_upgrade_gate_shown";
@@ -40,9 +40,9 @@ export function useUpgradeGate() {
     let cancelled = false;
     (async () => {
       try {
-        const [wallet, sub] = await Promise.all([
+        const [wallet, subRes] = await Promise.all([
           getMyCredits().catch(() => null),
-          getMySubscription().catch(() => null),
+          supabase.rpc("has_premium_access", { user_uuid: user.id }),
         ]);
         if (cancelled || !wallet) return;
 
@@ -51,9 +51,9 @@ export function useUpgradeGate() {
           (wallet.monthly ?? 0) === 0 &&
           (wallet.topup ?? 0) === 0;
         const spentBefore = (wallet.lifetimeSpent ?? 0) >= 1;
-        const hasSub = !!(sub as any)?.active;
+        const hasPremium = !!subRes.data;
 
-        if (zero && spentBefore && !hasSub) {
+        if (zero && spentBefore && !hasPremium) {
           window.sessionStorage.setItem(SESSION_KEY, "1");
           setOpen(true);
         }
