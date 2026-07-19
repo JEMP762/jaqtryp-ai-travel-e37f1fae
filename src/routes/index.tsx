@@ -270,28 +270,8 @@ function Landing() {
             </h2>
             <p className="mt-4 text-muted-foreground">{t("plans.subtitle")}</p>
 
-            {/* Billing toggle */}
-            <div className="mt-8 inline-flex items-center gap-1 rounded-full border border-border bg-card/60 p-1">
-              <button
-                type="button"
-                onClick={() => setBilling("monthly")}
-                className={`px-4 py-1.5 text-xs font-semibold rounded-full transition ${
-                  billing === "monthly" ? "bg-gradient-primary text-primary-foreground shadow-glow" : "text-muted-foreground"
-                }`}
-              >
-                Mensal
-              </button>
-              <button
-                type="button"
-                onClick={() => setBilling("yearly")}
-                className={`px-4 py-1.5 text-xs font-semibold rounded-full transition ${
-                  billing === "yearly" ? "bg-gradient-primary text-primary-foreground shadow-glow" : "text-muted-foreground"
-                }`}
-              >
-                Anual <span className="ml-1 rounded-full bg-primary/20 px-1.5 py-0.5 text-[10px]">−10%</span>
-              </button>
-            </div>
           </div>
+
           <div className="mt-14 grid gap-6 md:grid-cols-3">
             {[
               {
