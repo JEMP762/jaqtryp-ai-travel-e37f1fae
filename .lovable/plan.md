@@ -1,48 +1,53 @@
-# Plano: Voos e Hospedagens em modo Redirecionamento (links públicos)
+## Objetivo
 
-Enquanto Duffel produção não é liberada, o app **busca e compara preços** normalmente, mas **não finaliza reserva interna**. Redireciona para links públicos genéricos (Skyscanner, Google Flights, Booking). Depois basta trocar por links afiliados (com seu ID) ou reativar reserva direta.
+Landing page **sem preços** — foco só em atrair. Os valores só aparecem para o usuário **depois que ele consome os 100 créditos gratuitos de boas-vindas**, num modal que oferece as duas opções: **recarga avulsa** ou **assinatura mensal/anual**. Nada quebra: preços, Stripe, checkout e telas internas continuam iguais.
 
-## Comportamento para o usuário
+## Como fica para o usuário
 
-### Voos (`/flights`)
-- Busca Duffel continua ativa (ofertas reais, cias, horários, preços).
-- Botão **"Reservar"** → **"Ver e reservar no parceiro"** com badge "Redireciona para site oficial".
-- Ao clicar: abre nova aba com link público (Skyscanner por padrão, fallback Google Flights) já preenchido (origem, destino, datas, passageiros, classe).
-- Banner discreto no topo: *"Reservas diretas em breve — por enquanto finalize no site parceiro."*
-- Fluxo Stripe/passageiros/`createFlightCheckoutSession` fica no código, oculto por flag.
+### 1. Landing page (`/`) — sem preços
+Na seção de Planos:
+- Removo os números `$0 / $9 / $19 / $97.20 / $205.20` e a nota "Assinaturas cobradas em USD…".
+- Removo o toggle Mensal/Anual da home (ele continua ativo dentro do app).
+- Cada card mostra só: nome do plano, benefícios e um selo (Free = "Grátis para começar", Pro = "Mais escolhido", Ultra = "Experiência completa") + CTA "Começar grátis" → `/signup`.
+- Handlers `handleSubscribe` e `openCheckout` e todos os `priceId` ficam intactos no arquivo (código dormindo), pronto para reativar num flip.
 
-### Hospedagens (`/stays`)
-- Já usa fallback Booking.com. Vou reforçar:
-  - Cada hotel mostra 2 botões: **Booking.com** e **Hotels.com** (link público).
-  - Se `BOOKING_AFFILIATE_ID` estiver setado, usa afiliado; senão, link público (funciona igual, só sem comissão).
-- Mesmo banner explicativo.
+### 2. Novo modal "Continue com tudo liberado" (dispara quando os 100 créditos grátis acabam)
+- Componente novo `src/components/UpgradeGateDialog.tsx`.
+- Regra de disparo (hook `useUpgradeGate`):
+  - `wallet.free === 0` **E** `wallet.monthly === 0` **E** `wallet.topup === 0` **E** `lifetime_spent >= 1` (garante que já usou os grátis, não é conta nova).
+  - Sem assinatura ativa (`has_premium_access` = false — reaproveita `getMyCredits` + verificação de subscription).
+- Dispara em dois pontos:
+  a. Automaticamente ao abrir qualquer rota `_app.*` (uma vez por sessão, com `sessionStorage` para não incomodar).
+  b. Quando qualquer feature retorna `reason: "insufficient"` → `handleCreditError` (em `src/lib/credit-error.ts`) passa a abrir o modal em vez do toast atual (mantém toast como fallback quando o modal já foi visto).
+- Conteúdo do modal (duas colunas):
+  - **Recarga avulsa** → lista os 3 packs de `CREDIT_PACKS` (Starter/Explorer/Global), com "MAIS POPULAR" no 2000. Botão "Comprar" abre o `CreditPackCheckoutDialog` existente.
+  - **Assinatura** → 2 cards Pro e Ultra, com toggle Mensal/Anual local. Botão chama `useSubscriptionCheckout` com os `priceId` que hoje moram na home. Aqui **os preços aparecem**, pois é a primeira vez que o usuário está diante da decisão de pagar.
+- Rodapé: "Créditos gratuitos usados. Escolha como continuar." + link "Ver detalhes na Carteira" → `/credits`.
 
-## O que vou implementar
+### 3. Aviso preventivo dentro do app
+- O `CreditLowBalanceBanner` já existe e continua aparecendo em `/credits`. Nada muda ali.
 
-1. **Flag** `BOOKING_MODE = "redirect" | "direct"` em `src/lib/pricing.ts` (default `"redirect"`). Trocar 1 linha ativa reserva direta.
-2. **Helper novo** `src/lib/affiliate-links.ts`:
-   - `buildFlightLink({ origin, destination, departure, return, adults, cabin })` → Skyscanner + Google Flights.
-   - `buildStayLink({ query, checkIn, checkOut, guests, rooms, partner })` → Booking + Hotels.com.
-   - Usa afiliado se secret existir; senão link público.
-3. **UI Voos** (`_app.flights.tsx` + card de oferta):
-   - Ocultar CTA de checkout interno quando `redirect`.
-   - Novo botão "Reservar no parceiro" (nova aba) + registrar clique.
-   - Banner topo.
-4. **UI Stays** (`_app.stays.tsx`):
-   - Dois botões por hotel (Booking, Hotels.com).
-   - Mesmo banner.
-5. **Tabela `affiliate_clicks`** (Supabase):
-   - `id, user_id, partner, kind (flight|stay), payload jsonb, estimated_value, clicked_at`.
-   - RLS: usuário lê os próprios; admin (`has_role`) lê tudo; GRANTs completos.
-6. **Painel admin** (`_app.admin.financial.tsx`):
-   - Aba "Cliques em parceiros" — total por parceiro/período.
-7. **Manter intacto**: busca Duffel, Stripe checkout, `pending_flight_bookings`, `flight_orders`, `createStayBooking`. Nada é apagado — só oculto atrás da flag.
+## Arquivos afetados
 
-## Depois (quando você quiser)
-- Cadastrar em Skyscanner Partners / Booking Affiliate → me passa os IDs → adiciono como secrets → helper passa a usar afiliado automaticamente.
-- Duffel liberar produção → flipar `BOOKING_MODE = "direct"` → checkout interno volta.
+1. **`src/routes/index.tsx`** — remover exibição de preços, toggle e nota de rodapé; ajustar CTAs. Manter todo o resto do código intacto.
+2. **`src/components/UpgradeGateDialog.tsx`** (novo) — modal com abas Recarga / Assinatura.
+3. **`src/hooks/useUpgradeGate.tsx`** (novo) — hook que lê `getMyCredits` + subscription e decide quando abrir.
+4. **`src/routes/_app.tsx`** — montar `<UpgradeGateDialog />` uma vez para todas as rotas autenticadas.
+5. **`src/lib/credit-error.ts`** — quando `insufficient`, disparar evento `window.dispatchEvent(new CustomEvent("open-upgrade-gate"))` que o modal escuta; mantém toast como fallback.
+
+## O que NÃO muda
+
+- Nenhum arquivo de pricing / Stripe / webhooks / créditos / RLS.
+- Preços continuam existindo em `/credits` e `/billing` (usuário logado que quer ver por conta própria).
+- Fluxo de compra: mesmos `priceId`, mesmos `CREDIT_PACKS`, mesmo `openCheckout`.
+- Bônus de 100 créditos, `handle_new_user`, `spend_for_feature`: intocados.
 
 ## Verificação
-- Buscar voo GRU→LIS → clicar "Reservar no parceiro" → abre Skyscanner com os campos preenchidos.
-- Buscar hotel Lisboa → clicar Booking → abre Booking.com com datas/hóspedes.
-- Registro aparece em `affiliate_clicks` e no painel admin.
+
+- Abrir `/` deslogado → seção de planos sem valores, CTAs "Começar grátis".
+- Criar conta nova → dashboard normal, sem modal (tem 100 créditos, `lifetime_spent = 0`).
+- Consumir os 100 créditos → próxima ação paga dispara o modal com Recarga + Assinatura (com preços).
+- Fechar o modal e tentar outra feature paga → toast de créditos + botão "Comprar" (fallback já existente).
+- `bun run build` sem erros.
+
+Confirma esse fluxo (modal ao esgotar os 100 grátis, com Recarga + Assinatura lado a lado) que eu implemento?
