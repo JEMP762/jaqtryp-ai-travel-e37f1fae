@@ -231,9 +231,17 @@ function FlightsPage() {
         </div>
         <div>
           <h1 className="text-2xl font-bold">Voos</h1>
-          <p className="text-sm text-muted-foreground">Busque, compare e reserve passagens reais via Duffel</p>
+          <p className="text-sm text-muted-foreground">Busque e compare passagens em tempo real</p>
         </div>
       </div>
+
+      {FLIGHTS_BOOKING_MODE === "redirect" && (
+        <div className="mb-4 rounded-xl border border-primary/30 bg-primary/5 p-3 text-xs text-muted-foreground">
+          Reservas diretas em habilitação. Por enquanto, finalize sua compra no site oficial do parceiro —
+          mesmos preços e proteções.
+        </div>
+      )}
+
 
       {/* Search form */}
       <form
