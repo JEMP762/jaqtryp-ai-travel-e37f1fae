@@ -22,12 +22,19 @@ export function handleCreditError(err: unknown): boolean {
 
   if (!isInsufficient) return false;
 
+  // Open the upgrade gate modal (recarga + assinatura)
+  if (typeof window !== "undefined") {
+    window.dispatchEvent(new CustomEvent("open-upgrade-gate"));
+  }
+
   toast.error("Créditos esgotados", {
-    description: "Faça uma recarga para continuar usando este recurso.",
+    description: "Escolha uma recarga avulsa ou uma assinatura para continuar.",
     action: {
-      label: "Comprar",
+      label: "Ver opções",
       onClick: () => {
-        if (typeof window !== "undefined") window.location.href = "/credits";
+        if (typeof window !== "undefined") {
+          window.dispatchEvent(new CustomEvent("open-upgrade-gate"));
+        }
       },
     },
     duration: 8000,

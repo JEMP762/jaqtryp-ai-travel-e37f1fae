@@ -39,6 +39,8 @@ import { ThemeQuickSwatches } from "@/components/ThemeSwitcher";
 import { AppearanceModeQuickToggle } from "@/components/AppearanceModeSwitcher";
 import { applyReferralCode } from "@/lib/referrals.functions";
 import { toast } from "sonner";
+import { UpgradeGateDialog } from "@/components/UpgradeGateDialog";
+import { useUpgradeGate } from "@/hooks/useUpgradeGate";
 
 const REF_STORAGE_KEY = "jq_pending_ref";
 
@@ -53,6 +55,7 @@ function AppShell() {
   const nav = useNavigate();
   const path = useRouterState({ select: (s) => s.location.pathname });
   const [mobileOpen, setMobileOpen] = React.useState(false);
+  const upgradeGate = useUpgradeGate();
 
   React.useEffect(() => {
     if (!loading && !user) {
@@ -212,6 +215,7 @@ function AppShell() {
       <main className="flex-1 overflow-x-hidden pt-14 md:pt-0">
         <Outlet />
       </main>
+      <UpgradeGateDialog open={upgradeGate.open} onOpenChange={upgradeGate.setOpen} />
     </div>
   );
 }
