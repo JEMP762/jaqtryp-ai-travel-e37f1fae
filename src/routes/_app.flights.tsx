@@ -352,12 +352,16 @@ function FlightsPage() {
                 <div className="flex items-center gap-4">
                   <PriceWithBrl amount={o.total_amount} currency={o.total_currency} size="lg" />
 
-                  <button
-                    onClick={() => selectOffer(o)}
-                    className="rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground hover:opacity-90"
-                  >
-                    Selecionar
-                  </button>
+                  {FLIGHTS_BOOKING_MODE === "redirect" ? (
+                    <PartnerFlightButtons offer={o} form={form} />
+                  ) : (
+                    <button
+                      onClick={() => selectOffer(o)}
+                      className="rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground hover:opacity-90"
+                    >
+                      Selecionar
+                    </button>
+                  )}
                 </div>
               </div>
             </div>
