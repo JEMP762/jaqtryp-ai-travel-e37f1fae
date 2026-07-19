@@ -14,6 +14,39 @@ export type Database = {
   }
   public: {
     Tables: {
+      affiliate_clicks: {
+        Row: {
+          clicked_at: string
+          currency: string | null
+          estimated_value: number | null
+          id: string
+          kind: string
+          partner: string
+          payload: Json
+          user_id: string
+        }
+        Insert: {
+          clicked_at?: string
+          currency?: string | null
+          estimated_value?: number | null
+          id?: string
+          kind: string
+          partner: string
+          payload?: Json
+          user_id: string
+        }
+        Update: {
+          clicked_at?: string
+          currency?: string | null
+          estimated_value?: number | null
+          id?: string
+          kind?: string
+          partner?: string
+          payload?: Json
+          user_id?: string
+        }
+        Relationships: []
+      }
       booking_commissions: {
         Row: {
           created_at: string
