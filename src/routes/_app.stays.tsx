@@ -302,21 +302,36 @@ function StaysPage() {
       {showFallback && (
         <div className="mt-6 rounded-2xl border border-primary/30 bg-gradient-to-br from-primary/10 to-card p-5">
           <div className="mb-1 text-sm font-semibold">
-            Reservas internas em habilitação
+            {redirectMode ? "Compare e reserve nos parceiros" : "Reservas internas em habilitação"}
           </div>
           <p className="mb-3 text-xs text-muted-foreground">
-            Estamos concluindo a aprovação do nosso provedor de hospedagens (Duffel Stays).
-            Enquanto isso, sua busca abre no Booking.com{affiliateId ? " com nossa parceria oficial" : ""} —
-            mesmos preços, reserva imediata.
+            {redirectMode
+              ? "Enquanto habilitamos reservas diretas no app, sua busca abre nos maiores portais — mesmos preços, reserva imediata e proteção do parceiro."
+              : `Estamos concluindo a aprovação do nosso provedor de hospedagens. Enquanto isso, sua busca abre no Booking.com${affiliateId ? " com nossa parceria oficial" : ""} — mesmos preços, reserva imediata.`}
           </p>
-          <a
-            href={bookingFallback}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex items-center gap-2 rounded-lg bg-gradient-primary px-4 py-2 text-sm font-semibold text-primary-foreground shadow-glow hover:opacity-90"
-          >
-            Buscar no Booking.com ↗
-          </a>
+          <div className="flex flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={() => openPartnerStay("booking")}
+              className="inline-flex items-center gap-1.5 rounded-lg bg-gradient-primary px-4 py-2 text-sm font-semibold text-primary-foreground shadow-glow hover:opacity-90"
+            >
+              {PARTNER_LABEL.booking} <ExternalLink className="h-3.5 w-3.5" />
+            </button>
+            <button
+              type="button"
+              onClick={() => openPartnerStay("hotels")}
+              className="inline-flex items-center gap-1.5 rounded-lg border border-border/60 px-4 py-2 text-sm font-medium hover:border-primary/60"
+            >
+              {PARTNER_LABEL.hotels} <ExternalLink className="h-3.5 w-3.5" />
+            </button>
+            <button
+              type="button"
+              onClick={() => openPartnerStay("airbnb")}
+              className="inline-flex items-center gap-1.5 rounded-lg border border-border/60 px-4 py-2 text-sm font-medium hover:border-primary/60"
+            >
+              {PARTNER_LABEL.airbnb} <ExternalLink className="h-3.5 w-3.5" />
+            </button>
+          </div>
         </div>
       )}
 
