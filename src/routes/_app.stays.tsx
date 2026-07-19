@@ -89,7 +89,36 @@ function StaysPage() {
   const [apiUnavailable, setApiUnavailable] = React.useState(false);
   const providerUnavailable = providerQuery.data?.unavailable ?? false;
   const affiliateId = providerQuery.data?.booking_affiliate_id ?? null;
-  const showFallback = apiUnavailable || providerUnavailable;
+  const redirectMode = STAYS_BOOKING_MODE === "redirect";
+  const showFallback = redirectMode || apiUnavailable || providerUnavailable;
+
+  const logClickFn = useServerFn(logAffiliateClick);
+  function openPartnerStay(partner: "booking" | "hotels" | "airbnb") {
+    const url = buildStayLink(
+      {
+        query: form.query,
+        check_in_date: form.check_in_date,
+        check_out_date: form.check_out_date,
+        guests: form.guests,
+        rooms: form.rooms,
+      },
+      partner,
+    );
+    window.open(url, "_blank", "noopener,noreferrer");
+    logClickFn({
+      data: {
+        partner,
+        kind: "stay",
+        payload: {
+          query: form.query,
+          check_in: form.check_in_date,
+          check_out: form.check_out_date,
+          guests: form.guests,
+          rooms: form.rooms,
+        },
+      },
+    }).catch(() => {});
+  }
 
   const bookingFallback = React.useMemo(() => {
     const q = encodeURIComponent(form.query || "");
