@@ -27,6 +27,9 @@ import { PriceBreakdown } from "@/components/pricing/PriceBreakdown";
 import { UpsellSuggestions } from "@/components/pricing/UpsellSuggestions";
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/useAuth";
+import { buildStayLink, STAYS_BOOKING_MODE, PARTNER_LABEL } from "@/lib/affiliate-links";
+import { logAffiliateClick } from "@/lib/affiliate-clicks.functions";
+import { ExternalLink } from "lucide-react";
 
 const staysSearchSchema = z.object({
   query: fallback(z.string(), "").default(""),
