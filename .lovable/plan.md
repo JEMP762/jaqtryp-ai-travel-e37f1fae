@@ -1,32 +1,43 @@
-## Garantia de compatibilidade — sem quebrar usuários existentes nem login
+# Conectar projeto ao GitHub via Git Sync
 
-Nada do que foi implementado agora (ocultar preços na landing + `UpgradeGateDialog`) altera o fluxo de autenticação, sessões, senhas ou dados existentes. Mesmo assim, vou fazer uma passagem de verificação e endurecer 3 pontos para garantir zero impacto:
+## Objetivo
+Sincronizar o código deste projeto (Jaqtryp) com um repositório GitHub, permitindo backup, edição externa e colaboração em dois sentidos.
 
-### 1. Login e cadastro — intocados
-- Não vou mexer em `src/routes/login.tsx`, `signup.tsx`, `reset-password.tsx`, `_authenticated/route.tsx`, `handle_new_user`, triggers ou RPCs de auth.
-- Verificação: reler os arquivos e confirmar que nenhuma alteração desta rodada os importa/afeta.
+## O que será feito
+- Ativar a integração Git Sync no editor Lovable.
+- Criar um novo repositório no GitHub conectado a esta conta.
+- Configurar sincronização automática bidirecional entre Lovable e GitHub.
 
-### 2. Usuários já pagantes / com assinatura ativa — não veem o modal
-O `useUpgradeGate` só abre quando:
-- `free + monthly + topup == 0` **E**
-- `lifetimeSpent >= 1` **E**
-- `has_premium_access() == false`
+## Passos de implementação
 
-Reforços para garantir:
-- Se qualquer uma das 3 queries falhar (rede/RLS), o hook trata como "não abrir" (fail-safe silencioso, nunca fail-open).
-- Adicionar guarda extra: se `subscription_status in ('active','trialing','past_due')` → nunca abrir, mesmo com saldo zero.
-- Nunca abrir automaticamente em rotas de auth (`/login`, `/signup`, `/reset-password`, `/auth/*`) nem no primeiro carregamento antes das queries resolverem.
+1. **Abrir o menu de integração GitHub**
+   - No editor Lovable, clicar no botão **+** (Plus) no canto inferior esquerdo da caixa de chat.
+   - Escolher **GitHub** → **Connect project**.
 
-### 3. Usuários novos (100 créditos grátis) — sem interrupção
-- Enquanto `lifetimeSpent < 1` (ainda não gastou nada), modal nunca abre.
-- Toast de "crédito insuficiente" continua aparecendo só quando uma ação realmente falha por saldo — comportamento idêntico ao anterior, só muda o botão do toast (agora abre modal em vez de link direto).
+2. **Autorizar o Lovable GitHub App**
+   - Será redirecionado ao GitHub para autorizar o app Lovable.
+   - Confirmar a conta/organização onde o repositório será criado.
 
-### 4. Landing page — apenas visual
-- Removi números/toggle, mas mantive IDs de preço, `CREDIT_PACKS`, `useSubscriptionCheckout` e todo o backend Stripe intactos. Checkout existente continua funcionando normalmente para quem já usa.
+3. **Criar o repositório**
+   - No Lovable, selecionar a conta/organização GitHub.
+   - Clicar em **Create Repository** para gerar o repositório com o código atual do projeto.
 
-### Verificação final
-- `tsgo` (typecheck) já passou.
-- Vou reler `_app.tsx`, `useUpgradeGate.tsx` e `credit-error.ts` para confirmar as guardas acima e ajustar se faltar alguma.
-- Sem migração de banco, sem mudança em RLS, sem mudança em auth.
+4. **Verificar sincronização**
+   - Após a criação, o código é enviado automaticamente.
+   - Alterações futuras no Lovable são empurradas para o GitHub automaticamente.
+   - Alterações feitas no GitHub (localmente ou por outro dev) são sincronizadas de volta para o Lovable.
 
-Confirma que sigo com esses reforços de segurança no modal (itens 2 e 3)?
+## Limitações e cuidados
+- O Lovable **não importa repositórios GitHub existentes**. O repositório deve ser criado a partir do Lovable.
+- Apenas **uma conta GitHub** pode estar conectada por conta Lovable.
+- A sincronização é automática; evite editar os mesmos arquivos simultaneamente nos dois lados para não gerar conflitos.
+- Histórico de versões e rollback interno do Lovable continuam disponíveis independentemente do GitHub.
+- Caso queira editar localmente, poderá clonar o repositório GitHub após a conexão.
+
+## Após a conexão
+- O botão de download do codebase aparece desbloqueado (quando aplicável).
+- É possível usar branches experimentais se a opção **GitHub Branch Switching** estiver ativada em Account Settings → Labs.
+- O deploy continua sendo gerenciado pelo Lovable; a conexão GitHub é apenas sincronização de código.
+
+## Alternativa não escolhida
+- **GitHub Connector**: usado para chamar a API do GitHub dentro do app (automações, dashboards de issues). Não será ativado neste plano.
