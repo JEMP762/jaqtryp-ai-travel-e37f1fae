@@ -26,6 +26,15 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { useI18n } from "@/lib/i18n/I18nProvider";
 import { supabase } from "@/integrations/supabase/client";
+import { Switch } from "@/components/ui/switch";
+import {
+  type Branding,
+  loadBranding,
+  logoAsDataUrl,
+  removeLogo,
+  saveCompanyName,
+  uploadLogo,
+} from "@/lib/branding";
 
 
 const EXPORT_LANGUAGES = [
@@ -157,7 +166,18 @@ function PlannerPage() {
   const [plan, setPlan] = React.useState("");
   const [exporting, setExporting] = React.useState(false);
   const [isPro, setIsPro] = React.useState<boolean | null>(null);
+  const [branding, setBranding] = React.useState<Branding>({
+    companyName: null,
+    logoPath: null,
+    logoUrl: null,
+  });
+  const [companyName, setCompanyName] = React.useState("");
+  const [useBrand, setUseBrand] = React.useState(false);
+  const [uploadingLogo, setUploadingLogo] = React.useState(false);
+  const [planBrand, setPlanBrand] = React.useState<{ logoUrl: string | null; company: string | null } | null>(null);
+  const fileRef = React.useRef<HTMLInputElement | null>(null);
 
+  const cost = useBrand && branding.logoUrl ? 25 : 15;
 
   React.useEffect(() => {
     async function checkPremium() {
@@ -172,7 +192,36 @@ function PlannerPage() {
       }
     }
     checkPremium();
+    loadBranding().then((b) => {
+      setBranding(b);
+      setCompanyName(b.companyName ?? "");
+    });
   }, []);
+
+  const onPickLogo = async (file: File | undefined) => {
+    if (!file) return;
+    setUploadingLogo(true);
+    try {
+      const b = await uploadLogo(file);
+      setBranding((prev) => ({ ...prev, logoPath: b.logoPath, logoUrl: b.logoUrl }));
+      setUseBrand(true);
+      toast.success("Logo enviada");
+    } catch (e) {
+      toast.error((e as Error).message);
+    } finally {
+      setUploadingLogo(false);
+      if (fileRef.current) fileRef.current.value = "";
+    }
+  };
+
+  const onRemoveLogo = async () => {
+    try {
+      await removeLogo(branding.logoPath);
+    } catch { /* ignore */ }
+    setBranding((prev) => ({ ...prev, logoPath: null, logoUrl: null }));
+    setUseBrand(false);
+  };
+
 
 
   const handleExport = async (targetLang: string) => {
