@@ -99,7 +99,15 @@ function LoginPage() {
         >
           {loading ? t("common.loading") : t("auth.signin")}
         </Button>
+        <Link
+          to="/forgot-password"
+          search={{ mode: "magic" }}
+          className="block text-center text-xs text-muted-foreground hover:text-primary hover:underline"
+        >
+          Entrar sem senha (link mágico por e-mail)
+        </Link>
       </form>
+
     </AuthShell>
   );
 }
