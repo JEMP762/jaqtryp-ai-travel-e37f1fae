@@ -1,43 +1,35 @@
-# Conectar projeto ao GitHub via Git Sync
+## Roteiro com logo da empresa (25 créditos) + 10.000 créditos para messiaspassosj@gmail.com
 
-## Objetivo
-Sincronizar o código deste projeto (Jaqtryp) com um repositório GitHub, permitindo backup, edição externa e colaboração em dois sentidos.
+### 0. Créditos manuais
+- Creditar **10.000 créditos** (bucket avulso/topup, que não expira) na conta `messiaspassosj@gmail.com`, com registro no histórico ("bônus concedido"). Se o e-mail ainda não tiver conta criada, aviso e o crédito é aplicado assim que ele se cadastrar.
 
-## O que será feito
-- Ativar a integração Git Sync no editor Lovable.
-- Criar um novo repositório no GitHub conectado a esta conta.
-- Configurar sincronização automática bidirecional entre Lovable e GitHub.
+### 1. Armazenamento da logo
+- Novo bucket privado `brand-logos` (arquivo em `userId/logo.png`, máx. ~2 MB, PNG/JPG/WEBP).
+- Políticas em `storage.objects`: cada usuário só lê/escreve/apaga a própria pasta.
+- Nova tabela `user_branding` (`user_id`, `company_name`, `logo_path`) com acesso restrito ao dono e os GRANTs necessários.
+- A logo é exibida por URL assinada — nada fica público.
 
-## Passos de implementação
+### 2. Cobrança
+- Novo item em `credit_costs`: `trip_create_branded` = **25 créditos** ("Roteiro com logo").
+- `trip_create_full` permanece **15 créditos**.
+- Incluir `trip_create_branded` na allowlist de `src/routes/api.ai.tsx` para que a checagem de saldo e o débito usem o custo correto (fluxo de cobrança existente, sem mudanças na lógica).
 
-1. **Abrir o menu de integração GitHub**
-   - No editor Lovable, clicar no botão **+** (Plus) no canto inferior esquerdo da caixa de chat.
-   - Escolher **GitHub** → **Connect project**.
+### 3. Interface do Planejador (`/planner`)
+- Novo bloco "Marca da empresa" no painel lateral:
+  - upload da logo com preview e botão remover;
+  - campo opcional "Nome da empresa";
+  - switch **"Incluir logo no roteiro (25 créditos)"** — desligado por padrão e desabilitado enquanto não houver logo.
+- Botão de gerar mostra o custo atual: "Gerar roteiro — 15 créditos" ou "— 25 créditos".
 
-2. **Autorizar o Lovable GitHub App**
-   - Será redirecionado ao GitHub para autorizar o app Lovable.
-   - Confirmar a conta/organização onde o repositório será criado.
+### 4. Exibição da logo
+- **Na tela:** cabeçalho do roteiro mostra logo + nome da empresa acima do título quando gerado em modo com marca.
+- **No PDF/impressão:** cabeçalho com a imagem (altura ~56px) acima do título e rodapé discreto com o nome da empresa. Roteiros sem marca imprimem exatamente como hoje.
 
-3. **Criar o repositório**
-   - No Lovable, selecionar a conta/organização GitHub.
-   - Clicar em **Create Repository** para gerar o repositório com o código atual do projeto.
+### 5. Garantias de não-regressão
+- Sem logo enviada, tudo funciona igual a hoje (mesmo custo, mesmo layout).
+- Falha ao carregar a logo não bloqueia a geração: cai para o modo sem marca e cobra 15.
+- Créditos insuficientes continuam usando o tratamento de erro e o modal de upgrade já existentes.
 
-4. **Verificar sincronização**
-   - Após a criação, o código é enviado automaticamente.
-   - Alterações futuras no Lovable são empurradas para o GitHub automaticamente.
-   - Alterações feitas no GitHub (localmente ou por outro dev) são sincronizadas de volta para o Lovable.
-
-## Limitações e cuidados
-- O Lovable **não importa repositórios GitHub existentes**. O repositório deve ser criado a partir do Lovable.
-- Apenas **uma conta GitHub** pode estar conectada por conta Lovable.
-- A sincronização é automática; evite editar os mesmos arquivos simultaneamente nos dois lados para não gerar conflitos.
-- Histórico de versões e rollback interno do Lovable continuam disponíveis independentemente do GitHub.
-- Caso queira editar localmente, poderá clonar o repositório GitHub após a conexão.
-
-## Após a conexão
-- O botão de download do codebase aparece desbloqueado (quando aplicável).
-- É possível usar branches experimentais se a opção **GitHub Branch Switching** estiver ativada em Account Settings → Labs.
-- O deploy continua sendo gerenciado pelo Lovable; a conexão GitHub é apenas sincronização de código.
-
-## Alternativa não escolhida
-- **GitHub Connector**: usado para chamar a API do GitHub dentro do app (automações, dashboards de issues). Não será ativado neste plano.
+### Detalhes técnicos
+- Arquivos: `src/routes/_app.planner.tsx`, `src/routes/api.ai.tsx`, novo `src/lib/branding.ts`; migração SQL (tabela, políticas de storage, linha em `credit_costs`) e uma operação de dados para os 10.000 créditos.
+- Nenhuma alteração em autenticação, checkout ou nas demais funcionalidades.
