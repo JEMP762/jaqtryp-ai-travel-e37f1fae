@@ -920,6 +920,30 @@ export type Database = {
         }
         Relationships: []
       }
+      user_branding: {
+        Row: {
+          company_name: string | null
+          created_at: string
+          logo_path: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          company_name?: string | null
+          created_at?: string
+          logo_path?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          company_name?: string | null
+          created_at?: string
+          logo_path?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       user_credits: {
         Row: {
           balance: number | null

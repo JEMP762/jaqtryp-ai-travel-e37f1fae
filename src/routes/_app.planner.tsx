@@ -26,6 +26,15 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { useI18n } from "@/lib/i18n/I18nProvider";
 import { supabase } from "@/integrations/supabase/client";
+import { Switch } from "@/components/ui/switch";
+import {
+  type Branding,
+  loadBranding,
+  logoAsDataUrl,
+  removeLogo,
+  saveCompanyName,
+  uploadLogo,
+} from "@/lib/branding";
 
 
 const EXPORT_LANGUAGES = [
@@ -79,12 +88,31 @@ function markdownToHtml(md: string): string {
   return html;
 }
 
-function renderPrintWindow(w: Window, title: string, markdown: string) {
+function renderPrintWindow(
+  w: Window,
+  title: string,
+  markdown: string,
+  brand?: { logo?: string | null; company?: string | null } | null,
+) {
   const body = markdownToHtml(markdown);
+  const esc = (s: string) =>
+    s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+  const header =
+    brand && (brand.logo || brand.company)
+      ? `<div class="brand">${brand.logo ? `<img src="${brand.logo}" alt="logo" />` : ""}${
+          brand.company ? `<span>${esc(brand.company)}</span>` : ""
+        }</div>`
+      : "";
+  const footer =
+    brand && brand.company ? `<div class="brand-footer">${esc(brand.company)}</div>` : "";
   w.document.open();
   w.document.write(`<!doctype html><html><head><meta charset="utf-8"><title>${title}</title>
 <style>
   body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;max-width:780px;margin:40px auto;padding:0 24px;color:#111;line-height:1.55}
+  .brand{display:flex;align-items:center;gap:12px;margin-bottom:16px}
+  .brand img{height:56px;width:auto;object-fit:contain}
+  .brand span{font-size:15px;font-weight:600;color:#334155}
+  .brand-footer{margin-top:32px;padding-top:10px;border-top:1px solid #eee;font-size:12px;color:#64748b;text-align:center}
   h1{font-size:26px;margin:0 0 8px;border-bottom:2px solid #eee;padding-bottom:8px}
   h2{font-size:20px;margin:24px 0 8px;color:#1e40af}
   h3{font-size:16px;margin:18px 0 6px}
@@ -93,12 +121,15 @@ function renderPrintWindow(w: Window, title: string, markdown: string) {
   li{margin:3px 0}
   @media print { body { margin: 0; } }
 </style></head><body>
+${header}
 <h1>${title}</h1>
 ${body}
-<script>setTimeout(()=>window.print(),300);</script>
+${footer}
+<script>setTimeout(()=>window.print(),600);</script>
 </body></html>`);
   w.document.close();
 }
+
 
 function loadingHtml(msg: string) {
   return `<!doctype html><html><head><meta charset="utf-8"><title>${msg}</title>
@@ -135,7 +166,18 @@ function PlannerPage() {
   const [plan, setPlan] = React.useState("");
   const [exporting, setExporting] = React.useState(false);
   const [isPro, setIsPro] = React.useState<boolean | null>(null);
+  const [branding, setBranding] = React.useState<Branding>({
+    companyName: null,
+    logoPath: null,
+    logoUrl: null,
+  });
+  const [companyName, setCompanyName] = React.useState("");
+  const [useBrand, setUseBrand] = React.useState(false);
+  const [uploadingLogo, setUploadingLogo] = React.useState(false);
+  const [planBrand, setPlanBrand] = React.useState<{ logoUrl: string | null; company: string | null } | null>(null);
+  const fileRef = React.useRef<HTMLInputElement | null>(null);
 
+  const cost = useBrand && branding.logoUrl ? 25 : 15;
 
   React.useEffect(() => {
     async function checkPremium() {
@@ -150,7 +192,36 @@ function PlannerPage() {
       }
     }
     checkPremium();
+    loadBranding().then((b) => {
+      setBranding(b);
+      setCompanyName(b.companyName ?? "");
+    });
   }, []);
+
+  const onPickLogo = async (file: File | undefined) => {
+    if (!file) return;
+    setUploadingLogo(true);
+    try {
+      const b = await uploadLogo(file);
+      setBranding((prev) => ({ ...prev, logoPath: b.logoPath, logoUrl: b.logoUrl }));
+      setUseBrand(true);
+      toast.success("Logo enviada");
+    } catch (e) {
+      toast.error((e as Error).message);
+    } finally {
+      setUploadingLogo(false);
+      if (fileRef.current) fileRef.current.value = "";
+    }
+  };
+
+  const onRemoveLogo = async () => {
+    try {
+      await removeLogo(branding.logoPath);
+    } catch { /* ignore */ }
+    setBranding((prev) => ({ ...prev, logoPath: null, logoUrl: null }));
+    setUseBrand(false);
+  };
+
 
 
   const handleExport = async (targetLang: string) => {
@@ -181,7 +252,13 @@ function PlannerPage() {
         if (!resp.ok) throw new Error(data.error || "Erro ao traduzir");
         content = data.text as string;
       }
-      renderPrintWindow(w, title, content);
+      const logoData = planBrand?.logoUrl ? await logoAsDataUrl(planBrand.logoUrl) : null;
+      renderPrintWindow(
+        w,
+        title,
+        content,
+        planBrand ? { logo: logoData, company: planBrand.company } : null,
+      );
     } catch (e) {
       try { w.close(); } catch {}
       if (!handleCreditError(e)) toast.error((e as Error).message);
@@ -229,15 +306,30 @@ function PlannerPage() {
 
 
 
+      const branded = useBrand && !!branding.logoUrl;
+
       const resp = await fetch("/api/ai", {
         method: "POST",
         headers: await authedJsonHeaders(),
-        body: JSON.stringify({ system, prompt, featureKey: "trip_create_full" }),
+        body: JSON.stringify({
+          system,
+          prompt,
+          featureKey: branded ? "trip_create_branded" : "trip_create_full",
+        }),
       });
       const data = await resp.json();
       if (resp.status === 402) throw new Error(data.error || "Créditos insuficientes. Adicione créditos em /billing.");
       if (!resp.ok) throw new Error(data.error || "Erro");
       setPlan(data.text as string);
+      setPlanBrand(
+        branded
+          ? { logoUrl: branding.logoUrl, company: companyName.trim() || null }
+          : null,
+      );
+      if (branded && companyName.trim() !== (branding.companyName ?? "")) {
+        saveCompanyName(companyName.trim()).catch(() => {});
+        setBranding((prev) => ({ ...prev, companyName: companyName.trim() || null }));
+      }
     } catch (e) {
       if (!handleCreditError(e)) toast.error((e as Error).message);
     } finally {
@@ -323,6 +415,79 @@ function PlannerPage() {
               rows={3}
             />
           </div>
+          <div className="space-y-3 rounded-xl border border-border/70 bg-background/40 p-4">
+            <div className="flex items-center justify-between">
+              <Label className="text-sm font-semibold">Marca da empresa</Label>
+              {branding.logoUrl && (
+                <button
+                  type="button"
+                  onClick={onRemoveLogo}
+                  className="text-xs text-muted-foreground underline underline-offset-2"
+                >
+                  Remover logo
+                </button>
+              )}
+            </div>
+
+            {branding.logoUrl ? (
+              <img
+                src={branding.logoUrl}
+                alt="Logo da empresa"
+                className="h-14 w-auto max-w-full rounded-md bg-white/80 object-contain p-1"
+              />
+            ) : (
+              <p className="text-xs text-muted-foreground">
+                Envie a logo da sua empresa (PNG, JPG ou WEBP, até 2 MB).
+              </p>
+            )}
+
+            <input
+              ref={fileRef}
+              type="file"
+              accept="image/png,image/jpeg,image/webp"
+              className="hidden"
+              onChange={(e) => onPickLogo(e.target.files?.[0])}
+            />
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="w-full"
+              disabled={uploadingLogo}
+              onClick={() => fileRef.current?.click()}
+            >
+              {uploadingLogo ? (
+                <><Loader2 className="h-4 w-4 animate-spin" /> Enviando...</>
+              ) : branding.logoUrl ? (
+                "Trocar logo"
+              ) : (
+                "Enviar logo"
+              )}
+            </Button>
+
+            <div className="space-y-1.5">
+              <Label className="text-xs">Nome da empresa (opcional)</Label>
+              <Input
+                value={companyName}
+                onChange={(e) => setCompanyName(e.target.value)}
+                onBlur={() => saveCompanyName(companyName.trim()).catch(() => {})}
+                placeholder="Ex: Jaqtryp Viagens"
+              />
+            </div>
+
+            <div className="flex items-center justify-between gap-3">
+              <Label htmlFor="use-brand" className="text-xs leading-snug">
+                Incluir logo no roteiro <span className="text-muted-foreground">(25 créditos)</span>
+              </Label>
+              <Switch
+                id="use-brand"
+                checked={useBrand && !!branding.logoUrl}
+                disabled={!branding.logoUrl}
+                onCheckedChange={setUseBrand}
+              />
+            </div>
+          </div>
+
           <Button
             onClick={generate}
             disabled={loading}
@@ -334,7 +499,7 @@ function PlannerPage() {
               </>
             ) : (
               <>
-                <Sparkles className="h-4 w-4" /> Gerar roteiro
+                <Sparkles className="h-4 w-4" /> Gerar roteiro — {cost} créditos
               </>
             )}
           </Button>
@@ -387,6 +552,18 @@ function PlannerPage() {
                   </DropdownMenuContent>
                 </DropdownMenu>
               </div>
+              {planBrand?.logoUrl && (
+                <div className="mb-4 flex items-center gap-3 border-b border-border/60 pb-4">
+                  <img
+                    src={planBrand.logoUrl}
+                    alt="Logo da empresa"
+                    className="h-12 w-auto rounded-md bg-white/80 object-contain p-1"
+                  />
+                  {planBrand.company && (
+                    <span className="text-sm font-semibold">{planBrand.company}</span>
+                  )}
+                </div>
+              )}
               <div className="prose prose-sm prose-invert max-w-none">
                 <ReactMarkdown>{plan}</ReactMarkdown>
               </div>
