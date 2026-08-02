@@ -1,35 +1,26 @@
-## Roteiro com logo da empresa (25 créditos) + 10.000 créditos para messiaspassosj@gmail.com
+## Corrigir o e-mail de recuperação de senha (remetente: contact@jaqtryp.com)
 
-### 0. Créditos manuais
-- Creditar **10.000 créditos** (bucket avulso/topup, que não expira) na conta `messiaspassosj@gmail.com`, com registro no histórico ("bônus concedido"). Se o e-mail ainda não tiver conta criada, aviso e o crédito é aplicado assim que ele se cadastrar.
+### Diagnóstico (verificado)
+- As páginas `/forgot-password` e `/reset-password` existem e o código está correto (envio do link + `updateUser({ password })`).
+- **O projeto não tem domínio de envio de e-mail configurado.** Hoje os e-mails de autenticação saem por um remetente genérico da plataforma — motivo típico de o link não chegar, cair em spam ou ser bloqueado pelo Gmail/Outlook.
+- Não há registros recentes de pedidos de recuperação nos logs de autenticação.
 
-### 1. Armazenamento da logo
-- Novo bucket privado `brand-logos` (arquivo em `userId/logo.png`, máx. ~2 MB, PNG/JPG/WEBP).
-- Políticas em `storage.objects`: cada usuário só lê/escreve/apaga a própria pasta.
-- Nova tabela `user_branding` (`user_id`, `company_name`, `logo_path`) com acesso restrito ao dono e os GRANTs necessários.
-- A logo é exibida por URL assinada — nada fica público.
+### Passos
+1. **Configurar o domínio de envio `jaqtryp.com`**, com remetente `contact@jaqtryp.com`. Isso é feito pelo assistente de configuração de e-mail (botão abaixo do plano, após aprovação). O SPF/DKIM/MX é gerenciado automaticamente por delegação de DNS — a verificação pode levar de algumas horas até 72h.
+2. **Criar os modelos de e-mail de autenticação com a marca Jaqtryp** — recuperação de senha, confirmação de cadastro, magic link, troca de e-mail — usando as cores e o logo do app.
+3. **Aumentar o limite horário de envio de e-mails de autenticação**, hoje no padrão baixo, para um valor compatível com o volume real de cadastros e recuperações.
+4. **Melhorar a tela "Recuperar senha"**:
+   - aviso claro do remetente esperado (`contact@jaqtryp.com`) e para conferir o spam;
+   - botão "Reenviar link" com contador de 60s;
+   - mensagem amigável quando o limite de envios é atingido, em vez do erro técnico.
+5. **Opção de entrada por link mágico** na tela de login/recuperação: se o usuário não lembra a senha, recebe um link de acesso e define a nova senha dentro do app — um caminho de recuperação extra usando a mesma infraestrutura.
 
-### 2. Cobrança
-- Novo item em `credit_costs`: `trip_create_branded` = **25 créditos** ("Roteiro com logo").
-- `trip_create_full` permanece **15 créditos**.
-- Incluir `trip_create_branded` na allowlist de `src/routes/api.ai.tsx` para que a checagem de saldo e o débito usem o custo correto (fluxo de cobrança existente, sem mudanças na lógica).
+### O que preciso de você
+Concluir o assistente de configuração do domínio de e-mail (usaremos `jaqtryp.com`, que já é seu). Assim que o domínio estiver registrado, sigo com os passos 2 a 5 na mesma execução — não é preciso esperar o DNS verificar para eu implementar.
 
-### 3. Interface do Planejador (`/planner`)
-- Novo bloco "Marca da empresa" no painel lateral:
-  - upload da logo com preview e botão remover;
-  - campo opcional "Nome da empresa";
-  - switch **"Incluir logo no roteiro (25 créditos)"** — desligado por padrão e desabilitado enquanto não houver logo.
-- Botão de gerar mostra o custo atual: "Gerar roteiro — 15 créditos" ou "— 25 créditos".
-
-### 4. Exibição da logo
-- **Na tela:** cabeçalho do roteiro mostra logo + nome da empresa acima do título quando gerado em modo com marca.
-- **No PDF/impressão:** cabeçalho com a imagem (altura ~56px) acima do título e rodapé discreto com o nome da empresa. Roteiros sem marca imprimem exatamente como hoje.
-
-### 5. Garantias de não-regressão
-- Sem logo enviada, tudo funciona igual a hoje (mesmo custo, mesmo layout).
-- Falha ao carregar a logo não bloqueia a geração: cai para o modo sem marca e cobra 15.
-- Créditos insuficientes continuam usando o tratamento de erro e o modal de upgrade já existentes.
+### Enquanto o DNS não verifica
+Se algum usuário precisar entrar imediatamente (ex.: `joseedimilsonmessiaspassos@gmail.com`), posso gerar um link de recuperação direto ou definir uma senha temporária. É só pedir.
 
 ### Detalhes técnicos
-- Arquivos: `src/routes/_app.planner.tsx`, `src/routes/api.ai.tsx`, novo `src/lib/branding.ts`; migração SQL (tabela, políticas de storage, linha em `credit_costs`) e uma operação de dados para os 10.000 créditos.
-- Nenhuma alteração em autenticação, checkout ou nas demais funcionalidades.
+- `src/routes/reset-password.tsx` não precisa de mudanças — o fluxo de recuperação já trata `token_hash`, `code` e `access_token`.
+- Alterações previstas: `src/routes/forgot-password.tsx` e `src/routes/login.tsx`, novos modelos de e-mail de autenticação, e ajuste do limite de envio no serviço de autenticação.
