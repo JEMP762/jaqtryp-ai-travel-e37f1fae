@@ -79,12 +79,31 @@ function markdownToHtml(md: string): string {
   return html;
 }
 
-function renderPrintWindow(w: Window, title: string, markdown: string) {
+function renderPrintWindow(
+  w: Window,
+  title: string,
+  markdown: string,
+  brand?: { logo?: string | null; company?: string | null } | null,
+) {
   const body = markdownToHtml(markdown);
+  const esc = (s: string) =>
+    s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+  const header =
+    brand && (brand.logo || brand.company)
+      ? `<div class="brand">${brand.logo ? `<img src="${brand.logo}" alt="logo" />` : ""}${
+          brand.company ? `<span>${esc(brand.company)}</span>` : ""
+        }</div>`
+      : "";
+  const footer =
+    brand && brand.company ? `<div class="brand-footer">${esc(brand.company)}</div>` : "";
   w.document.open();
   w.document.write(`<!doctype html><html><head><meta charset="utf-8"><title>${title}</title>
 <style>
   body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;max-width:780px;margin:40px auto;padding:0 24px;color:#111;line-height:1.55}
+  .brand{display:flex;align-items:center;gap:12px;margin-bottom:16px}
+  .brand img{height:56px;width:auto;object-fit:contain}
+  .brand span{font-size:15px;font-weight:600;color:#334155}
+  .brand-footer{margin-top:32px;padding-top:10px;border-top:1px solid #eee;font-size:12px;color:#64748b;text-align:center}
   h1{font-size:26px;margin:0 0 8px;border-bottom:2px solid #eee;padding-bottom:8px}
   h2{font-size:20px;margin:24px 0 8px;color:#1e40af}
   h3{font-size:16px;margin:18px 0 6px}
@@ -93,12 +112,15 @@ function renderPrintWindow(w: Window, title: string, markdown: string) {
   li{margin:3px 0}
   @media print { body { margin: 0; } }
 </style></head><body>
+${header}
 <h1>${title}</h1>
 ${body}
-<script>setTimeout(()=>window.print(),300);</script>
+${footer}
+<script>setTimeout(()=>window.print(),600);</script>
 </body></html>`);
   w.document.close();
 }
+
 
 function loadingHtml(msg: string) {
   return `<!doctype html><html><head><meta charset="utf-8"><title>${msg}</title>
