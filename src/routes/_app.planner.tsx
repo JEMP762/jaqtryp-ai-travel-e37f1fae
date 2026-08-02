@@ -552,6 +552,18 @@ function PlannerPage() {
                   </DropdownMenuContent>
                 </DropdownMenu>
               </div>
+              {planBrand?.logoUrl && (
+                <div className="mb-4 flex items-center gap-3 border-b border-border/60 pb-4">
+                  <img
+                    src={planBrand.logoUrl}
+                    alt="Logo da empresa"
+                    className="h-12 w-auto rounded-md bg-white/80 object-contain p-1"
+                  />
+                  {planBrand.company && (
+                    <span className="text-sm font-semibold">{planBrand.company}</span>
+                  )}
+                </div>
+              )}
               <div className="prose prose-sm prose-invert max-w-none">
                 <ReactMarkdown>{plan}</ReactMarkdown>
               </div>
