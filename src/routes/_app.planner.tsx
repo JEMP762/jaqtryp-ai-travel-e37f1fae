@@ -252,7 +252,13 @@ function PlannerPage() {
         if (!resp.ok) throw new Error(data.error || "Erro ao traduzir");
         content = data.text as string;
       }
-      renderPrintWindow(w, title, content);
+      const logoData = planBrand?.logoUrl ? await logoAsDataUrl(planBrand.logoUrl) : null;
+      renderPrintWindow(
+        w,
+        title,
+        content,
+        planBrand ? { logo: logoData, company: planBrand.company } : null,
+      );
     } catch (e) {
       try { w.close(); } catch {}
       if (!handleCreditError(e)) toast.error((e as Error).message);
@@ -300,15 +306,30 @@ function PlannerPage() {
 
 
 
+      const branded = useBrand && !!branding.logoUrl;
+
       const resp = await fetch("/api/ai", {
         method: "POST",
         headers: await authedJsonHeaders(),
-        body: JSON.stringify({ system, prompt, featureKey: "trip_create_full" }),
+        body: JSON.stringify({
+          system,
+          prompt,
+          featureKey: branded ? "trip_create_branded" : "trip_create_full",
+        }),
       });
       const data = await resp.json();
       if (resp.status === 402) throw new Error(data.error || "Créditos insuficientes. Adicione créditos em /billing.");
       if (!resp.ok) throw new Error(data.error || "Erro");
       setPlan(data.text as string);
+      setPlanBrand(
+        branded
+          ? { logoUrl: branding.logoUrl, company: companyName.trim() || null }
+          : null,
+      );
+      if (branded && companyName.trim() !== (branding.companyName ?? "")) {
+        saveCompanyName(companyName.trim()).catch(() => {});
+        setBranding((prev) => ({ ...prev, companyName: companyName.trim() || null }));
+      }
     } catch (e) {
       if (!handleCreditError(e)) toast.error((e as Error).message);
     } finally {
@@ -394,6 +415,79 @@ function PlannerPage() {
               rows={3}
             />
           </div>
+          <div className="space-y-3 rounded-xl border border-border/70 bg-background/40 p-4">
+            <div className="flex items-center justify-between">
+              <Label className="text-sm font-semibold">Marca da empresa</Label>
+              {branding.logoUrl && (
+                <button
+                  type="button"
+                  onClick={onRemoveLogo}
+                  className="text-xs text-muted-foreground underline underline-offset-2"
+                >
+                  Remover logo
+                </button>
+              )}
+            </div>
+
+            {branding.logoUrl ? (
+              <img
+                src={branding.logoUrl}
+                alt="Logo da empresa"
+                className="h-14 w-auto max-w-full rounded-md bg-white/80 object-contain p-1"
+              />
+            ) : (
+              <p className="text-xs text-muted-foreground">
+                Envie a logo da sua empresa (PNG, JPG ou WEBP, até 2 MB).
+              </p>
+            )}
+
+            <input
+              ref={fileRef}
+              type="file"
+              accept="image/png,image/jpeg,image/webp"
+              className="hidden"
+              onChange={(e) => onPickLogo(e.target.files?.[0])}
+            />
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="w-full"
+              disabled={uploadingLogo}
+              onClick={() => fileRef.current?.click()}
+            >
+              {uploadingLogo ? (
+                <><Loader2 className="h-4 w-4 animate-spin" /> Enviando...</>
+              ) : branding.logoUrl ? (
+                "Trocar logo"
+              ) : (
+                "Enviar logo"
+              )}
+            </Button>
+
+            <div className="space-y-1.5">
+              <Label className="text-xs">Nome da empresa (opcional)</Label>
+              <Input
+                value={companyName}
+                onChange={(e) => setCompanyName(e.target.value)}
+                onBlur={() => saveCompanyName(companyName.trim()).catch(() => {})}
+                placeholder="Ex: Jaqtryp Viagens"
+              />
+            </div>
+
+            <div className="flex items-center justify-between gap-3">
+              <Label htmlFor="use-brand" className="text-xs leading-snug">
+                Incluir logo no roteiro <span className="text-muted-foreground">(25 créditos)</span>
+              </Label>
+              <Switch
+                id="use-brand"
+                checked={useBrand && !!branding.logoUrl}
+                disabled={!branding.logoUrl}
+                onCheckedChange={setUseBrand}
+              />
+            </div>
+          </div>
+
           <Button
             onClick={generate}
             disabled={loading}
@@ -405,7 +499,7 @@ function PlannerPage() {
               </>
             ) : (
               <>
-                <Sparkles className="h-4 w-4" /> Gerar roteiro
+                <Sparkles className="h-4 w-4" /> Gerar roteiro — {cost} créditos
               </>
             )}
           </Button>
