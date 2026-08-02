@@ -10,6 +10,7 @@ const ALLOWED_FEATURES = new Set([
   "translate_menu_sign",
   "translate_voice",
   "trip_create_full",
+  "trip_create_branded",
   "trip_update_ai",
   "trip_optimize_full",
   "itinerary_ai",
