@@ -1,44 +1,52 @@
-O objetivo é fazer os e-mails de recuperação de senha (e outros e-mails de autenticação) chegarem na caixa de entrada do usuário, saindo de `contact@jaqtryp.com`, em vez de um remetente genérico. O domínio `jaqtryp.com` já está configurado no projeto e está registrado na Hostinger, então precisamos ativar a infraestrutura de e-mail nele.
+## JAX — Assistente Oficial da JAQTRYP
 
-### Diagnóstico confirmado
-- O fluxo de recuperação de senha já existe e está funcional: `/forgot-password`, `/reset-password`, `resetPasswordForEmail` e `updateUser`.
-- O domínio `jaqtryp.com` está configurado no projeto, mas ainda não existe configuração de envio de e-mail. Hoje os e-mails de autenticação saem por remetente genérico da plataforma, o que costuma cair em spam ou ser bloqueado pelo Gmail/Outlook.
-- A tela de recuperação já tem aviso de remetente e contador de reenvio, mas ainda precisa dos modelos de e-mail com a marca.
+Assistente novo e separado do chat de viagem (`/chat`), focado 100% em ensinar o usuário a usar a plataforma. Gratuito (sem débito de créditos) e com histórico salvo no banco do projeto.
 
-### Passos
-1. **Ativar envio de e-mail no domínio `jaqtryp.com`** (remetente `contact@jaqtryp.com`)
-   - Usar o assistente de configuração de e-mail para o domínio já existente.
-   - O DNS (SPF, DKIM, MX) é gerenciado automaticamente por delegação de subdomínio. Como o domínio está na Hostinger, será necessário adicionar os registros `NS` informados pelo assistente no painel DNS da Hostinger.
-   - A verificação pode levar de algumas horas até 72h.
+### 1. Banco de dados
+Duas tabelas novas com RLS por usuário:
+- `jax_conversations` — id, user_id, title, created_at, updated_at
+- `jax_messages` — id, conversation_id, user_id, role (user/assistant), content, page_path, created_at
 
-2. **Criar modelos de e-mail de autenticação com a marca Jaqtryp**
-   - Recuperação de senha, confirmação de cadastro, magic link, troca de e-mail e reautenticação.
-   - Usar as cores do app (azul neon), gradiente e logo Jaqtryp.
-   - Corpo do e-mail em fundo branco (padrão de e-mail), mas com os acentos da marca.
+Regras de acesso: cada usuário só vê, cria e apaga as próprias conversas e mensagens. GRANTs para `authenticated` e `service_role`.
 
-3. **Aumentar o limite horário de envio de e-mails de autenticação**
-   - O padrão do Supabase é baixo e pode bloquear cadastros/recuperações.
-   - Ajustar `rate_limit_email_sent` para um valor compatível com o volume real.
+Anti-abuso (JAX é grátis): limite de mensagens por usuário por dia (ex.: 80), validado no servidor contando `jax_messages` das últimas 24h. Ao estourar, o JAX responde educadamente pedindo para tentar novamente mais tarde.
 
-4. **Manter as melhorias já feitas na tela de recuperação**
-   - Aviso claro do remetente `contact@jaqtryp.com` e instrução para conferir spam.
-   - Botão "Reenviar link" com contador de 60s.
-   - Mensagem amigável quando atingir o limite de envios.
-   - Opção de link mágico na tela de login/recuperação.
+### 2. Cérebro do JAX (base de conhecimento da plataforma)
+Novo arquivo `src/lib/jax/knowledge.ts` com um mapa de cada tela real do app e o que ela faz:
+- `/dashboard`, `/planner` (roteiro + logo/marca 15 ou 25 créditos), `/flights` (busca + redirecionamento Skyscanner/Google Flights), `/stays` (Booking/Hotels/Airbnb), `/translator`, `/live-translator` e sala ao vivo, `/file-translator`, `/wallet`, `/deals`, `/credits`, `/billing`, `/referrals` (10% de indicação, 100/200 créditos recorrentes), `/shield`, `/settings/appearance`, login/cadastro/recuperação de senha, notificações push/PWA.
+- Cada entrada tem: nome, o que faz, passo a passo curto, custo em créditos quando aplicável e perguntas frequentes.
 
-5. **Validar o envio**
-   - Após configuração, testar o fluxo de recuperação e confirmar que o e-mail chega com a marca Jaqtryp.
+### 3. Rota de IA `/api/jax` (streaming)
+Nova rota TanStack (`src/routes/api.jax.tsx`), separada de `/api/chat`:
+- Exige usuário autenticado; **não** chama `chargeFeature` (grátis).
+- System prompt em PT/EN com: identidade JAX, escopo estrito (só JAQTRYP), lista de assuntos proibidos, recusa educada em 1 frase + convite para perguntar sobre a plataforma, tom humano e respostas curtas (2–5 frases).
+- Injeta o resumo da base de conhecimento + a rota atual do usuário no contexto, para respostas contextuais.
+- Envia o histórico da conversa (últimas ~24 mensagens) para manter memória (ex.: "Paris" continua valendo na pergunta seguinte).
+- Trata 429/402 do gateway com mensagens amigáveis; salva a mensagem do usuário e a resposta completa em `jax_messages`.
 
-### O que preciso de você
-Concluir o assistente de configuração do domínio de e-mail (já pode ser iniciado abaixo). Assim que o domínio estiver registrado no assistente, sigo com os passos 2 a 5 na mesma execução — não é preciso esperar o DNS verificar para eu criar os modelos e ajustar o limite.
+Blindagem extra de escopo: um filtro leve no servidor detecta temas claramente proibidos e responde a recusa padrão sem gastar chamada de IA.
 
-### Enquanto o DNS não verifica
-Se algum usuário precisar entrar imediatamente, posso gerar um link de recuperação direto ou definir uma senha temporária. É só pedir.
+### 4. Botão flutuante (todas as páginas)
+Novo `src/components/jax/JaxLauncher.tsx`, montado uma vez em `src/routes/_app.tsx` (área logada):
+- Fixo no canto inferior direito, acima da navegação mobile, com animação discreta (pulso suave).
+- Balão de chamada que alterna frases a cada ~8s: "💬 Precisa de ajuda?", "✈️ Tire suas dúvidas com o JAX.", "🌍 Posso ajudar você.", "🤖 Fale comigo.", "💡 Posso ensinar como usar esta tela.", "✨ Precisa de ajuda com esta função?".
+- Clique abre o painel na hora, sem recarregar, com transição suave.
+
+### 5. Painel de chat `JaxPanel.tsx`
+- Desktop: janela flutuante 400×620; mobile: folha em tela cheia.
+- Cabeçalho com identidade JAX (ícone próprio, não genérico), botões **minimizar**, **limpar conversa** e **fechar**.
+- Saudação inicial pelo horário + primeiro nome do perfil: "Bom dia, João! Como posso ajudar você hoje?".
+- Sugestões contextuais conforme a rota atual (ex.: em `/planner` → "Como criar meu roteiro?", "Como colocar minha logo?").
+- Campo de mensagem fixo no rodapé, rolagem automática, markdown nas respostas, streaming token a token.
+- Humanização: ao enviar, mostra "JAX está digitando…" com três pontos animados por 800–2000 ms (variando conforme o tamanho previsto) antes de exibir o texto.
+- Tema claro/escuro pelos tokens semânticos existentes; sem cores fixas.
+- Área de anexos já prevista no layout (desabilitada nesta versão).
+
+### 6. Proatividade discreta
+Se o usuário ficar parado numa tela por ~45s sem interagir, o balão exibe uma dica contextual uma única vez por sessão/rota. Nunca abre o chat sozinho e nunca bloqueia a interface.
 
 ### Detalhes técnicos
-- `src/routes/reset-password.tsx` não precisa de mudanças — o fluxo de recuperação já trata `token_hash`, `code` e `access_token`.
-- Alterações previstas: modelos de e-mail de autenticação, ajuste do limite de envio, e confirmação das melhorias em `src/routes/forgot-password.tsx` e `src/routes/login.tsx`.
-
-<presentation-actions>
-<presentation-open-email-setup>Configurar e-mail no domínio jaqtryp.com</presentation-open-email-setup>
-</presentation-actions>
+- Rota: `src/routes/api.jax.tsx` com `createFileRoute` + `server.handlers.POST`, autenticação via `requireAuthFromRequest`, gateway Lovable AI em streaming (mesmo padrão de `api.chat.tsx`), modelo `google/gemini-3.5-flash`.
+- Persistência via server functions em `src/lib/jax.functions.ts` (listar/criar conversa, carregar mensagens, apagar conversa), respeitando RLS do usuário.
+- Componentes: `JaxLauncher.tsx`, `JaxPanel.tsx`, `JaxMessage.tsx`, hook `useJaxChat.ts`; montagem única em `_app.tsx` para não duplicar em cada rota.
+- `/chat` (consultor de viagem + JAQ Price) permanece intacto, inclusive a cobrança de créditos dele.

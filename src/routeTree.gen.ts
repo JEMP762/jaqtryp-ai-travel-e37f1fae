@@ -19,6 +19,7 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as LiveRoomCodeRouteImport } from './routes/live-room.$code'
 import { Route as CheckoutReturnRouteImport } from './routes/checkout.return'
 import { Route as ApiTtsRouteImport } from './routes/api.tts'
+import { Route as ApiJaxRouteImport } from './routes/api.jax'
 import { Route as ApiChatRouteImport } from './routes/api.chat'
 import { Route as ApiAiRouteImport } from './routes/api.ai'
 import { Route as AppWalletRouteImport } from './routes/_app.wallet'
@@ -90,6 +91,11 @@ const CheckoutReturnRoute = CheckoutReturnRouteImport.update({
 const ApiTtsRoute = ApiTtsRouteImport.update({
   id: '/api/tts',
   path: '/api/tts',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiJaxRoute = ApiJaxRouteImport.update({
+  id: '/api/jax',
+  path: '/api/jax',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiChatRoute = ApiChatRouteImport.update({
@@ -233,6 +239,7 @@ export interface FileRoutesByFullPath {
   '/wallet': typeof AppWalletRoute
   '/api/ai': typeof ApiAiRoute
   '/api/chat': typeof ApiChatRoute
+  '/api/jax': typeof ApiJaxRoute
   '/api/tts': typeof ApiTtsRoute
   '/checkout/return': typeof CheckoutReturnRoute
   '/live-room/$code': typeof LiveRoomCodeRoute
@@ -267,6 +274,7 @@ export interface FileRoutesByTo {
   '/wallet': typeof AppWalletRoute
   '/api/ai': typeof ApiAiRoute
   '/api/chat': typeof ApiChatRoute
+  '/api/jax': typeof ApiJaxRoute
   '/api/tts': typeof ApiTtsRoute
   '/checkout/return': typeof CheckoutReturnRoute
   '/live-room/$code': typeof LiveRoomCodeRoute
@@ -303,6 +311,7 @@ export interface FileRoutesById {
   '/_app/wallet': typeof AppWalletRoute
   '/api/ai': typeof ApiAiRoute
   '/api/chat': typeof ApiChatRoute
+  '/api/jax': typeof ApiJaxRoute
   '/api/tts': typeof ApiTtsRoute
   '/checkout/return': typeof CheckoutReturnRoute
   '/live-room/$code': typeof LiveRoomCodeRoute
@@ -339,6 +348,7 @@ export interface FileRouteTypes {
     | '/wallet'
     | '/api/ai'
     | '/api/chat'
+    | '/api/jax'
     | '/api/tts'
     | '/checkout/return'
     | '/live-room/$code'
@@ -373,6 +383,7 @@ export interface FileRouteTypes {
     | '/wallet'
     | '/api/ai'
     | '/api/chat'
+    | '/api/jax'
     | '/api/tts'
     | '/checkout/return'
     | '/live-room/$code'
@@ -408,6 +419,7 @@ export interface FileRouteTypes {
     | '/_app/wallet'
     | '/api/ai'
     | '/api/chat'
+    | '/api/jax'
     | '/api/tts'
     | '/checkout/return'
     | '/live-room/$code'
@@ -430,6 +442,7 @@ export interface RootRouteChildren {
   SignupRoute: typeof SignupRoute
   ApiAiRoute: typeof ApiAiRoute
   ApiChatRoute: typeof ApiChatRoute
+  ApiJaxRoute: typeof ApiJaxRoute
   ApiTtsRoute: typeof ApiTtsRoute
   CheckoutReturnRoute: typeof CheckoutReturnRoute
   LiveRoomCodeRoute: typeof LiveRoomCodeRoute
@@ -509,6 +522,13 @@ declare module '@tanstack/react-router' {
       path: '/api/tts'
       fullPath: '/api/tts'
       preLoaderRoute: typeof ApiTtsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/jax': {
+      id: '/api/jax'
+      path: '/api/jax'
+      fullPath: '/api/jax'
+      preLoaderRoute: typeof ApiJaxRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/chat': {
@@ -727,6 +747,7 @@ const rootRouteChildren: RootRouteChildren = {
   SignupRoute: SignupRoute,
   ApiAiRoute: ApiAiRoute,
   ApiChatRoute: ApiChatRoute,
+  ApiJaxRoute: ApiJaxRoute,
   ApiTtsRoute: ApiTtsRoute,
   CheckoutReturnRoute: CheckoutReturnRoute,
   LiveRoomCodeRoute: LiveRoomCodeRoute,
@@ -738,13 +759,3 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}

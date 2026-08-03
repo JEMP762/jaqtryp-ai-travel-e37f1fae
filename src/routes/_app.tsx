@@ -40,7 +40,9 @@ import { AppearanceModeQuickToggle } from "@/components/AppearanceModeSwitcher";
 import { applyReferralCode } from "@/lib/referrals.functions";
 import { toast } from "sonner";
 import { UpgradeGateDialog } from "@/components/UpgradeGateDialog";
+import { JaxLauncher } from "@/components/jax/JaxLauncher";
 import { useUpgradeGate } from "@/hooks/useUpgradeGate";
+
 
 const REF_STORAGE_KEY = "jq_pending_ref";
 
@@ -216,6 +218,8 @@ function AppShell() {
         <Outlet />
       </main>
       <UpgradeGateDialog open={upgradeGate.open} onOpenChange={upgradeGate.setOpen} />
+      <JaxLauncher />
     </div>
+
   );
 }
