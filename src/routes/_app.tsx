@@ -218,6 +218,8 @@ function AppShell() {
         <Outlet />
       </main>
       <UpgradeGateDialog open={upgradeGate.open} onOpenChange={upgradeGate.setOpen} />
+      <JaxLauncher />
     </div>
+
   );
 }
