@@ -118,7 +118,12 @@ export const Route = createFileRoute("/api/jax")({
             page_path: body.pagePath ?? null,
           });
           if (error) console.error("jax persist error", error.message);
-          else await db.from("jax_conversations").update({}).eq("id", conversationId);
+          else
+            await db
+              .from("jax_conversations")
+              .update({ updated_at: new Date().toISOString() })
+              .eq("id", conversationId);
+
         };
 
         const plainAnswer = async (text: string) => {
