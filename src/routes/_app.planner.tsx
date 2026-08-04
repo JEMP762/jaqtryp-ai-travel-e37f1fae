@@ -5,6 +5,8 @@ import ReactMarkdown from "react-markdown";
 import { toast } from "sonner";
 import { authedJsonHeaders } from "@/lib/authed-fetch";
 import { handleCreditError } from "@/lib/credit-error";
+import { TripWidgetPanel } from "@/components/planner/TripWidgetPanel";
+
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -503,7 +505,10 @@ function PlannerPage() {
               </>
             )}
           </Button>
+
+          <TripWidgetPanel companyName={companyName} />
         </div>
+
 
         <div className="min-h-[400px] rounded-2xl border border-border bg-gradient-card p-6">
           {plan ? (

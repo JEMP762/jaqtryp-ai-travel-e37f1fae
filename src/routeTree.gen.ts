@@ -16,6 +16,7 @@ import { Route as ForgotPasswordRouteImport } from './routes/forgot-password'
 import { Route as CheapFlightsRouteImport } from './routes/cheap-flights'
 import { Route as AppRouteImport } from './routes/_app'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as RSlugRouteImport } from './routes/r.$slug'
 import { Route as LiveRoomCodeRouteImport } from './routes/live-room.$code'
 import { Route as CheckoutReturnRouteImport } from './routes/checkout.return'
 import { Route as ApiTtsRouteImport } from './routes/api.tts'
@@ -36,6 +37,7 @@ import { Route as AppDashboardRouteImport } from './routes/_app.dashboard'
 import { Route as AppCreditsRouteImport } from './routes/_app.credits'
 import { Route as AppChatRouteImport } from './routes/_app.chat'
 import { Route as AppBillingRouteImport } from './routes/_app.billing'
+import { Route as ApiPublicWidgetItineraryRouteImport } from './routes/api.public.widget-itinerary'
 import { Route as ApiPublicTtsRouteImport } from './routes/api.public.tts'
 import { Route as ApiPublicTranslateBroadcastRouteImport } from './routes/api.public.translate-broadcast'
 import { Route as ApiPublicSttRouteImport } from './routes/api.public.stt'
@@ -76,6 +78,11 @@ const AppRoute = AppRouteImport.update({
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const RSlugRoute = RSlugRouteImport.update({
+  id: '/r/$slug',
+  path: '/r/$slug',
   getParentRoute: () => rootRouteImport,
 } as any)
 const LiveRoomCodeRoute = LiveRoomCodeRouteImport.update({
@@ -178,6 +185,12 @@ const AppBillingRoute = AppBillingRouteImport.update({
   path: '/billing',
   getParentRoute: () => AppRoute,
 } as any)
+const ApiPublicWidgetItineraryRoute =
+  ApiPublicWidgetItineraryRouteImport.update({
+    id: '/api/public/widget-itinerary',
+    path: '/api/public/widget-itinerary',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiPublicTtsRoute = ApiPublicTtsRouteImport.update({
   id: '/api/public/tts',
   path: '/api/public/tts',
@@ -243,12 +256,14 @@ export interface FileRoutesByFullPath {
   '/api/tts': typeof ApiTtsRoute
   '/checkout/return': typeof CheckoutReturnRoute
   '/live-room/$code': typeof LiveRoomCodeRoute
+  '/r/$slug': typeof RSlugRoute
   '/admin/financial': typeof AppAdminFinancialRoute
   '/admin/settings': typeof AppAdminSettingsRoute
   '/settings/appearance': typeof AppSettingsAppearanceRoute
   '/api/public/stt': typeof ApiPublicSttRoute
   '/api/public/translate-broadcast': typeof ApiPublicTranslateBroadcastRoute
   '/api/public/tts': typeof ApiPublicTtsRoute
+  '/api/public/widget-itinerary': typeof ApiPublicWidgetItineraryRoute
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
 }
 export interface FileRoutesByTo {
@@ -278,12 +293,14 @@ export interface FileRoutesByTo {
   '/api/tts': typeof ApiTtsRoute
   '/checkout/return': typeof CheckoutReturnRoute
   '/live-room/$code': typeof LiveRoomCodeRoute
+  '/r/$slug': typeof RSlugRoute
   '/admin/financial': typeof AppAdminFinancialRoute
   '/admin/settings': typeof AppAdminSettingsRoute
   '/settings/appearance': typeof AppSettingsAppearanceRoute
   '/api/public/stt': typeof ApiPublicSttRoute
   '/api/public/translate-broadcast': typeof ApiPublicTranslateBroadcastRoute
   '/api/public/tts': typeof ApiPublicTtsRoute
+  '/api/public/widget-itinerary': typeof ApiPublicWidgetItineraryRoute
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
 }
 export interface FileRoutesById {
@@ -315,12 +332,14 @@ export interface FileRoutesById {
   '/api/tts': typeof ApiTtsRoute
   '/checkout/return': typeof CheckoutReturnRoute
   '/live-room/$code': typeof LiveRoomCodeRoute
+  '/r/$slug': typeof RSlugRoute
   '/_app/admin/financial': typeof AppAdminFinancialRoute
   '/_app/admin/settings': typeof AppAdminSettingsRoute
   '/_app/settings/appearance': typeof AppSettingsAppearanceRoute
   '/api/public/stt': typeof ApiPublicSttRoute
   '/api/public/translate-broadcast': typeof ApiPublicTranslateBroadcastRoute
   '/api/public/tts': typeof ApiPublicTtsRoute
+  '/api/public/widget-itinerary': typeof ApiPublicWidgetItineraryRoute
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
 }
 export interface FileRouteTypes {
@@ -352,12 +371,14 @@ export interface FileRouteTypes {
     | '/api/tts'
     | '/checkout/return'
     | '/live-room/$code'
+    | '/r/$slug'
     | '/admin/financial'
     | '/admin/settings'
     | '/settings/appearance'
     | '/api/public/stt'
     | '/api/public/translate-broadcast'
     | '/api/public/tts'
+    | '/api/public/widget-itinerary'
     | '/api/public/payments/webhook'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -387,12 +408,14 @@ export interface FileRouteTypes {
     | '/api/tts'
     | '/checkout/return'
     | '/live-room/$code'
+    | '/r/$slug'
     | '/admin/financial'
     | '/admin/settings'
     | '/settings/appearance'
     | '/api/public/stt'
     | '/api/public/translate-broadcast'
     | '/api/public/tts'
+    | '/api/public/widget-itinerary'
     | '/api/public/payments/webhook'
   id:
     | '__root__'
@@ -423,12 +446,14 @@ export interface FileRouteTypes {
     | '/api/tts'
     | '/checkout/return'
     | '/live-room/$code'
+    | '/r/$slug'
     | '/_app/admin/financial'
     | '/_app/admin/settings'
     | '/_app/settings/appearance'
     | '/api/public/stt'
     | '/api/public/translate-broadcast'
     | '/api/public/tts'
+    | '/api/public/widget-itinerary'
     | '/api/public/payments/webhook'
   fileRoutesById: FileRoutesById
 }
@@ -446,9 +471,11 @@ export interface RootRouteChildren {
   ApiTtsRoute: typeof ApiTtsRoute
   CheckoutReturnRoute: typeof CheckoutReturnRoute
   LiveRoomCodeRoute: typeof LiveRoomCodeRoute
+  RSlugRoute: typeof RSlugRoute
   ApiPublicSttRoute: typeof ApiPublicSttRoute
   ApiPublicTranslateBroadcastRoute: typeof ApiPublicTranslateBroadcastRoute
   ApiPublicTtsRoute: typeof ApiPublicTtsRoute
+  ApiPublicWidgetItineraryRoute: typeof ApiPublicWidgetItineraryRoute
   ApiPublicPaymentsWebhookRoute: typeof ApiPublicPaymentsWebhookRoute
 }
 
@@ -501,6 +528,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/r/$slug': {
+      id: '/r/$slug'
+      path: '/r/$slug'
+      fullPath: '/r/$slug'
+      preLoaderRoute: typeof RSlugRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/live-room/$code': {
@@ -643,6 +677,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppBillingRouteImport
       parentRoute: typeof AppRoute
     }
+    '/api/public/widget-itinerary': {
+      id: '/api/public/widget-itinerary'
+      path: '/api/public/widget-itinerary'
+      fullPath: '/api/public/widget-itinerary'
+      preLoaderRoute: typeof ApiPublicWidgetItineraryRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/tts': {
       id: '/api/public/tts'
       path: '/api/public/tts'
@@ -751,21 +792,13 @@ const rootRouteChildren: RootRouteChildren = {
   ApiTtsRoute: ApiTtsRoute,
   CheckoutReturnRoute: CheckoutReturnRoute,
   LiveRoomCodeRoute: LiveRoomCodeRoute,
+  RSlugRoute: RSlugRoute,
   ApiPublicSttRoute: ApiPublicSttRoute,
   ApiPublicTranslateBroadcastRoute: ApiPublicTranslateBroadcastRoute,
   ApiPublicTtsRoute: ApiPublicTtsRoute,
+  ApiPublicWidgetItineraryRoute: ApiPublicWidgetItineraryRoute,
   ApiPublicPaymentsWebhookRoute: ApiPublicPaymentsWebhookRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}

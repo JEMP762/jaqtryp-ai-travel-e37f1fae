@@ -925,6 +925,92 @@ export type Database = {
         }
         Relationships: []
       }
+      trip_widget_generations: {
+        Row: {
+          created_at: string
+          credits_spent: number
+          days: number
+          destination: string
+          id: string
+          owner_id: string
+          status: string
+          visitor_hash: string | null
+          widget_id: string
+        }
+        Insert: {
+          created_at?: string
+          credits_spent?: number
+          days: number
+          destination: string
+          id?: string
+          owner_id: string
+          status?: string
+          visitor_hash?: string | null
+          widget_id: string
+        }
+        Update: {
+          created_at?: string
+          credits_spent?: number
+          days?: number
+          destination?: string
+          id?: string
+          owner_id?: string
+          status?: string
+          visitor_hash?: string | null
+          widget_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "trip_widget_generations_widget_id_fkey"
+            columns: ["widget_id"]
+            isOneToOne: false
+            referencedRelation: "trip_widgets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      trip_widgets: {
+        Row: {
+          active: boolean
+          allowed_domains: string[]
+          created_at: string
+          headline: string | null
+          id: string
+          intro: string | null
+          max_per_day: number
+          max_per_hour: number
+          owner_id: string
+          slug: string
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          allowed_domains?: string[]
+          created_at?: string
+          headline?: string | null
+          id?: string
+          intro?: string | null
+          max_per_day?: number
+          max_per_hour?: number
+          owner_id: string
+          slug: string
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          allowed_domains?: string[]
+          created_at?: string
+          headline?: string | null
+          id?: string
+          intro?: string | null
+          max_per_day?: number
+          max_per_hour?: number
+          owner_id?: string
+          slug?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       trips: {
         Row: {
           ai_summary: Json | null
@@ -1286,6 +1372,16 @@ export type Database = {
       apply_referral_code: { Args: { _code: string }; Returns: Json }
       claim_room_host: { Args: { _code: string }; Returns: string }
       generate_referral_code: { Args: { _uid: string }; Returns: string }
+      get_public_trip_widget: {
+        Args: { _slug: string }
+        Returns: {
+          company_name: string
+          headline: string
+          intro: string
+          logo_path: string
+          slug: string
+        }[]
+      }
       grant_monthly_credits: {
         Args: { _amount: number; _user: string }
         Returns: undefined
