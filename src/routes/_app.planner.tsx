@@ -503,7 +503,10 @@ function PlannerPage() {
               </>
             )}
           </Button>
+
+          <TripWidgetPanel companyName={companyName} />
         </div>
+
 
         <div className="min-h-[400px] rounded-2xl border border-border bg-gradient-card p-6">
           {plan ? (
