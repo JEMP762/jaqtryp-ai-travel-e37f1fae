@@ -16,6 +16,7 @@ import { Route as ForgotPasswordRouteImport } from './routes/forgot-password'
 import { Route as CheapFlightsRouteImport } from './routes/cheap-flights'
 import { Route as AppRouteImport } from './routes/_app'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as RSlugRouteImport } from './routes/r.$slug'
 import { Route as LiveRoomCodeRouteImport } from './routes/live-room.$code'
 import { Route as CheckoutReturnRouteImport } from './routes/checkout.return'
 import { Route as ApiTtsRouteImport } from './routes/api.tts'
@@ -77,6 +78,11 @@ const AppRoute = AppRouteImport.update({
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const RSlugRoute = RSlugRouteImport.update({
+  id: '/r/$slug',
+  path: '/r/$slug',
   getParentRoute: () => rootRouteImport,
 } as any)
 const LiveRoomCodeRoute = LiveRoomCodeRouteImport.update({
@@ -250,6 +256,7 @@ export interface FileRoutesByFullPath {
   '/api/tts': typeof ApiTtsRoute
   '/checkout/return': typeof CheckoutReturnRoute
   '/live-room/$code': typeof LiveRoomCodeRoute
+  '/r/$slug': typeof RSlugRoute
   '/admin/financial': typeof AppAdminFinancialRoute
   '/admin/settings': typeof AppAdminSettingsRoute
   '/settings/appearance': typeof AppSettingsAppearanceRoute
@@ -286,6 +293,7 @@ export interface FileRoutesByTo {
   '/api/tts': typeof ApiTtsRoute
   '/checkout/return': typeof CheckoutReturnRoute
   '/live-room/$code': typeof LiveRoomCodeRoute
+  '/r/$slug': typeof RSlugRoute
   '/admin/financial': typeof AppAdminFinancialRoute
   '/admin/settings': typeof AppAdminSettingsRoute
   '/settings/appearance': typeof AppSettingsAppearanceRoute
@@ -324,6 +332,7 @@ export interface FileRoutesById {
   '/api/tts': typeof ApiTtsRoute
   '/checkout/return': typeof CheckoutReturnRoute
   '/live-room/$code': typeof LiveRoomCodeRoute
+  '/r/$slug': typeof RSlugRoute
   '/_app/admin/financial': typeof AppAdminFinancialRoute
   '/_app/admin/settings': typeof AppAdminSettingsRoute
   '/_app/settings/appearance': typeof AppSettingsAppearanceRoute
@@ -362,6 +371,7 @@ export interface FileRouteTypes {
     | '/api/tts'
     | '/checkout/return'
     | '/live-room/$code'
+    | '/r/$slug'
     | '/admin/financial'
     | '/admin/settings'
     | '/settings/appearance'
@@ -398,6 +408,7 @@ export interface FileRouteTypes {
     | '/api/tts'
     | '/checkout/return'
     | '/live-room/$code'
+    | '/r/$slug'
     | '/admin/financial'
     | '/admin/settings'
     | '/settings/appearance'
@@ -435,6 +446,7 @@ export interface FileRouteTypes {
     | '/api/tts'
     | '/checkout/return'
     | '/live-room/$code'
+    | '/r/$slug'
     | '/_app/admin/financial'
     | '/_app/admin/settings'
     | '/_app/settings/appearance'
@@ -459,6 +471,7 @@ export interface RootRouteChildren {
   ApiTtsRoute: typeof ApiTtsRoute
   CheckoutReturnRoute: typeof CheckoutReturnRoute
   LiveRoomCodeRoute: typeof LiveRoomCodeRoute
+  RSlugRoute: typeof RSlugRoute
   ApiPublicSttRoute: typeof ApiPublicSttRoute
   ApiPublicTranslateBroadcastRoute: typeof ApiPublicTranslateBroadcastRoute
   ApiPublicTtsRoute: typeof ApiPublicTtsRoute
@@ -515,6 +528,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/r/$slug': {
+      id: '/r/$slug'
+      path: '/r/$slug'
+      fullPath: '/r/$slug'
+      preLoaderRoute: typeof RSlugRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/live-room/$code': {
@@ -772,6 +792,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiTtsRoute: ApiTtsRoute,
   CheckoutReturnRoute: CheckoutReturnRoute,
   LiveRoomCodeRoute: LiveRoomCodeRoute,
+  RSlugRoute: RSlugRoute,
   ApiPublicSttRoute: ApiPublicSttRoute,
   ApiPublicTranslateBroadcastRoute: ApiPublicTranslateBroadcastRoute,
   ApiPublicTtsRoute: ApiPublicTtsRoute,
