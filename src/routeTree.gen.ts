@@ -36,6 +36,7 @@ import { Route as AppDashboardRouteImport } from './routes/_app.dashboard'
 import { Route as AppCreditsRouteImport } from './routes/_app.credits'
 import { Route as AppChatRouteImport } from './routes/_app.chat'
 import { Route as AppBillingRouteImport } from './routes/_app.billing'
+import { Route as ApiPublicWidgetItineraryRouteImport } from './routes/api.public.widget-itinerary'
 import { Route as ApiPublicTtsRouteImport } from './routes/api.public.tts'
 import { Route as ApiPublicTranslateBroadcastRouteImport } from './routes/api.public.translate-broadcast'
 import { Route as ApiPublicSttRouteImport } from './routes/api.public.stt'
@@ -178,6 +179,12 @@ const AppBillingRoute = AppBillingRouteImport.update({
   path: '/billing',
   getParentRoute: () => AppRoute,
 } as any)
+const ApiPublicWidgetItineraryRoute =
+  ApiPublicWidgetItineraryRouteImport.update({
+    id: '/api/public/widget-itinerary',
+    path: '/api/public/widget-itinerary',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiPublicTtsRoute = ApiPublicTtsRouteImport.update({
   id: '/api/public/tts',
   path: '/api/public/tts',
@@ -249,6 +256,7 @@ export interface FileRoutesByFullPath {
   '/api/public/stt': typeof ApiPublicSttRoute
   '/api/public/translate-broadcast': typeof ApiPublicTranslateBroadcastRoute
   '/api/public/tts': typeof ApiPublicTtsRoute
+  '/api/public/widget-itinerary': typeof ApiPublicWidgetItineraryRoute
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
 }
 export interface FileRoutesByTo {
@@ -284,6 +292,7 @@ export interface FileRoutesByTo {
   '/api/public/stt': typeof ApiPublicSttRoute
   '/api/public/translate-broadcast': typeof ApiPublicTranslateBroadcastRoute
   '/api/public/tts': typeof ApiPublicTtsRoute
+  '/api/public/widget-itinerary': typeof ApiPublicWidgetItineraryRoute
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
 }
 export interface FileRoutesById {
@@ -321,6 +330,7 @@ export interface FileRoutesById {
   '/api/public/stt': typeof ApiPublicSttRoute
   '/api/public/translate-broadcast': typeof ApiPublicTranslateBroadcastRoute
   '/api/public/tts': typeof ApiPublicTtsRoute
+  '/api/public/widget-itinerary': typeof ApiPublicWidgetItineraryRoute
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
 }
 export interface FileRouteTypes {
@@ -358,6 +368,7 @@ export interface FileRouteTypes {
     | '/api/public/stt'
     | '/api/public/translate-broadcast'
     | '/api/public/tts'
+    | '/api/public/widget-itinerary'
     | '/api/public/payments/webhook'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -393,6 +404,7 @@ export interface FileRouteTypes {
     | '/api/public/stt'
     | '/api/public/translate-broadcast'
     | '/api/public/tts'
+    | '/api/public/widget-itinerary'
     | '/api/public/payments/webhook'
   id:
     | '__root__'
@@ -429,6 +441,7 @@ export interface FileRouteTypes {
     | '/api/public/stt'
     | '/api/public/translate-broadcast'
     | '/api/public/tts'
+    | '/api/public/widget-itinerary'
     | '/api/public/payments/webhook'
   fileRoutesById: FileRoutesById
 }
@@ -449,6 +462,7 @@ export interface RootRouteChildren {
   ApiPublicSttRoute: typeof ApiPublicSttRoute
   ApiPublicTranslateBroadcastRoute: typeof ApiPublicTranslateBroadcastRoute
   ApiPublicTtsRoute: typeof ApiPublicTtsRoute
+  ApiPublicWidgetItineraryRoute: typeof ApiPublicWidgetItineraryRoute
   ApiPublicPaymentsWebhookRoute: typeof ApiPublicPaymentsWebhookRoute
 }
 
@@ -643,6 +657,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppBillingRouteImport
       parentRoute: typeof AppRoute
     }
+    '/api/public/widget-itinerary': {
+      id: '/api/public/widget-itinerary'
+      path: '/api/public/widget-itinerary'
+      fullPath: '/api/public/widget-itinerary'
+      preLoaderRoute: typeof ApiPublicWidgetItineraryRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/tts': {
       id: '/api/public/tts'
       path: '/api/public/tts'
@@ -754,6 +775,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPublicSttRoute: ApiPublicSttRoute,
   ApiPublicTranslateBroadcastRoute: ApiPublicTranslateBroadcastRoute,
   ApiPublicTtsRoute: ApiPublicTtsRoute,
+  ApiPublicWidgetItineraryRoute: ApiPublicWidgetItineraryRoute,
   ApiPublicPaymentsWebhookRoute: ApiPublicPaymentsWebhookRoute,
 }
 export const routeTree = rootRouteImport
