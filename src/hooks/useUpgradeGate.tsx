@@ -52,16 +52,16 @@ export function useUpgradeGate() {
       try {
         const [walletRes, subRes] = await Promise.allSettled([
           getMyCredits(),
-          supabase.rpc("has_premium_access", { user_uuid: user.id }),
+          checkPremiumAccessClient(user.id),
         ]);
         if (cancelled) return;
 
         // Fail-safe: if any query failed, do NOT open the modal
         if (walletRes.status !== "fulfilled" || !walletRes.value) return;
-        if (subRes.status !== "fulfilled") return;
+        if (subRes.status !== "fulfilled" || subRes.value === null) return;
 
         const wallet = walletRes.value;
-        const hasPremium = !!subRes.value.data;
+        const hasPremium = subRes.value === true;
         if (hasPremium) return; // paying users never see the gate
 
         const zero =
