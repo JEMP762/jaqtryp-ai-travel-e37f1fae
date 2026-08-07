@@ -1,6 +1,6 @@
 import * as React from "react";
 import { getMyCredits } from "@/lib/credits.functions";
-import { supabase } from "@/integrations/supabase/client";
+import { checkPremiumAccessClient } from "@/lib/premium-access";
 import { useAuth } from "@/hooks/useAuth";
 
 const SESSION_KEY = "jq_upgrade_gate_shown";
