@@ -1,71 +1,96 @@
-# Onde o projeto parou e o que falta
+# Passo a passo para deixar a integração Mystifly pronta
 
-## Situação atual (verificada)
+Este guia mostre o que você precisa fazer, na ordem certa, para que o
+sistema de voos funcione de verdade.
 
-A integração com a Mystifly (o sistema de voos que permite buscar, reservar
-e emitir bilhetes) já está construída no projeto:
+## 1. Entrar no painel de admin
 
-- Cliente de comunicação com sessão automática, novas tentativas, limite de
-  requisições e registro de todas as chamadas.
-- 15 operações implementadas: busca de tarifas, revalidação, regras, reserva,
-  emissão, detalhes, cancelamento, faturas, pós-emissão, alterações de malha e
-  notas de crédito.
-- Telas de administração: painel em Admin → Mystifly e console de testes em
-  Admin → Testes Mystifly.
-- Documentação técnica com checklist de homologação em `docs/mystifly.md`.
-- O erro de "permissão negada" na verificação de plano premium já foi
-  corrigido e o registro de monitoramento foi encerrado.
+- Vá para o app (domínio do JAQTRYP).
+- Faça login com seu usuário de administrador.
+- Se o seu usuário não for admin, ninguém consegue ver a tela da Mystifly.
 
-O que impede avançar: **nenhuma credencial da Mystifly está cadastrada**. A
-lista de segredos do projeto hoje tem Daily, Duffel, ElevenLabs, Stripe e
-Push — nenhum item `MYSTIFLY_*`. Sem isso, qualquer chamada retorna
-"Credenciais da Mystifly não configuradas".
+## 2. Acessar a configuração da Mystifly
 
-## Próximos passos
+- Dentro do app, abra: **Administração → Mystifly**.
+- Ali tem o formulário de configuração e o status da conexão.
+- Você também pode entrar em **Administração → Testes Mystifly** para bater
+  cada endpoint manualmente.
 
-### Passo 1 — Cadastrar as credenciais (depende de você)
-Abro o formulário seguro para você colar os valores enviados pela Mystifly:
+## 3. Cadastrar as credenciais de sandbox (testes)
 
-- `MYSTIFLY_BASE_URL_SANDBOX` — endereço do ambiente de testes
-- `MYSTIFLY_USERNAME` — usuário
-- `MYSTIFLY_PASSWORD` — senha
-- `MYSTIFLY_ACCOUNT_NUMBER` (opcional) — número da conta/agência
-- `MYSTIFLY_API_KEY` (opcional) — se a Mystifly exigir
-- `MYSTIFLY_BASE_URL_PRODUCTION` — pode ficar para depois da homologação
+A Mystifly deve ter enviado um e-mail com os dados de acesso. Você precisa
+colocar no mínimo:
 
-Os valores ficam apenas no servidor; nunca aparecem no navegador nem no banco.
+- Endereço do ambiente de testes (Base URL sandbox)
+- Usuário
+- Senha
 
-### Passo 2 — Teste de conexão
-Executar o botão "Testar conexão" no painel, que cria uma sessão real na
-Mystifly e grava o resultado no status da integração.
+Campos opcionais:
 
-### Passo 3 — Bateria de testes de homologação
-Rodar, pelo console de testes, a sequência exigida pela Mystifly: busca ida,
-busca ida e volta, tarifas com marca, regras, revalidação, reserva em hold,
-detalhes do PNR, emissão, notas, faturas, pós-emissão, cancelamento,
-alteração de malha e nota de crédito. Cada chamada fica registrada com tempo,
-status e referência.
+- Número da conta
+- Chave de API extra
 
-### Passo 4 — Relatório de conformidade
-Gerar um resumo em `docs/mystifly.md` com o resultado de cada item do
-checklist (aprovado / pendente / erro), pronto para enviar à Mystifly.
+Importante: esses dados nunca aparecem no navegador. Eles ficam guardados
+apenas no servidor.
 
-### Passo 5 — Produção
-Depois do aval da Mystifly: cadastrar a Base URL de produção e alternar o
-ambiente na tela de configuração, sem novo deploy.
+## 4. Testar a conexão
 
-## Alternativa enquanto a Mystifly não libera
+- Na tela Admin → Mystifly, clique no botão **Testar conexão**.
+- O sistema vai criar uma sessão real na Mystifly e atualizar o status.
+- Se der certo, o status muda para "Conectado".
+- Se der errado, aparece a mensagem de erro. Copie a mensagem e me mostre
+  para corrigirmos.
 
-Voos e hospedagens já operam em modo "busca + redirecionamento" para
-parceiros públicos. Esse modo continua ativo e não é afetado pela
-homologação; a troca para reserva direta é uma mudança de configuração
-quando a Mystifly aprovar.
+## 5. Rodar os testes de homologação
 
-## Detalhes técnicos
+Ainda em **Admin → Testes Mystifly**, execute na ordem abaixo. Cada teste
+grava um log automaticamente.
 
-- Credenciais lidas somente dentro de handlers de servidor
-  (`src/lib/mystifly/client.server.ts`), via `process.env`.
-- Configurações não sensíveis (ambiente, timeout, retries, TTL de sessão)
-  ficam em `mystifly_settings`, com RLS restrito a administradores.
-- Logs em `mystifly_api_logs`, com dados sensíveis redigidos.
-- Acesso às telas e às server functions exige papel `admin` em `user_roles`.
+1. **createSession** — cria sessão.
+2. **searchLowestFare** — busca passagem só de ida.
+3. **searchBrandedFare** — busca passagem ida e volta.
+4. **fareRules** — mostra as regras de uma tarifa.
+5. **revalidate** — revalida o preço antes de reservar.
+6. **bookFlight** — faz uma reserva de teste (use "hold" primeiro).
+7. **tripDetails** — confere o PNR da reserva.
+8. **orderTicket** — emite o bilhete.
+9. **bookingNotes** — adiciona uma observação.
+10. **invoiceSearch** — busca a fatura.
+11. **postTicketingRequest** — abre pedido pós-emissão (void/refund).
+12. **ptrSearch** — consulta os pedidos pós-emissão.
+13. **scheduleChange** — lista alterações de malha.
+14. **creditNote** — consulta notas de crédito.
+15. **bookingCancel** — cancela a reserva de teste.
+
+Se algum teste falhar, me avise qual endpoint e qual mensagem apareceu.
+
+## 6. Revisar os logs
+
+- Na tela Admin → Mystifly, a seção "Últimas chamadas" mostra o resultado de
+cada teste.
+- Cada linha tem: endpoint, sucesso ou erro, tempo de resposta e referência.
+- Isso ajuda a identificar se o problema é credencial, formato de dados ou
+  indisponibilidade da Mystifly.
+
+## 7. Gerar o relatório de homologação
+
+- Depois que todos os testes passarem, eu gero um relatório atualizado em
+  `docs/mystifly.md`.
+- Esse relatório pode ser enviado para a Mystifly como comprovação de que a
+  integração está funcionando.
+
+## 8. Trocar para produção
+
+- Depois que a Mystifly aprovar a homologação, você cadastra o endereço de
+  produção (Base URL production) e o usuário/senha de produção.
+- Na tela Admin → Mystifly, altera o ambiente de "sandbox" para
+  "production".
+- Pronto. A partir daí, os usuários podem buscar e reservar vois reais.
+
+## O que não precisa fazer agora
+
+- Não precisa alterar código.
+- Não precisa mexer em banco de dados.
+- Não precisa publicar o app de novo.
+
+Tudo que falta é colocar os dados da Mystifly e rodar os testes.
