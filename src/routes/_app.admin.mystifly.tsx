@@ -137,7 +137,7 @@ function MystiflyAdminPage() {
           </div>
         </div>
         <Link
-          to="/admin/mystifly/test"
+          to="/admin/mystifly-test"
           className="inline-flex items-center gap-2 rounded-xl border border-border/60 bg-card px-3 py-2 text-sm hover:border-primary/60"
         >
           <FlaskConical className="h-4 w-4" /> Tela de testes
