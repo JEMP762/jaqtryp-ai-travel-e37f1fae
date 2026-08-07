@@ -28,6 +28,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { useI18n } from "@/lib/i18n/I18nProvider";
 import { supabase } from "@/integrations/supabase/client";
+import { checkPremiumAccessClient } from "@/lib/premium-access";
 import { Switch } from "@/components/ui/switch";
 import {
   type Branding,
