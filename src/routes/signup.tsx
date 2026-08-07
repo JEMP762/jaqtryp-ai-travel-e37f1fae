@@ -14,7 +14,9 @@ import { applyReferralCode } from "@/lib/referrals.functions";
 
 export const Route = createFileRoute("/signup")({
   component: SignupPage,
-  validateSearch: (search: Record<string, unknown>) => ({
+  validateSearch: (
+    search: Record<string, unknown>,
+  ): { intent?: string; ref?: string } => ({
     intent: typeof search.intent === "string" ? search.intent : undefined,
     ref: typeof search.ref === "string" ? search.ref : undefined,
   }),

@@ -610,6 +610,105 @@ export type Database = {
         }
         Relationships: []
       }
+      mystifly_api_logs: {
+        Row: {
+          booking_id: string | null
+          created_at: string
+          duration_ms: number | null
+          endpoint: string
+          environment: string
+          error: string | null
+          http_status: number | null
+          id: string
+          method: string
+          mf_reference: string | null
+          request: Json
+          response: Json | null
+          success: boolean
+          trip_id: string | null
+          user_id: string | null
+        }
+        Insert: {
+          booking_id?: string | null
+          created_at?: string
+          duration_ms?: number | null
+          endpoint: string
+          environment?: string
+          error?: string | null
+          http_status?: number | null
+          id?: string
+          method?: string
+          mf_reference?: string | null
+          request?: Json
+          response?: Json | null
+          success?: boolean
+          trip_id?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          booking_id?: string | null
+          created_at?: string
+          duration_ms?: number | null
+          endpoint?: string
+          environment?: string
+          error?: string | null
+          http_status?: number | null
+          id?: string
+          method?: string
+          mf_reference?: string | null
+          request?: Json
+          response?: Json | null
+          success?: boolean
+          trip_id?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
+      mystifly_settings: {
+        Row: {
+          cache_ttl_seconds: number
+          connection_message: string | null
+          connection_status: string
+          created_at: string
+          environment: string
+          id: string
+          last_sync_at: string | null
+          max_retries: number
+          singleton: boolean
+          timeout_ms: number
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          cache_ttl_seconds?: number
+          connection_message?: string | null
+          connection_status?: string
+          created_at?: string
+          environment?: string
+          id?: string
+          last_sync_at?: string | null
+          max_retries?: number
+          singleton?: boolean
+          timeout_ms?: number
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          cache_ttl_seconds?: number
+          connection_message?: string | null
+          connection_status?: string
+          created_at?: string
+          environment?: string
+          id?: string
+          last_sync_at?: string | null
+          max_retries?: number
+          singleton?: boolean
+          timeout_ms?: number
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: []
+      }
       pending_flight_bookings: {
         Row: {
           breakdown: Json

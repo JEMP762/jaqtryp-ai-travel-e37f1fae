@@ -43,6 +43,8 @@ import { Route as ApiPublicTranslateBroadcastRouteImport } from './routes/api.pu
 import { Route as ApiPublicSttRouteImport } from './routes/api.public.stt'
 import { Route as AppSettingsAppearanceRouteImport } from './routes/_app.settings.appearance'
 import { Route as AppAdminSettingsRouteImport } from './routes/_app.admin.settings'
+import { Route as AppAdminMystiflyTestRouteImport } from './routes/_app.admin.mystifly-test'
+import { Route as AppAdminMystiflyRouteImport } from './routes/_app.admin.mystifly'
 import { Route as AppAdminFinancialRouteImport } from './routes/_app.admin.financial'
 import { Route as ApiPublicPaymentsWebhookRouteImport } from './routes/api.public.payments.webhook'
 
@@ -217,6 +219,16 @@ const AppAdminSettingsRoute = AppAdminSettingsRouteImport.update({
   path: '/admin/settings',
   getParentRoute: () => AppRoute,
 } as any)
+const AppAdminMystiflyTestRoute = AppAdminMystiflyTestRouteImport.update({
+  id: '/admin/mystifly-test',
+  path: '/admin/mystifly-test',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppAdminMystiflyRoute = AppAdminMystiflyRouteImport.update({
+  id: '/admin/mystifly',
+  path: '/admin/mystifly',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppAdminFinancialRoute = AppAdminFinancialRouteImport.update({
   id: '/admin/financial',
   path: '/admin/financial',
@@ -258,6 +270,8 @@ export interface FileRoutesByFullPath {
   '/live-room/$code': typeof LiveRoomCodeRoute
   '/r/$slug': typeof RSlugRoute
   '/admin/financial': typeof AppAdminFinancialRoute
+  '/admin/mystifly': typeof AppAdminMystiflyRoute
+  '/admin/mystifly-test': typeof AppAdminMystiflyTestRoute
   '/admin/settings': typeof AppAdminSettingsRoute
   '/settings/appearance': typeof AppSettingsAppearanceRoute
   '/api/public/stt': typeof ApiPublicSttRoute
@@ -295,6 +309,8 @@ export interface FileRoutesByTo {
   '/live-room/$code': typeof LiveRoomCodeRoute
   '/r/$slug': typeof RSlugRoute
   '/admin/financial': typeof AppAdminFinancialRoute
+  '/admin/mystifly': typeof AppAdminMystiflyRoute
+  '/admin/mystifly-test': typeof AppAdminMystiflyTestRoute
   '/admin/settings': typeof AppAdminSettingsRoute
   '/settings/appearance': typeof AppSettingsAppearanceRoute
   '/api/public/stt': typeof ApiPublicSttRoute
@@ -334,6 +350,8 @@ export interface FileRoutesById {
   '/live-room/$code': typeof LiveRoomCodeRoute
   '/r/$slug': typeof RSlugRoute
   '/_app/admin/financial': typeof AppAdminFinancialRoute
+  '/_app/admin/mystifly': typeof AppAdminMystiflyRoute
+  '/_app/admin/mystifly-test': typeof AppAdminMystiflyTestRoute
   '/_app/admin/settings': typeof AppAdminSettingsRoute
   '/_app/settings/appearance': typeof AppSettingsAppearanceRoute
   '/api/public/stt': typeof ApiPublicSttRoute
@@ -373,6 +391,8 @@ export interface FileRouteTypes {
     | '/live-room/$code'
     | '/r/$slug'
     | '/admin/financial'
+    | '/admin/mystifly'
+    | '/admin/mystifly-test'
     | '/admin/settings'
     | '/settings/appearance'
     | '/api/public/stt'
@@ -410,6 +430,8 @@ export interface FileRouteTypes {
     | '/live-room/$code'
     | '/r/$slug'
     | '/admin/financial'
+    | '/admin/mystifly'
+    | '/admin/mystifly-test'
     | '/admin/settings'
     | '/settings/appearance'
     | '/api/public/stt'
@@ -448,6 +470,8 @@ export interface FileRouteTypes {
     | '/live-room/$code'
     | '/r/$slug'
     | '/_app/admin/financial'
+    | '/_app/admin/mystifly'
+    | '/_app/admin/mystifly-test'
     | '/_app/admin/settings'
     | '/_app/settings/appearance'
     | '/api/public/stt'
@@ -719,6 +743,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppAdminSettingsRouteImport
       parentRoute: typeof AppRoute
     }
+    '/_app/admin/mystifly-test': {
+      id: '/_app/admin/mystifly-test'
+      path: '/admin/mystifly-test'
+      fullPath: '/admin/mystifly-test'
+      preLoaderRoute: typeof AppAdminMystiflyTestRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/admin/mystifly': {
+      id: '/_app/admin/mystifly'
+      path: '/admin/mystifly'
+      fullPath: '/admin/mystifly'
+      preLoaderRoute: typeof AppAdminMystiflyRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/_app/admin/financial': {
       id: '/_app/admin/financial'
       path: '/admin/financial'
@@ -752,6 +790,8 @@ interface AppRouteChildren {
   AppTranslatorRoute: typeof AppTranslatorRoute
   AppWalletRoute: typeof AppWalletRoute
   AppAdminFinancialRoute: typeof AppAdminFinancialRoute
+  AppAdminMystiflyRoute: typeof AppAdminMystiflyRoute
+  AppAdminMystiflyTestRoute: typeof AppAdminMystiflyTestRoute
   AppAdminSettingsRoute: typeof AppAdminSettingsRoute
   AppSettingsAppearanceRoute: typeof AppSettingsAppearanceRoute
 }
@@ -772,6 +812,8 @@ const AppRouteChildren: AppRouteChildren = {
   AppTranslatorRoute: AppTranslatorRoute,
   AppWalletRoute: AppWalletRoute,
   AppAdminFinancialRoute: AppAdminFinancialRoute,
+  AppAdminMystiflyRoute: AppAdminMystiflyRoute,
+  AppAdminMystiflyTestRoute: AppAdminMystiflyTestRoute,
   AppAdminSettingsRoute: AppAdminSettingsRoute,
   AppSettingsAppearanceRoute: AppSettingsAppearanceRoute,
 }
@@ -802,13 +844,3 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}

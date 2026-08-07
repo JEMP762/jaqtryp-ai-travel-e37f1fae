@@ -3,7 +3,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
-import { Settings, Save, BarChart3 } from "lucide-react";
+import { Settings, Save, BarChart3, Plane } from "lucide-react";
 import { getCommissionSettings, updateCommissionSettings } from "@/lib/pricing.functions";
 import { checkIsAdmin } from "@/lib/commission.functions";
 
@@ -66,9 +66,14 @@ function AdminSettingsPage() {
             <p className="text-sm text-muted-foreground">Defina markup, taxa de serviço e upsells</p>
           </div>
         </div>
-        <Link to="/admin/financial" className="inline-flex items-center gap-2 rounded-xl border border-border/60 bg-card px-3 py-2 text-sm hover:border-primary/60">
-          <BarChart3 className="h-4 w-4" /> Painel
-        </Link>
+        <div className="flex flex-wrap gap-2">
+          <Link to="/admin/financial" className="inline-flex items-center gap-2 rounded-xl border border-border/60 bg-card px-3 py-2 text-sm hover:border-primary/60">
+            <BarChart3 className="h-4 w-4" /> Painel
+          </Link>
+          <Link to="/admin/mystifly" className="inline-flex items-center gap-2 rounded-xl border border-border/60 bg-card px-3 py-2 text-sm hover:border-primary/60">
+            <Plane className="h-4 w-4" /> Mystifly
+          </Link>
+        </div>
       </div>
 
       <form
