@@ -28,6 +28,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { useI18n } from "@/lib/i18n/I18nProvider";
 import { supabase } from "@/integrations/supabase/client";
+import { checkPremiumAccessClient } from "@/lib/premium-access";
 import { Switch } from "@/components/ui/switch";
 import {
   type Branding,
@@ -183,15 +184,9 @@ function PlannerPage() {
 
   React.useEffect(() => {
     async function checkPremium() {
-      try {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) { setIsPro(false); return; }
-        // Libera para assinantes Pro/Ultra OU para quem possui créditos avulsos.
-        const { data } = await supabase.rpc("has_premium_access", { user_uuid: user.id });
-        setIsPro(data === true);
-      } catch {
-        setIsPro(false);
-      }
+      // Só consulta com sessão válida; evita "permission denied" no banco.
+      const result = await checkPremiumAccessClient();
+      if (result !== null) setIsPro(result);
     }
     checkPremium();
     loadBranding().then((b) => {
