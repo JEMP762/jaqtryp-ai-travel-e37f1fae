@@ -47,6 +47,7 @@ import { Route as AppAdminMystiflyTestRouteImport } from './routes/_app.admin.my
 import { Route as AppAdminMystiflyRouteImport } from './routes/_app.admin.mystifly'
 import { Route as AppAdminFinancialRouteImport } from './routes/_app.admin.financial'
 import { Route as ApiPublicPaymentsWebhookRouteImport } from './routes/api.public.payments.webhook'
+import { Route as ApiPublicMercadopagoWebhookRouteImport } from './routes/api.public.mercadopago.webhook'
 
 const SignupRoute = SignupRouteImport.update({
   id: '/signup',
@@ -240,6 +241,12 @@ const ApiPublicPaymentsWebhookRoute =
     path: '/api/public/payments/webhook',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiPublicMercadopagoWebhookRoute =
+  ApiPublicMercadopagoWebhookRouteImport.update({
+    id: '/api/public/mercadopago/webhook',
+    path: '/api/public/mercadopago/webhook',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -278,6 +285,7 @@ export interface FileRoutesByFullPath {
   '/api/public/translate-broadcast': typeof ApiPublicTranslateBroadcastRoute
   '/api/public/tts': typeof ApiPublicTtsRoute
   '/api/public/widget-itinerary': typeof ApiPublicWidgetItineraryRoute
+  '/api/public/mercadopago/webhook': typeof ApiPublicMercadopagoWebhookRoute
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
 }
 export interface FileRoutesByTo {
@@ -317,6 +325,7 @@ export interface FileRoutesByTo {
   '/api/public/translate-broadcast': typeof ApiPublicTranslateBroadcastRoute
   '/api/public/tts': typeof ApiPublicTtsRoute
   '/api/public/widget-itinerary': typeof ApiPublicWidgetItineraryRoute
+  '/api/public/mercadopago/webhook': typeof ApiPublicMercadopagoWebhookRoute
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
 }
 export interface FileRoutesById {
@@ -358,6 +367,7 @@ export interface FileRoutesById {
   '/api/public/translate-broadcast': typeof ApiPublicTranslateBroadcastRoute
   '/api/public/tts': typeof ApiPublicTtsRoute
   '/api/public/widget-itinerary': typeof ApiPublicWidgetItineraryRoute
+  '/api/public/mercadopago/webhook': typeof ApiPublicMercadopagoWebhookRoute
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
 }
 export interface FileRouteTypes {
@@ -399,6 +409,7 @@ export interface FileRouteTypes {
     | '/api/public/translate-broadcast'
     | '/api/public/tts'
     | '/api/public/widget-itinerary'
+    | '/api/public/mercadopago/webhook'
     | '/api/public/payments/webhook'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -438,6 +449,7 @@ export interface FileRouteTypes {
     | '/api/public/translate-broadcast'
     | '/api/public/tts'
     | '/api/public/widget-itinerary'
+    | '/api/public/mercadopago/webhook'
     | '/api/public/payments/webhook'
   id:
     | '__root__'
@@ -478,6 +490,7 @@ export interface FileRouteTypes {
     | '/api/public/translate-broadcast'
     | '/api/public/tts'
     | '/api/public/widget-itinerary'
+    | '/api/public/mercadopago/webhook'
     | '/api/public/payments/webhook'
   fileRoutesById: FileRoutesById
 }
@@ -500,6 +513,7 @@ export interface RootRouteChildren {
   ApiPublicTranslateBroadcastRoute: typeof ApiPublicTranslateBroadcastRoute
   ApiPublicTtsRoute: typeof ApiPublicTtsRoute
   ApiPublicWidgetItineraryRoute: typeof ApiPublicWidgetItineraryRoute
+  ApiPublicMercadopagoWebhookRoute: typeof ApiPublicMercadopagoWebhookRoute
   ApiPublicPaymentsWebhookRoute: typeof ApiPublicPaymentsWebhookRoute
 }
 
@@ -771,6 +785,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicPaymentsWebhookRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/mercadopago/webhook': {
+      id: '/api/public/mercadopago/webhook'
+      path: '/api/public/mercadopago/webhook'
+      fullPath: '/api/public/mercadopago/webhook'
+      preLoaderRoute: typeof ApiPublicMercadopagoWebhookRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -839,6 +860,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPublicTranslateBroadcastRoute: ApiPublicTranslateBroadcastRoute,
   ApiPublicTtsRoute: ApiPublicTtsRoute,
   ApiPublicWidgetItineraryRoute: ApiPublicWidgetItineraryRoute,
+  ApiPublicMercadopagoWebhookRoute: ApiPublicMercadopagoWebhookRoute,
   ApiPublicPaymentsWebhookRoute: ApiPublicPaymentsWebhookRoute,
 }
 export const routeTree = rootRouteImport
