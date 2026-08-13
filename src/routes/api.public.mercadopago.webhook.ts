@@ -33,8 +33,9 @@ export const Route = createFileRoute("/api/public/mercadopago/webhook")({
           const res = await syncPixPaymentStatus(supabaseAdmin, String(paymentId));
           console.log("[mp/webhook] payment", paymentId, res);
         } catch (e: any) {
-          console.error("[mp/webhook] error", e?.message || e);
-          return new Response("error", { status: 500 });
+          // Retorna 200 para o Mercado Pago não ficar reenviando notificações
+          // que não conseguimos processar (ex: pagamento inexistente no nosso BD).
+          console.error("[mp/webhook] ignored error", e?.message || e);
         }
 
         return new Response("ok", { status: 200 });
