@@ -2,11 +2,15 @@
 
 Adicionar PIX em reais ao lado do Stripe em dólar, sem tocar em nada do fluxo Stripe atual.
 
+Escopo: **apenas recargas de créditos** (página de Créditos). Nada relacionado a compra de passagens, hospedagens ou assinaturas é tocado.
+
 ## O que NÃO muda
 
 - `src/lib/stripe.ts`, `src/lib/stripe.server.ts`, `src/lib/credits.functions.ts` (checkout Stripe), `src/components/CreditPackCheckout.tsx`
 - Webhook atual `/api/public/payments/webhook` (assinaturas, pacotes, voos) — nenhuma linha alterada
 - Preços em dólar, produtos/prices do Stripe, assinaturas, regras de crédito
+- Fluxo de pagamento de voos/hospedagens (Duffel/Mystifly) — PIX não aparece lá
+
 
 ## Preços PIX (independentes do dólar)
 
