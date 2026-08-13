@@ -33,6 +33,8 @@ function SignupPage() {
   const [email, setEmail] = React.useState("");
   const [password, setPassword] = React.useState("");
   const [loading, setLoading] = React.useState(false);
+  const [googleLoading, setGoogleLoading] = React.useState(false);
+
   const [errorMsg, setErrorMsg] = React.useState<string | null>(null);
 
   // Persist ?ref= for signup flows that pass through Google OAuth
