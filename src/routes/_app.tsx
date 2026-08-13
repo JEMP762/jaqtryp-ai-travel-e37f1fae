@@ -59,11 +59,33 @@ function AppShell() {
   const [mobileOpen, setMobileOpen] = React.useState(false);
   const upgradeGate = useUpgradeGate();
 
+  // Antes de mandar o usuário para o login, tentamos renovar a sessão uma vez.
+  // Isso evita expulsar quem só está com o token expirado (ex.: após um deploy
+  // ou depois de dias com o app instalado).
   React.useEffect(() => {
-    if (!loading && !user) {
-      nav({ to: "/login" });
-    }
+    if (loading || user) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const { data } = await supabase.auth.refreshSession();
+        if (data.session) return;
+      } catch {
+        /* ignore */
+      }
+      if (!cancelled) {
+        try {
+          window.sessionStorage.setItem("jq_post_login_dest", window.location.pathname);
+        } catch {
+          /* ignore */
+        }
+        nav({ to: "/login" });
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
   }, [loading, user, nav]);
+
 
   // Apply pending referral code after any authenticated arrival (incl. Google OAuth
   // which redirects to `${origin}/` and never re-mounts /signup).
