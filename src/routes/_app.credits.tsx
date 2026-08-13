@@ -11,6 +11,9 @@ import {
 } from "@/lib/credits.functions";
 import { CreditPackCheckoutDialog } from "@/components/CreditPackCheckout";
 import { CreditLowBalanceBanner } from "@/components/CreditLowBalanceBanner";
+import { PaymentMethodDialog } from "@/components/PaymentMethodDialog";
+import { PixCheckoutDialog } from "@/components/PixCheckoutDialog";
+import { PIX_PRICES_BRL, formatBrl } from "@/lib/pix-packs";
 
 export const Route = createFileRoute("/_app/credits")({
   component: CreditsPage,
