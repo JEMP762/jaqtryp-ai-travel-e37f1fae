@@ -296,6 +296,17 @@ function CreditsPage() {
         </>
       )}
 
+      <PaymentMethodDialog
+        pack={choosing}
+        onClose={() => setChoosing(null)}
+        onSelect={(method) => {
+          const key = choosing?.lookupKey ?? null;
+          setChoosing(null);
+          if (method === "stripe") setCheckoutKey(key);
+          else setPixKey(key);
+        }}
+      />
+
       <CreditPackCheckoutDialog
         lookupKey={checkoutKey}
         onClose={() => {
@@ -303,6 +314,16 @@ function CreditsPage() {
           setTimeout(load, 1200);
         }}
       />
+
+      <PixCheckoutDialog
+        lookupKey={pixKey}
+        onPaid={() => setTimeout(load, 800)}
+        onClose={() => {
+          setPixKey(null);
+          setTimeout(load, 800);
+        }}
+      />
+
     </div>
   );
 }
