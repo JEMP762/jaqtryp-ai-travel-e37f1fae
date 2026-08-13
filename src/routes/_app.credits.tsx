@@ -367,7 +367,21 @@ function BucketCard({
 function labelFor(reason: string): string {
   if (reason === "signup_bonus") return "Bônus de boas-vindas";
   if (reason === "purchase") return "Compra de pacote avulso";
+  if (reason === "purchase_pix") return "Compra de pacote avulso";
   if (reason === "monthly_grant") return "Renovação mensal";
+  if (reason === "referral_bonus") return "Bônus de indicação";
   if (reason.startsWith("feature:")) return `Uso · ${reason.slice("feature:".length)}`;
   return reason;
 }
+
+function methodFor(entry: Entry): string | null {
+  const meta = (entry.metadata ?? {}) as Record<string, any>;
+  if (entry.reason === "purchase_pix" || meta.payment_method === "pix") {
+    const amount = Number(meta.amount_brl ?? 0);
+    const price = amount ? `${formatBrl(amount)} · ` : "";
+    return `${price}PIX / Mercado Pago · Pago`;
+  }
+  if (entry.reason === "purchase") return "Stripe (USD) · Pago";
+  return null;
+}
+
