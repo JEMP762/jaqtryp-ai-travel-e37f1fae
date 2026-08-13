@@ -48,43 +48,34 @@ const REF_STORAGE_KEY = "jq_pending_ref";
 
 
 export const Route = createFileRoute("/_app")({
+  // A sessão vive no navegador (localStorage). Renderizar esta área no servidor
+  // cria uma janela "sem sessão" que expulsava o usuário para o login.
+  ssr: false,
   component: AppShell,
 });
 
 function AppShell() {
-  const { user, loading } = useAuth();
+  const { user, initializing } = useAuth();
+  const loading = initializing;
   const { t, lang, setLang } = useI18n();
   const nav = useNavigate();
   const path = useRouterState({ select: (s) => s.location.pathname });
   const [mobileOpen, setMobileOpen] = React.useState(false);
   const upgradeGate = useUpgradeGate();
 
-  // Antes de mandar o usuário para o login, tentamos renovar a sessão uma vez.
-  // Isso evita expulsar quem só está com o token expirado (ex.: após um deploy
-  // ou depois de dias com o app instalado).
+  // Só redirecionamos quando o Supabase já confirmou que não há sessão.
+  // Nada de renovação forçada aqui: a biblioteca renova sozinha e chamadas
+  // concorrentes invalidavam o refresh token (o "do nada volta pro login").
   React.useEffect(() => {
-    if (loading || user) return;
-    let cancelled = false;
-    (async () => {
-      try {
-        const { data } = await supabase.auth.refreshSession();
-        if (data.session) return;
-      } catch {
-        /* ignore */
-      }
-      if (!cancelled) {
-        try {
-          window.sessionStorage.setItem("jq_post_login_dest", window.location.pathname);
-        } catch {
-          /* ignore */
-        }
-        nav({ to: "/login" });
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [loading, user, nav]);
+    if (initializing || user) return;
+    try {
+      window.sessionStorage.setItem("jq_post_login_dest", window.location.pathname);
+    } catch {
+      /* ignore */
+    }
+    nav({ to: "/login", replace: true });
+  }, [initializing, user, nav]);
+
 
 
   // Apply pending referral code after any authenticated arrival (incl. Google OAuth
