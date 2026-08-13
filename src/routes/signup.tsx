@@ -107,13 +107,24 @@ function SignupPage() {
 
 
   const onGoogle = async () => {
-    const result = await lovable.auth.signInWithOAuth("google", {
-      redirect_uri: window.location.origin,
-    });
-    if (result.redirected) return;
-    if (result.error) toast.error(result.error.message);
-    else nav({ to: "/dashboard" });
+    setGoogleLoading(true);
+    try {
+      const result = await lovable.auth.signInWithOAuth("google", {
+        redirect_uri: `${window.location.origin}/auth/callback`,
+      });
+      if (result.redirected) return;
+      if (result.error) {
+        toast.error("Não foi possível entrar com o Google. Tente novamente.");
+        return;
+      }
+      nav({ to: "/dashboard" });
+    } catch {
+      toast.error("Não foi possível entrar com o Google. Tente novamente.");
+    } finally {
+      setGoogleLoading(false);
+    }
   };
+
 
   return (
     <AuthShell
