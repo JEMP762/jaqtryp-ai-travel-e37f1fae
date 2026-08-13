@@ -276,7 +276,12 @@ function CreditsPage() {
                           <td className="px-4 py-3 text-muted-foreground">
                             {new Date(h.created_at).toLocaleString("pt-BR")}
                           </td>
-                          <td className="px-4 py-3">{labelFor(h.reason)}</td>
+                          <td className="px-4 py-3">
+                            {labelFor(h.reason)}
+                            {methodFor(h) && (
+                              <div className="text-[11px] text-muted-foreground">{methodFor(h)}</div>
+                            )}
+                          </td>
                           <td
                             className={`px-4 py-3 text-right font-bold ${
                               positive ? "text-emerald-400" : "text-rose-400"
