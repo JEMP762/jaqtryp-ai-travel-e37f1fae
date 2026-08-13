@@ -19,6 +19,7 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as RSlugRouteImport } from './routes/r.$slug'
 import { Route as LiveRoomCodeRouteImport } from './routes/live-room.$code'
 import { Route as CheckoutReturnRouteImport } from './routes/checkout.return'
+import { Route as AuthCallbackRouteImport } from './routes/auth.callback'
 import { Route as ApiTtsRouteImport } from './routes/api.tts'
 import { Route as ApiJaxRouteImport } from './routes/api.jax'
 import { Route as ApiChatRouteImport } from './routes/api.chat'
@@ -96,6 +97,11 @@ const LiveRoomCodeRoute = LiveRoomCodeRouteImport.update({
 const CheckoutReturnRoute = CheckoutReturnRouteImport.update({
   id: '/checkout/return',
   path: '/checkout/return',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AuthCallbackRoute = AuthCallbackRouteImport.update({
+  id: '/auth/callback',
+  path: '/auth/callback',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiTtsRoute = ApiTtsRouteImport.update({
@@ -273,6 +279,7 @@ export interface FileRoutesByFullPath {
   '/api/chat': typeof ApiChatRoute
   '/api/jax': typeof ApiJaxRoute
   '/api/tts': typeof ApiTtsRoute
+  '/auth/callback': typeof AuthCallbackRoute
   '/checkout/return': typeof CheckoutReturnRoute
   '/live-room/$code': typeof LiveRoomCodeRoute
   '/r/$slug': typeof RSlugRoute
@@ -313,6 +320,7 @@ export interface FileRoutesByTo {
   '/api/chat': typeof ApiChatRoute
   '/api/jax': typeof ApiJaxRoute
   '/api/tts': typeof ApiTtsRoute
+  '/auth/callback': typeof AuthCallbackRoute
   '/checkout/return': typeof CheckoutReturnRoute
   '/live-room/$code': typeof LiveRoomCodeRoute
   '/r/$slug': typeof RSlugRoute
@@ -355,6 +363,7 @@ export interface FileRoutesById {
   '/api/chat': typeof ApiChatRoute
   '/api/jax': typeof ApiJaxRoute
   '/api/tts': typeof ApiTtsRoute
+  '/auth/callback': typeof AuthCallbackRoute
   '/checkout/return': typeof CheckoutReturnRoute
   '/live-room/$code': typeof LiveRoomCodeRoute
   '/r/$slug': typeof RSlugRoute
@@ -397,6 +406,7 @@ export interface FileRouteTypes {
     | '/api/chat'
     | '/api/jax'
     | '/api/tts'
+    | '/auth/callback'
     | '/checkout/return'
     | '/live-room/$code'
     | '/r/$slug'
@@ -437,6 +447,7 @@ export interface FileRouteTypes {
     | '/api/chat'
     | '/api/jax'
     | '/api/tts'
+    | '/auth/callback'
     | '/checkout/return'
     | '/live-room/$code'
     | '/r/$slug'
@@ -478,6 +489,7 @@ export interface FileRouteTypes {
     | '/api/chat'
     | '/api/jax'
     | '/api/tts'
+    | '/auth/callback'
     | '/checkout/return'
     | '/live-room/$code'
     | '/r/$slug'
@@ -506,6 +518,7 @@ export interface RootRouteChildren {
   ApiChatRoute: typeof ApiChatRoute
   ApiJaxRoute: typeof ApiJaxRoute
   ApiTtsRoute: typeof ApiTtsRoute
+  AuthCallbackRoute: typeof AuthCallbackRoute
   CheckoutReturnRoute: typeof CheckoutReturnRoute
   LiveRoomCodeRoute: typeof LiveRoomCodeRoute
   RSlugRoute: typeof RSlugRoute
@@ -587,6 +600,13 @@ declare module '@tanstack/react-router' {
       path: '/checkout/return'
       fullPath: '/checkout/return'
       preLoaderRoute: typeof CheckoutReturnRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/auth/callback': {
+      id: '/auth/callback'
+      path: '/auth/callback'
+      fullPath: '/auth/callback'
+      preLoaderRoute: typeof AuthCallbackRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/tts': {
@@ -853,6 +873,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiChatRoute: ApiChatRoute,
   ApiJaxRoute: ApiJaxRoute,
   ApiTtsRoute: ApiTtsRoute,
+  AuthCallbackRoute: AuthCallbackRoute,
   CheckoutReturnRoute: CheckoutReturnRoute,
   LiveRoomCodeRoute: LiveRoomCodeRoute,
   RSlugRoute: RSlugRoute,

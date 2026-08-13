@@ -33,6 +33,8 @@ function SignupPage() {
   const [email, setEmail] = React.useState("");
   const [password, setPassword] = React.useState("");
   const [loading, setLoading] = React.useState(false);
+  const [googleLoading, setGoogleLoading] = React.useState(false);
+
   const [errorMsg, setErrorMsg] = React.useState<string | null>(null);
 
   // Persist ?ref= for signup flows that pass through Google OAuth
@@ -107,13 +109,24 @@ function SignupPage() {
 
 
   const onGoogle = async () => {
-    const result = await lovable.auth.signInWithOAuth("google", {
-      redirect_uri: window.location.origin,
-    });
-    if (result.redirected) return;
-    if (result.error) toast.error(result.error.message);
-    else nav({ to: "/dashboard" });
+    setGoogleLoading(true);
+    try {
+      const result = await lovable.auth.signInWithOAuth("google", {
+        redirect_uri: `${window.location.origin}/auth/callback`,
+      });
+      if (result.redirected) return;
+      if (result.error) {
+        toast.error("Não foi possível entrar com o Google. Tente novamente.");
+        return;
+      }
+      nav({ to: "/dashboard" });
+    } catch {
+      toast.error("Não foi possível entrar com o Google. Tente novamente.");
+    } finally {
+      setGoogleLoading(false);
+    }
   };
+
 
   return (
     <AuthShell
@@ -134,8 +147,9 @@ function SignupPage() {
         </div>
       }
     >
-      <Button onClick={onGoogle} variant="outline" className="w-full">
-        {t("auth.google")}
+      <Button onClick={onGoogle} disabled={googleLoading} variant="outline" className="w-full">
+        {googleLoading ? t("common.loading") : t("auth.google")}
+
       </Button>
       <div className="my-5 flex items-center gap-3 text-xs text-muted-foreground">
         <div className="h-px flex-1 bg-border" /> {t("auth.or")}

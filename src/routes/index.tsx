@@ -56,6 +56,12 @@ function Landing() {
   const { user } = useAuth();
   const { openCheckout, checkoutDialog } = useSubscriptionCheckout();
 
+  // Quem já está logado vai direto para o painel (evita a sensação de "deslogado").
+  React.useEffect(() => {
+    if (user) navigate({ to: "/dashboard", replace: true });
+  }, [user, navigate]);
+
+
   const onPlan = (e: React.FormEvent) => {
     e.preventDefault();
     const q = query.trim();
