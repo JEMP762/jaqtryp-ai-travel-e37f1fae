@@ -192,13 +192,26 @@ function CreditsPage() {
                     <div className="mt-1 text-[11px] text-muted-foreground">
                       ≈ ${perCredit}¢ por crédito
                     </div>
+                    {PIX_PRICES_BRL[p.lookupKey] !== undefined && (
+                      <div className="mt-2 text-[11px] text-emerald-300">
+                        ou {formatBrl(PIX_PRICES_BRL[p.lookupKey])} no PIX
+                      </div>
+                    )}
                     <Button
                       className="mt-5 w-full"
                       variant={(p as any).popular ? "default" : "outline"}
-                      onClick={() => setCheckoutKey(p.lookupKey)}
+                      onClick={() =>
+                        setChoosing({
+                          lookupKey: p.lookupKey,
+                          label: p.label,
+                          credits: p.credits,
+                          priceUsd: p.priceUsd,
+                        })
+                      }
                     >
                       Comprar
                     </Button>
+
                   </div>
                 );
               })}
