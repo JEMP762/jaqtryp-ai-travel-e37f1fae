@@ -763,6 +763,63 @@ export type Database = {
         }
         Relationships: []
       }
+      pix_payments: {
+        Row: {
+          amount_brl: number
+          created_at: string
+          credited_at: string | null
+          credits: number
+          expires_at: string | null
+          id: string
+          lookup_key: string
+          mp_payment_id: string | null
+          payment_method: string
+          provider: string
+          qr_code: string | null
+          qr_code_base64: string | null
+          status: string
+          ticket_url: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          amount_brl: number
+          created_at?: string
+          credited_at?: string | null
+          credits: number
+          expires_at?: string | null
+          id?: string
+          lookup_key: string
+          mp_payment_id?: string | null
+          payment_method?: string
+          provider?: string
+          qr_code?: string | null
+          qr_code_base64?: string | null
+          status?: string
+          ticket_url?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          amount_brl?: number
+          created_at?: string
+          credited_at?: string | null
+          credits?: number
+          expires_at?: string | null
+          id?: string
+          lookup_key?: string
+          mp_payment_id?: string | null
+          payment_method?: string
+          provider?: string
+          qr_code?: string | null
+          qr_code_base64?: string | null
+          status?: string
+          ticket_url?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           avatar_url: string | null
