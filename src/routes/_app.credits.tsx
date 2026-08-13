@@ -29,6 +29,10 @@ function CreditsPage() {
   const [history, setHistory] = React.useState<Entry[]>([]);
   const [loading, setLoading] = React.useState(true);
   const [checkoutKey, setCheckoutKey] = React.useState<string | null>(null);
+  const [pixKey, setPixKey] = React.useState<string | null>(null);
+  const [choosing, setChoosing] = React.useState<
+    { lookupKey: string; label: string; credits: number; priceUsd: number } | null
+  >(null);
 
   const load = React.useCallback(async () => {
     setLoading(true);
