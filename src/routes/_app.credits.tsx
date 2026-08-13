@@ -11,6 +11,9 @@ import {
 } from "@/lib/credits.functions";
 import { CreditPackCheckoutDialog } from "@/components/CreditPackCheckout";
 import { CreditLowBalanceBanner } from "@/components/CreditLowBalanceBanner";
+import { PaymentMethodDialog } from "@/components/PaymentMethodDialog";
+import { PixCheckoutDialog } from "@/components/PixCheckoutDialog";
+import { PIX_PRICES_BRL, formatBrl } from "@/lib/pix-packs";
 
 export const Route = createFileRoute("/_app/credits")({
   component: CreditsPage,
@@ -26,6 +29,10 @@ function CreditsPage() {
   const [history, setHistory] = React.useState<Entry[]>([]);
   const [loading, setLoading] = React.useState(true);
   const [checkoutKey, setCheckoutKey] = React.useState<string | null>(null);
+  const [pixKey, setPixKey] = React.useState<string | null>(null);
+  const [choosing, setChoosing] = React.useState<
+    { lookupKey: string; label: string; credits: number; priceUsd: number } | null
+  >(null);
 
   const load = React.useCallback(async () => {
     setLoading(true);
@@ -185,13 +192,26 @@ function CreditsPage() {
                     <div className="mt-1 text-[11px] text-muted-foreground">
                       ≈ ${perCredit}¢ por crédito
                     </div>
+                    {PIX_PRICES_BRL[p.lookupKey] !== undefined && (
+                      <div className="mt-2 text-[11px] text-emerald-300">
+                        ou {formatBrl(PIX_PRICES_BRL[p.lookupKey])} no PIX
+                      </div>
+                    )}
                     <Button
                       className="mt-5 w-full"
                       variant={(p as any).popular ? "default" : "outline"}
-                      onClick={() => setCheckoutKey(p.lookupKey)}
+                      onClick={() =>
+                        setChoosing({
+                          lookupKey: p.lookupKey,
+                          label: p.label,
+                          credits: p.credits,
+                          priceUsd: p.priceUsd,
+                        })
+                      }
                     >
                       Comprar
                     </Button>
+
                   </div>
                 );
               })}
@@ -256,7 +276,12 @@ function CreditsPage() {
                           <td className="px-4 py-3 text-muted-foreground">
                             {new Date(h.created_at).toLocaleString("pt-BR")}
                           </td>
-                          <td className="px-4 py-3">{labelFor(h.reason)}</td>
+                          <td className="px-4 py-3">
+                            {labelFor(h.reason)}
+                            {methodFor(h) && (
+                              <div className="text-[11px] text-muted-foreground">{methodFor(h)}</div>
+                            )}
+                          </td>
                           <td
                             className={`px-4 py-3 text-right font-bold ${
                               positive ? "text-emerald-400" : "text-rose-400"
@@ -276,6 +301,17 @@ function CreditsPage() {
         </>
       )}
 
+      <PaymentMethodDialog
+        pack={choosing}
+        onClose={() => setChoosing(null)}
+        onSelect={(method) => {
+          const key = choosing?.lookupKey ?? null;
+          setChoosing(null);
+          if (method === "stripe") setCheckoutKey(key);
+          else setPixKey(key);
+        }}
+      />
+
       <CreditPackCheckoutDialog
         lookupKey={checkoutKey}
         onClose={() => {
@@ -283,6 +319,16 @@ function CreditsPage() {
           setTimeout(load, 1200);
         }}
       />
+
+      <PixCheckoutDialog
+        lookupKey={pixKey}
+        onPaid={() => setTimeout(load, 800)}
+        onClose={() => {
+          setPixKey(null);
+          setTimeout(load, 800);
+        }}
+      />
+
     </div>
   );
 }
@@ -321,7 +367,21 @@ function BucketCard({
 function labelFor(reason: string): string {
   if (reason === "signup_bonus") return "Bônus de boas-vindas";
   if (reason === "purchase") return "Compra de pacote avulso";
+  if (reason === "purchase_pix") return "Compra de pacote avulso";
   if (reason === "monthly_grant") return "Renovação mensal";
+  if (reason === "referral_bonus") return "Bônus de indicação";
   if (reason.startsWith("feature:")) return `Uso · ${reason.slice("feature:".length)}`;
   return reason;
 }
+
+function methodFor(entry: Entry): string | null {
+  const meta = (entry.metadata ?? {}) as Record<string, any>;
+  if (entry.reason === "purchase_pix" || meta.payment_method === "pix") {
+    const amount = Number(meta.amount_brl ?? 0);
+    const price = amount ? `${formatBrl(amount)} · ` : "";
+    return `${price}PIX / Mercado Pago · Pago`;
+  }
+  if (entry.reason === "purchase") return "Stripe (USD) · Pago";
+  return null;
+}
+
