@@ -42,6 +42,8 @@ import { toast } from "sonner";
 import { UpgradeGateDialog } from "@/components/UpgradeGateDialog";
 import { JaxLauncher } from "@/components/jax/JaxLauncher";
 import { useUpgradeGate } from "@/hooks/useUpgradeGate";
+import { SUBSCRIPTIONS_ENABLED, STAYS_ENABLED } from "@/lib/feature-flags";
+
 
 
 const REF_STORAGE_KEY = "jq_pending_ref";
@@ -119,15 +121,18 @@ function AppShell() {
 
     { to: "/flights", icon: Plane, label: "Voos" },
 
-    { to: "/stays", icon: BedDouble, label: "Hospedagem" },
+    ...(STAYS_ENABLED ? [{ to: "/stays", icon: BedDouble, label: "Hospedagem" }] : []),
     { to: "/wallet", icon: Wallet, label: "Carteira IA" },
     { to: "/credits", icon: Coins, label: "Créditos" },
     { to: "/deals", icon: Tag, label: "Promoções" },
     { to: "/shield", icon: ShieldCheck, label: "JAQ Shield" },
-    { to: "/billing", icon: CreditCard, label: "Minha Assinatura" },
+    ...(SUBSCRIPTIONS_ENABLED
+      ? [{ to: "/billing", icon: CreditCard, label: "Minha Assinatura" }]
+      : []),
     { to: "/settings/appearance", icon: Palette, label: "Aparência" },
     { to: "/referrals", icon: Gift, label: "Indique e ganhe" },
   ] as const;
+
 
   const onSignOut = async () => {
     await supabase.auth.signOut();
