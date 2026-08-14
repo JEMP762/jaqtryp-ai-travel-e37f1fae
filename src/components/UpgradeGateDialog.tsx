@@ -7,6 +7,8 @@ import { CREDIT_PACKS } from "@/lib/credits.functions";
 import { CreditPackCheckoutDialog } from "@/components/CreditPackCheckout";
 import { useSubscriptionCheckout } from "@/hooks/useSubscriptionCheckout";
 import { useAuth } from "@/hooks/useAuth";
+import { SUBSCRIPTIONS_ENABLED } from "@/lib/feature-flags";
+
 
 interface Props {
   open: boolean;
