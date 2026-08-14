@@ -68,12 +68,12 @@ export function useUpgradeGate() {
           (wallet.free ?? 0) === 0 &&
           (wallet.monthly ?? 0) === 0 &&
           (wallet.topup ?? 0) === 0;
-        const spentBefore = (wallet.lifetimeSpent ?? 0) >= 1;
 
-        if (zero && spentBefore) {
+        if (zero) {
           window.sessionStorage.setItem(SESSION_KEY, "1");
           setOpen(true);
         }
+
       } catch {
         /* fail-safe: never open on error */
       }
