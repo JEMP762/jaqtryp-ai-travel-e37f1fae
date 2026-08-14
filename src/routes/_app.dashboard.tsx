@@ -4,6 +4,8 @@ import { useAuth } from "@/hooks/useAuth";
 import { useI18n } from "@/lib/i18n/I18nProvider";
 import { DashboardCreditsCard } from "@/components/DashboardCreditsCard";
 import { PushOptIn } from "@/components/PushOptIn";
+import { QuickActions } from "@/components/QuickActions";
+
 
 export const Route = createFileRoute("/_app/dashboard")({
   component: DashboardHome,
@@ -65,9 +67,14 @@ function DashboardHome() {
         </p>
       </div>
 
+      <div className="mt-8">
+        <QuickActions />
+      </div>
+
       <div className="mt-6">
         <PushOptIn />
       </div>
+
 
 
 
