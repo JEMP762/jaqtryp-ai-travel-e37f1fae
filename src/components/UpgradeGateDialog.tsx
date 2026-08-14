@@ -56,34 +56,39 @@ export function UpgradeGateDialog({ open, onOpenChange }: Props) {
               <Sparkles className="h-6 w-6 text-primary-foreground" />
             </div>
             <DialogTitle className="text-center text-2xl">
-              Seus créditos gratuitos acabaram
+              Seus créditos acabaram
             </DialogTitle>
             <DialogDescription className="text-center">
-              Escolha como continuar aproveitando o Jaqtryp — recarga avulsa ou assinatura.
+              {SUBSCRIPTIONS_ENABLED
+                ? "Escolha como continuar aproveitando o Jaqtryp — recarga avulsa ou assinatura."
+                : "Faça uma recarga para continuar usando o Jaqtryp. Sem mensalidade — você paga só quando quiser."}
             </DialogDescription>
           </DialogHeader>
 
           {/* Tabs */}
-          <div className="mx-auto mt-4 inline-flex rounded-full border border-border bg-card/60 p-1 self-center">
-            <button
-              onClick={() => setTab("packs")}
-              className={`px-4 py-1.5 text-xs font-semibold rounded-full transition ${
-                tab === "packs" ? "bg-gradient-primary text-primary-foreground shadow-glow" : "text-muted-foreground"
-              }`}
-            >
-              <Coins className="mr-1 inline h-3.5 w-3.5" /> Recarga avulsa
-            </button>
-            <button
-              onClick={() => setTab("subs")}
-              className={`px-4 py-1.5 text-xs font-semibold rounded-full transition ${
-                tab === "subs" ? "bg-gradient-primary text-primary-foreground shadow-glow" : "text-muted-foreground"
-              }`}
-            >
-              <Crown className="mr-1 inline h-3.5 w-3.5" /> Assinar
-            </button>
-          </div>
+          {SUBSCRIPTIONS_ENABLED && (
+            <div className="mx-auto mt-4 inline-flex rounded-full border border-border bg-card/60 p-1 self-center">
+              <button
+                onClick={() => setTab("packs")}
+                className={`px-4 py-1.5 text-xs font-semibold rounded-full transition ${
+                  tab === "packs" ? "bg-gradient-primary text-primary-foreground shadow-glow" : "text-muted-foreground"
+                }`}
+              >
+                <Coins className="mr-1 inline h-3.5 w-3.5" /> Recarga avulsa
+              </button>
+              <button
+                onClick={() => setTab("subs")}
+                className={`px-4 py-1.5 text-xs font-semibold rounded-full transition ${
+                  tab === "subs" ? "bg-gradient-primary text-primary-foreground shadow-glow" : "text-muted-foreground"
+                }`}
+              >
+                <Crown className="mr-1 inline h-3.5 w-3.5" /> Assinar
+              </button>
+            </div>
+          )}
 
-          {tab === "packs" ? (
+          {tab === "packs" || !SUBSCRIPTIONS_ENABLED ? (
+
             <div className="mt-6 grid gap-3 md:grid-cols-3">
               {CREDIT_PACKS.map((p) => {
                 const popular = (p as any).popular;
