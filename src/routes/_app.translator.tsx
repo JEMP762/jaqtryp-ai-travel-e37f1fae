@@ -412,6 +412,15 @@ function TranslatorPage() {
             <Button
               variant="ghost"
               size="icon"
+              onClick={copyOut}
+              disabled={!out}
+              title="Copiar tradução"
+            >
+              <Copy className="h-4 w-4" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
               onClick={() => speak(out, to)}
               disabled={!out}
               title="Ouvir tradução"
