@@ -314,6 +314,14 @@ function TranslatorPage() {
               <Button
                 variant="ghost"
                 size="icon"
+                onClick={pasteSrc}
+                title="Colar da área de transferência"
+              >
+                <ClipboardPaste className="h-4 w-4" />
+              </Button>
+              <Button
+                variant="ghost"
+                size="icon"
                 onClick={() => cameraInputRef.current?.click()}
                 disabled={ocrLoading}
                 title="Tirar foto e traduzir"
