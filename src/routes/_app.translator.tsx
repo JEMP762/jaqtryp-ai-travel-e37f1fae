@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { ArrowRightLeft, Camera, Languages, Loader2, Mic, MicOff, ScanLine, Volume2 } from "lucide-react";
+import { ArrowRightLeft, Camera, ClipboardPaste, Copy, Languages, Loader2, Mic, MicOff, ScanLine, Volume2 } from "lucide-react";
 import * as React from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -158,6 +158,26 @@ function TranslatorPage() {
     window.speechSynthesis.speak(u);
   };
 
+  const copyOut = async () => {
+    if (!out) return;
+    try {
+      await navigator.clipboard.writeText(out);
+      toast.success("Tradução copiada!");
+    } catch {
+      toast.error("Não foi possível copiar.");
+    }
+  };
+
+  const pasteSrc = async () => {
+    try {
+      const text = await navigator.clipboard.readText();
+      if (text) setSrc(text);
+      toast.success("Texto colado!");
+    } catch {
+      toast.error("Permita acesso à área de transferência.");
+    }
+  };
+
   const startListening = async () => {
     if (typeof window === "undefined") return;
     const SR =
@@ -294,6 +314,14 @@ function TranslatorPage() {
               <Button
                 variant="ghost"
                 size="icon"
+                onClick={pasteSrc}
+                title="Colar da área de transferência"
+              >
+                <ClipboardPaste className="h-4 w-4" />
+              </Button>
+              <Button
+                variant="ghost"
+                size="icon"
                 onClick={() => cameraInputRef.current?.click()}
                 disabled={ocrLoading}
                 title="Tirar foto e traduzir"
@@ -381,6 +409,15 @@ function TranslatorPage() {
                 ))}
               </SelectContent>
             </Select>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={copyOut}
+              disabled={!out}
+              title="Copiar tradução"
+            >
+              <Copy className="h-4 w-4" />
+            </Button>
             <Button
               variant="ghost"
               size="icon"
