@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { ArrowRightLeft, Camera, Languages, Loader2, Mic, MicOff, ScanLine, Volume2 } from "lucide-react";
+import { ArrowRightLeft, Camera, ClipboardPaste, Copy, Languages, Loader2, Mic, MicOff, ScanLine, Volume2 } from "lucide-react";
 import * as React from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
