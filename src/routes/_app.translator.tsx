@@ -158,6 +158,26 @@ function TranslatorPage() {
     window.speechSynthesis.speak(u);
   };
 
+  const copyOut = async () => {
+    if (!out) return;
+    try {
+      await navigator.clipboard.writeText(out);
+      toast.success("Tradução copiada!");
+    } catch {
+      toast.error("Não foi possível copiar.");
+    }
+  };
+
+  const pasteSrc = async () => {
+    try {
+      const text = await navigator.clipboard.readText();
+      if (text) setSrc(text);
+      toast.success("Texto colado!");
+    } catch {
+      toast.error("Permita acesso à área de transferência.");
+    }
+  };
+
   const startListening = async () => {
     if (typeof window === "undefined") return;
     const SR =
