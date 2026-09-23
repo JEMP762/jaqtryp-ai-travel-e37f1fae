@@ -52,9 +52,6 @@ export const saveOnboarding = createServerFn({ method: "POST" })
       updated_at: new Date().toISOString(),
     });
     if (error) throw new Error(error.message);
-    if (data.event === "first_result") {
-      await context.supabase.rpc("activate_viral_referral", { _user: context.userId });
-    }
     return { ok: true };
   });
 
@@ -79,6 +76,9 @@ export const trackActivation = createServerFn({ method: "POST" })
       properties: data.properties as Json,
     });
     if (error) throw new Error(error.message);
+    if (data.event === "first_result") {
+      await context.supabase.rpc("activate_viral_referral", { _user: context.userId });
+    }
     return { ok: true };
   });
 

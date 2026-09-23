@@ -11,7 +11,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useI18n } from "@/lib/i18n/I18nProvider";
 import { applyReferralCode } from "@/lib/referrals.functions";
-import { onboardingDestination, saveEntryContext } from "@/lib/onboarding-context";
+import { onboardingDestination, readEntryContext, saveEntryContext } from "@/lib/onboarding-context";
 import { trackActivation } from "@/lib/activation.functions";
 
 export const Route = createFileRoute("/signup")({
@@ -57,8 +57,9 @@ function SignupPage() {
     if (typeof window === "undefined") return;
     const code = window.sessionStorage.getItem(REF_STORAGE_KEY);
     if (!code) return;
+    const entry = readEntryContext();
     try {
-      const res = await applyReferralCode({ data: { code } });
+      const res = await applyReferralCode({ data: { code, visitorId: entry?.visitorId, shareSlug: entry?.contentSlug } });
       if ((res as any)?.ok) toast.success("Código de indicação aplicado!");
     } catch {
       /* ignore */
