@@ -167,6 +167,18 @@ export const Route = createFileRoute("/api/public/widget-itinerary")({
           .maybeSingle();
         if (!widget) return json({ error: "Este link não está disponível." }, 404);
 
+        // Domain allowlist applies to both generation and translation requests.
+        const selfHost = hostFrom(request.url);
+        const callerHost =
+          hostFrom(request.headers.get("origin")) || hostFrom(request.headers.get("referer"));
+        const allowed = (widget.allowed_domains ?? []) as string[];
+        if (callerHost && callerHost !== selfHost && allowed.length > 0) {
+          const ok = allowed.some(
+            (d) => callerHost === d.toLowerCase() || callerHost.endsWith(`.${d.toLowerCase()}`),
+          );
+          if (!ok) return json({ error: "Domínio não autorizado para este widget." }, 403);
+        }
+
         if (input.action === "translate") {
           const { data: generation } = await sb
             .from("trip_widget_generations")
@@ -194,27 +206,16 @@ export const Route = createFileRoute("/api/public/widget-itinerary")({
             });
             if (!spend.ok) return json({ error: "Serviço indisponível no momento. Tente mais tarde." }, 402);
             const languages = Array.from(new Set([...(generation.translated_languages ?? []), input.targetLanguage]));
-            await sb.from("trip_widget_generations").update({
+            const { error: updateError } = await sb.from("trip_widget_generations").update({
               credits_spent: generation.credits_spent + spend.spent,
               translation_credits: generation.translation_credits + spend.spent,
               translated_languages: languages,
             }).eq("id", generation.id);
+            if (updateError) throw updateError;
             return json({ text: translated, language: input.targetLanguage, creditsSpent: spend.spent });
           } catch {
             return json({ error: "Não foi possível traduzir agora. Tente novamente." }, 502);
           }
-        }
-
-        // Domain allowlist (only enforced for external embeds)
-        const selfHost = hostFrom(request.url);
-        const callerHost =
-          hostFrom(request.headers.get("origin")) || hostFrom(request.headers.get("referer"));
-        const allowed = (widget.allowed_domains ?? []) as string[];
-        if (callerHost && callerHost !== selfHost && allowed.length > 0) {
-          const ok = allowed.some(
-            (d) => callerHost === d.toLowerCase() || callerHost.endsWith(`.${d.toLowerCase()}`),
-          );
-          if (!ok) return json({ error: "Domínio não autorizado para este widget." }, 403);
         }
 
         // Rate limits
@@ -326,7 +327,7 @@ export const Route = createFileRoute("/api/public/widget-itinerary")({
           }
         }
 
-        const { data: generation } = await sb.from("trip_widget_generations").insert({
+        const { data: generation, error: generationError } = await sb.from("trip_widget_generations").insert({
           widget_id: widget.id,
           owner_id: widget.owner_id,
           destination: input.destination,
@@ -340,8 +341,11 @@ export const Route = createFileRoute("/api/public/widget-itinerary")({
           translation_credits: translationSpent,
           translated_languages: deliveredLanguage === "pt" ? [] : [deliveredLanguage],
         }).select("id").single();
+        if (generationError || !generation) {
+          return json({ error: "O roteiro foi criado, mas não pôde ser preparado para tradução." }, 500);
+        }
 
-        return json({ text, originalText, language: deliveredLanguage, generationId: generation?.id ?? null });
+        return json({ text, originalText, language: deliveredLanguage, generationId: generation.id });
       },
     },
   },
