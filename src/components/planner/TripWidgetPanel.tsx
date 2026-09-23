@@ -140,7 +140,8 @@ export function TripWidgetPanel({ companyName }: { companyName: string }) {
       </div>
       <p className="text-xs text-muted-foreground">
         Publique uma página com a sua marca para que seus clientes gerem roteiros sozinhos. Cada
-        roteiro gerado consome 25 créditos da sua conta.
+        roteiro gerado consome 25 créditos da sua conta. Traduções adicionais usam o custo vigente
+        da tradução de texto.
       </p>
 
       {loading ? (

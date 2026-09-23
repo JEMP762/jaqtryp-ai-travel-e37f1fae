@@ -14,3 +14,6 @@
 - [x] Ampliar painel administrativo e painel de indicação do usuário
 - [x] Cobrir compartilhamento de arquivos e orçamento apenas por ação explícita
 - [ ] Testar o loop viral completo e regressões A–N
+- [x] Adicionar moeda e idioma ao gerador público de roteiros
+- [x] Cobrar traduções do proprietário pelo custo vigente do tradutor
+- [ ] Validar geração, tradução, PDF e cobrança do widget em celular e computador
