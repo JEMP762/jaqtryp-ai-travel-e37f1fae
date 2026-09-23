@@ -65,6 +65,8 @@ import {
 } from "@/lib/wallet.functions";
 import { scanReceipt, askWalletAi, advisorReport, fxAsk } from "@/lib/wallet-ai.functions";
 import { getFxRate } from "@/lib/fx.functions";
+import { ResultActions } from "@/components/ResultActions";
+import { saveUserResult, trackActivation } from "@/lib/activation.functions";
 
 export const Route = createFileRoute("/_app/wallet")({
   component: WalletPage,
@@ -890,6 +892,7 @@ function BudgetPanel({
 }) {
   const _set = useServerFn(setBudget);
   const _suggest = useServerFn(suggestBudget);
+  const saveResult = useServerFn(saveUserResult);
   const b = summary?.budget;
   const [total, setTotal] = React.useState(String(b?.total_budget || 0));
   const [daily, setDaily] = React.useState(String(b?.daily_budget || 0));
@@ -898,6 +901,7 @@ function BudgetPanel({
   const [days, setDays] = React.useState("7");
   const [style, setStyle] = React.useState<"budget" | "standard" | "premium">("standard");
   const [saving, setSaving] = React.useState(false);
+  const [shareResultId, setShareResultId] = React.useState<string | null>(null);
 
   React.useEffect(() => {
     if (b) {
@@ -919,6 +923,17 @@ function BudgetPanel({
           currency: wallet.main_currency,
         },
       });
+      const saved = await saveResult({ data: {
+        kind: "travel_budget",
+        title: destination.trim() ? `Orçamento para ${destination.trim()}` : "Orçamento de viagem",
+        summary: `${wallet.main_currency} ${Number(total) || 0} no total`,
+        payload: {
+          markdown: `## Orçamento de viagem\n\n- Total: ${fmt(Number(total) || 0, wallet.main_currency)}\n- Limite diário: ${fmt(Number(daily) || 0, wallet.main_currency)}\n- Reserva de emergência: ${fmt(Number(reserve) || 0, wallet.main_currency)}`,
+          currency: wallet.main_currency, total: Number(total) || 0, daily: Number(daily) || 0,
+        },
+      } });
+      setShareResultId(saved.id);
+      await trackActivation({ data: { event: "first_result", feature: "travel_budget", properties: {} } }).catch(() => {});
       toast.success("Orçamento salvo");
       onChange();
     } catch (e: any) {
@@ -975,6 +990,7 @@ function BudgetPanel({
           <Button onClick={save} disabled={saving} className="w-full">
             {saving ? <Loader2 className="mr-1 h-4 w-4 animate-spin" /> : null} Salvar orçamento
           </Button>
+          {shareResultId && <ResultActions resultId={shareResultId} title="Orçamento de viagem" />}
         </div>
       </Card>
 

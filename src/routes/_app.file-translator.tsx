@@ -38,6 +38,8 @@ import {
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { TranslationExportMenu } from "@/components/TranslationExportMenu";
+import { ResultActions } from "@/components/ResultActions";
+import { saveUserResult, trackActivation } from "@/lib/activation.functions";
 
 export const Route = createFileRoute("/_app/file-translator")({
   component: FileTranslatorPage,
@@ -95,6 +97,7 @@ function FileTranslatorPage() {
   const doTranslate = useServerFn(translateFile);
   const doList = useServerFn(listFileTranslations);
   const doGetUrl = useServerFn(getFileTranslationDownloadUrl);
+  const saveResult = useServerFn(saveUserResult);
 
   const [file, setFile] = React.useState<File | null>(null);
   const [target, setTarget] = React.useState("en");
@@ -108,6 +111,7 @@ function FileTranslatorPage() {
     credits_spent: number;
   }>(null);
   const [rangeFilter, setRangeFilter] = React.useState<"today" | "7d" | "30d" | "all">("all");
+  const [shareResultId, setShareResultId] = React.useState<string | null>(null);
   const inputRef = React.useRef<HTMLInputElement>(null);
 
   // Saldo (browser-side via supabase)
@@ -191,6 +195,14 @@ function FileTranslatorPage() {
         source_lang: res.source_lang,
         credits_spent: res.credits_spent,
       });
+      const saved = await saveResult({ data: {
+        kind: "document_translation",
+        title: "Documento traduzido",
+        summary: `${langName(res.source_lang)} → ${langName(target)}`,
+        payload: { summary: "Documento traduzido com sucesso no JAQTRYP AI.", sourceLanguage: res.source_lang, targetLanguage: target },
+      } });
+      setShareResultId(saved.id);
+      await trackActivation({ data: { event: "first_result", feature: "document_translation", properties: {} } }).catch(() => {});
       toast.success("Tradução concluída com sucesso!");
       qc.invalidateQueries({ queryKey: ["user_credits_total"] });
       qc.invalidateQueries({ queryKey: ["file_translations"] });
@@ -376,6 +388,7 @@ function FileTranslatorPage() {
                 <RotateCcw className="mr-2 h-4 w-4" /> Traduzir Novamente
               </Button>
             </div>
+            {shareResultId && <ResultActions resultId={shareResultId} title="Documento traduzido" />}
           </div>
         )}
       </Card>

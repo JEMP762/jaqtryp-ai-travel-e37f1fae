@@ -95,6 +95,11 @@ export async function creditApprovedPixPayment(
       _pack_credits: pack.credits,
       _stripe_ref: `mp:${mpPaymentId}`,
     });
+    await supabaseAdmin.rpc("record_viral_payment", {
+      _paid_user: row.user_id,
+      _external_ref: `pix:${mpPaymentId}`,
+      _kind: "pack",
+    });
   } catch (e: any) {
     console.warn("[pix] reward_referrer falhou", e?.message);
   }

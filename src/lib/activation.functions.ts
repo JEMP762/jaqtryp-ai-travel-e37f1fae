@@ -159,6 +159,28 @@ export const getGrowthEngine = createServerFn({ method: "GET" })
     return { counts, byFeature, journeys: journeys ?? [], rewards: rewards ?? [] };
   });
 
+export const updateViralRewardSettings = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) => z.object({
+    eventKey: z.enum(["registration", "activation"]),
+    credits: z.number().int().min(0).max(10000),
+    enabled: z.boolean(),
+  }).parse(input))
+  .handler(async ({ data, context }) => {
+    const { data: role } = await context.supabase.from("user_roles").select("role").eq("user_id", context.userId).eq("role", "admin").maybeSingle();
+    if (!role) throw new Error("Acesso negado");
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { error } = await supabaseAdmin.from("viral_reward_settings").upsert({
+      event_key: data.eventKey,
+      credits: data.credits,
+      enabled: data.enabled,
+      updated_at: new Date().toISOString(),
+      updated_by: context.userId,
+    });
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
 export const getActivationFunnel = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {

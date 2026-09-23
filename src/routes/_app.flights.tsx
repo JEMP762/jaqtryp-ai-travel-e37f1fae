@@ -17,6 +17,8 @@ import { useAuth } from "@/hooks/useAuth";
 import { buildFlightLink, FLIGHTS_BOOKING_MODE, PARTNER_LABEL } from "@/lib/affiliate-links";
 import { logAffiliateClick } from "@/lib/affiliate-clicks.functions";
 import { ExternalLink } from "lucide-react";
+import { ResultActions } from "@/components/ResultActions";
+import { saveUserResult, trackActivation } from "@/lib/activation.functions";
 
 const flightsSearchSchema = z.object({
   origin: fallback(z.string(), "").default(""),
@@ -92,6 +94,7 @@ function FlightsPage() {
   const listOrders = useServerFn(listFlightOrders);
   const settingsFn = useServerFn(getCommissionSettings);
   const checkoutFn = useServerFn(createFlightCheckoutSession);
+  const saveResult = useServerFn(saveUserResult);
   const sp = Route.useSearch();
   const settingsQuery = useQuery({ queryKey: ["commission-settings"], queryFn: () => settingsFn(), retry: false });
 
@@ -107,6 +110,7 @@ function FlightsPage() {
   const [selected, setSelected] = useState<Offer | null>(null);
   const [confirmed, setConfirmed] = useState<{ booking_reference: string; total_amount: string; total_currency: string } | null>(null);
   const [passengers, setPassengers] = useState<Passenger[]>([]);
+  const [shareResultId, setShareResultId] = useState<string | null>(null);
 
   const { user } = useAuth();
   const ordersQuery = useQuery({
@@ -143,11 +147,21 @@ function FlightsPage() {
         throw new Error(await unwrapError(e));
       }
     },
-    onSuccess: (data) => {
+    onSuccess: async (data) => {
       setOffers(data.offers);
       setSelected(null);
       setConfirmed(null);
       if (!data.offers.length) toast.info("Nenhuma oferta encontrada para esses critérios.");
+      if (data.offers.length) {
+        const saved = await saveResult({ data: {
+          kind: "flight_search",
+          title: `Voos ${form.origin} → ${form.destination}`,
+          summary: `${data.offers.length} opções encontradas`,
+          payload: { summary: `${data.offers.length} opções de voo encontradas. Preços e disponibilidade podem mudar.`, origin: form.origin, destination: form.destination, departureDate: form.departure_date },
+        } });
+        setShareResultId(saved.id);
+        await trackActivation({ data: { event: "first_result", feature: "flight_search", properties: { offers: data.offers.length } } }).catch(() => {});
+      }
     },
     onError: (e: any) => toast.error(e.message || "Erro na busca"),
   });
@@ -328,6 +342,7 @@ function FlightsPage() {
       {offers.length > 0 && !selected && (
         <div className="mt-8 space-y-3">
           <h2 className="text-lg font-semibold">{offers.length} ofertas encontradas</h2>
+          {shareResultId && <ResultActions resultId={shareResultId} title={`Voos ${form.origin} para ${form.destination}`} />}
           {offers.map((o) => (
             <div
               key={o.id}
