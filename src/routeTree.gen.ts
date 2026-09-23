@@ -42,11 +42,13 @@ import { Route as ApiPublicWidgetItineraryRouteImport } from './routes/api.publi
 import { Route as ApiPublicTtsRouteImport } from './routes/api.public.tts'
 import { Route as ApiPublicTranslateBroadcastRouteImport } from './routes/api.public.translate-broadcast'
 import { Route as ApiPublicSttRouteImport } from './routes/api.public.stt'
+import { Route as ApiPublicActivationRouteImport } from './routes/api.public.activation'
 import { Route as AppSettingsAppearanceRouteImport } from './routes/_app.settings.appearance'
 import { Route as AppAdminSettingsRouteImport } from './routes/_app.admin.settings'
 import { Route as AppAdminMystiflyTestRouteImport } from './routes/_app.admin.mystifly-test'
 import { Route as AppAdminMystiflyRouteImport } from './routes/_app.admin.mystifly'
 import { Route as AppAdminFinancialRouteImport } from './routes/_app.admin.financial'
+import { Route as ApiPublicSharedResultSlugRouteImport } from './routes/api.public.shared-result.$slug'
 import { Route as ApiPublicPaymentsWebhookRouteImport } from './routes/api.public.payments.webhook'
 import { Route as ApiPublicMercadopagoWebhookRouteImport } from './routes/api.public.mercadopago.webhook'
 
@@ -216,6 +218,11 @@ const ApiPublicSttRoute = ApiPublicSttRouteImport.update({
   path: '/api/public/stt',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPublicActivationRoute = ApiPublicActivationRouteImport.update({
+  id: '/api/public/activation',
+  path: '/api/public/activation',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AppSettingsAppearanceRoute = AppSettingsAppearanceRouteImport.update({
   id: '/settings/appearance',
   path: '/settings/appearance',
@@ -241,6 +248,12 @@ const AppAdminFinancialRoute = AppAdminFinancialRouteImport.update({
   path: '/admin/financial',
   getParentRoute: () => AppRoute,
 } as any)
+const ApiPublicSharedResultSlugRoute =
+  ApiPublicSharedResultSlugRouteImport.update({
+    id: '/api/public/shared-result/$slug',
+    path: '/api/public/shared-result/$slug',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiPublicPaymentsWebhookRoute =
   ApiPublicPaymentsWebhookRouteImport.update({
     id: '/api/public/payments/webhook',
@@ -288,12 +301,14 @@ export interface FileRoutesByFullPath {
   '/admin/mystifly-test': typeof AppAdminMystiflyTestRoute
   '/admin/settings': typeof AppAdminSettingsRoute
   '/settings/appearance': typeof AppSettingsAppearanceRoute
+  '/api/public/activation': typeof ApiPublicActivationRoute
   '/api/public/stt': typeof ApiPublicSttRoute
   '/api/public/translate-broadcast': typeof ApiPublicTranslateBroadcastRoute
   '/api/public/tts': typeof ApiPublicTtsRoute
   '/api/public/widget-itinerary': typeof ApiPublicWidgetItineraryRoute
   '/api/public/mercadopago/webhook': typeof ApiPublicMercadopagoWebhookRoute
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
+  '/api/public/shared-result/$slug': typeof ApiPublicSharedResultSlugRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -329,12 +344,14 @@ export interface FileRoutesByTo {
   '/admin/mystifly-test': typeof AppAdminMystiflyTestRoute
   '/admin/settings': typeof AppAdminSettingsRoute
   '/settings/appearance': typeof AppSettingsAppearanceRoute
+  '/api/public/activation': typeof ApiPublicActivationRoute
   '/api/public/stt': typeof ApiPublicSttRoute
   '/api/public/translate-broadcast': typeof ApiPublicTranslateBroadcastRoute
   '/api/public/tts': typeof ApiPublicTtsRoute
   '/api/public/widget-itinerary': typeof ApiPublicWidgetItineraryRoute
   '/api/public/mercadopago/webhook': typeof ApiPublicMercadopagoWebhookRoute
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
+  '/api/public/shared-result/$slug': typeof ApiPublicSharedResultSlugRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -372,12 +389,14 @@ export interface FileRoutesById {
   '/_app/admin/mystifly-test': typeof AppAdminMystiflyTestRoute
   '/_app/admin/settings': typeof AppAdminSettingsRoute
   '/_app/settings/appearance': typeof AppSettingsAppearanceRoute
+  '/api/public/activation': typeof ApiPublicActivationRoute
   '/api/public/stt': typeof ApiPublicSttRoute
   '/api/public/translate-broadcast': typeof ApiPublicTranslateBroadcastRoute
   '/api/public/tts': typeof ApiPublicTtsRoute
   '/api/public/widget-itinerary': typeof ApiPublicWidgetItineraryRoute
   '/api/public/mercadopago/webhook': typeof ApiPublicMercadopagoWebhookRoute
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
+  '/api/public/shared-result/$slug': typeof ApiPublicSharedResultSlugRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -415,12 +434,14 @@ export interface FileRouteTypes {
     | '/admin/mystifly-test'
     | '/admin/settings'
     | '/settings/appearance'
+    | '/api/public/activation'
     | '/api/public/stt'
     | '/api/public/translate-broadcast'
     | '/api/public/tts'
     | '/api/public/widget-itinerary'
     | '/api/public/mercadopago/webhook'
     | '/api/public/payments/webhook'
+    | '/api/public/shared-result/$slug'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -456,12 +477,14 @@ export interface FileRouteTypes {
     | '/admin/mystifly-test'
     | '/admin/settings'
     | '/settings/appearance'
+    | '/api/public/activation'
     | '/api/public/stt'
     | '/api/public/translate-broadcast'
     | '/api/public/tts'
     | '/api/public/widget-itinerary'
     | '/api/public/mercadopago/webhook'
     | '/api/public/payments/webhook'
+    | '/api/public/shared-result/$slug'
   id:
     | '__root__'
     | '/'
@@ -498,12 +521,14 @@ export interface FileRouteTypes {
     | '/_app/admin/mystifly-test'
     | '/_app/admin/settings'
     | '/_app/settings/appearance'
+    | '/api/public/activation'
     | '/api/public/stt'
     | '/api/public/translate-broadcast'
     | '/api/public/tts'
     | '/api/public/widget-itinerary'
     | '/api/public/mercadopago/webhook'
     | '/api/public/payments/webhook'
+    | '/api/public/shared-result/$slug'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -522,12 +547,14 @@ export interface RootRouteChildren {
   CheckoutReturnRoute: typeof CheckoutReturnRoute
   LiveRoomCodeRoute: typeof LiveRoomCodeRoute
   RSlugRoute: typeof RSlugRoute
+  ApiPublicActivationRoute: typeof ApiPublicActivationRoute
   ApiPublicSttRoute: typeof ApiPublicSttRoute
   ApiPublicTranslateBroadcastRoute: typeof ApiPublicTranslateBroadcastRoute
   ApiPublicTtsRoute: typeof ApiPublicTtsRoute
   ApiPublicWidgetItineraryRoute: typeof ApiPublicWidgetItineraryRoute
   ApiPublicMercadopagoWebhookRoute: typeof ApiPublicMercadopagoWebhookRoute
   ApiPublicPaymentsWebhookRoute: typeof ApiPublicPaymentsWebhookRoute
+  ApiPublicSharedResultSlugRoute: typeof ApiPublicSharedResultSlugRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -763,6 +790,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicSttRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/activation': {
+      id: '/api/public/activation'
+      path: '/api/public/activation'
+      fullPath: '/api/public/activation'
+      preLoaderRoute: typeof ApiPublicActivationRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/_app/settings/appearance': {
       id: '/_app/settings/appearance'
       path: '/settings/appearance'
@@ -797,6 +831,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/admin/financial'
       preLoaderRoute: typeof AppAdminFinancialRouteImport
       parentRoute: typeof AppRoute
+    }
+    '/api/public/shared-result/$slug': {
+      id: '/api/public/shared-result/$slug'
+      path: '/api/public/shared-result/$slug'
+      fullPath: '/api/public/shared-result/$slug'
+      preLoaderRoute: typeof ApiPublicSharedResultSlugRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/api/public/payments/webhook': {
       id: '/api/public/payments/webhook'
@@ -877,12 +918,14 @@ const rootRouteChildren: RootRouteChildren = {
   CheckoutReturnRoute: CheckoutReturnRoute,
   LiveRoomCodeRoute: LiveRoomCodeRoute,
   RSlugRoute: RSlugRoute,
+  ApiPublicActivationRoute: ApiPublicActivationRoute,
   ApiPublicSttRoute: ApiPublicSttRoute,
   ApiPublicTranslateBroadcastRoute: ApiPublicTranslateBroadcastRoute,
   ApiPublicTtsRoute: ApiPublicTtsRoute,
   ApiPublicWidgetItineraryRoute: ApiPublicWidgetItineraryRoute,
   ApiPublicMercadopagoWebhookRoute: ApiPublicMercadopagoWebhookRoute,
   ApiPublicPaymentsWebhookRoute: ApiPublicPaymentsWebhookRoute,
+  ApiPublicSharedResultSlugRoute: ApiPublicSharedResultSlugRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

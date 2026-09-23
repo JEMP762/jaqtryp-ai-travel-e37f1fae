@@ -33,8 +33,8 @@ export const saveOnboarding = createServerFn({ method: "POST" })
       intent: data.intent,
       status: data.status,
       current_step: data.currentStep,
-      draft: data.draft,
-      source_context: data.sourceContext,
+      draft: data.draft as any,
+      source_context: data.sourceContext as any,
       variant: data.variant,
       completed_at: data.status === "completed" ? new Date().toISOString() : null,
       updated_at: new Date().toISOString(),
@@ -61,7 +61,7 @@ export const trackActivation = createServerFn({ method: "POST" })
       source: data.source ?? null,
       campaign: data.campaign ?? null,
       variant: data.variant,
-      properties: data.properties,
+      properties: data.properties as any,
     });
     if (error) throw new Error(error.message);
     return { ok: true };

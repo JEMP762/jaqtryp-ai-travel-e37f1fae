@@ -21,10 +21,11 @@ export function ResultActions({ resultId, title }: { resultId: string; title: st
     setBusy(true);
     try {
       const link = await getUrl();
-      if (navigator.share) await navigator.share({ title, text: "Confira este resultado criado com JAQTRYP AI", url: link });
+      const nativeShare = typeof navigator.share === "function";
+      if (nativeShare) await navigator.share({ title, text: "Confira este resultado criado com JAQTRYP AI", url: link });
       else await navigator.clipboard.writeText(link);
       track();
-      toast.success(navigator.share ? "Compartilhado!" : "Link copiado!");
+      toast.success(nativeShare ? "Compartilhado!" : "Link copiado!");
     } catch (error) {
       if ((error as Error).name !== "AbortError") toast.error("Não foi possível compartilhar.");
     } finally {
