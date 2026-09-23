@@ -19,4 +19,4 @@
 - [x] Validar página, preços e seletores do widget em celular e computador
 - [ ] Validar geração, tradução, PDF e débitos reais com uma execução autorizada
 - [x] Implementar e validar monetização opcional no link de roteiro com logo
-- [ ] Corrigir e validar o salvamento seguro da senha de venda no ambiente publicado
+- [x] Corrigir e validar o salvamento seguro da senha de venda no ambiente publicado
