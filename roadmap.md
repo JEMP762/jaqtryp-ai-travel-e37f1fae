@@ -18,3 +18,4 @@
 - [x] Cobrar traduções do proprietário pelo custo vigente do tradutor
 - [x] Validar página, preços e seletores do widget em celular e computador
 - [ ] Validar geração, tradução, PDF e débitos reais com uma execução autorizada
+- [ ] Implementar e validar monetização opcional no link de roteiro com logo
