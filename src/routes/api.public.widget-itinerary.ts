@@ -2,6 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { createHash } from "crypto";
 import { z } from "zod";
 import { chargeFeature, checkBalance } from "@/lib/credit-charge.server";
+import { ITINERARY_INTEREST_IDS, itineraryInterestPrompt } from "@/lib/itinerary-interests";
 
 const BRAND_BUCKET = "brand-logos";
 const FEATURE_KEY = "trip_create_branded";
@@ -46,6 +47,8 @@ const generateSchema = z.object({
   startDate: z.string().max(20).optional().nullable(),
   travelers: z.number().int().min(1).max(20).optional().nullable(),
   style: z.string().max(80).optional().nullable(),
+  interestIds: z.array(z.enum(ITINERARY_INTEREST_IDS as [string, ...string[]])).max(10).optional().default([]),
+  customInterests: z.string().max(500).optional().nullable(),
   budget: z.string().max(40).optional().nullable(),
   currency: currencySchema.optional().default("BRL"),
   language: languageSchema.optional().default("pt"),
@@ -59,17 +62,17 @@ const translateSchema = z.object({
   generationId: z.string().uuid(),
   originalText: z.string().min(20).max(100000),
   targetLanguage: languageSchema.exclude(["pt"]),
-  accessPassword: z.string().min(6).max(100).optional(),
 });
 
-const unlockSchema = z.object({
-  action: z.literal("unlock"),
+const startPixSchema = z.object({
+  action: z.literal("start_pix"),
   slug: z.string().min(2).max(40),
   generationId: z.string().uuid(),
-  password: z.string().min(6).max(100),
 });
 
-const payloadSchema = z.union([generateSchema, translateSchema, unlockSchema]);
+const paymentStatusSchema = z.object({ action: z.literal("payment_status"), slug: z.string().min(2).max(40), generationId: z.string().uuid(), purchaseId: z.string().uuid() });
+
+const payloadSchema = z.union([generateSchema, translateSchema, startPixSchema, paymentStatusSchema]);
 
 function resultHash(widgetId: string, text: string) {
   return createHash("sha256").update(`${widgetId}:${text}`).digest("hex");
@@ -77,14 +80,10 @@ function resultHash(widgetId: string, text: string) {
 
 function isMonetized(widget: {
   monetization_enabled: boolean;
-  payment_url: string | null;
   itinerary_price: number | null;
-  unlock_password_hash: string | null;
-  unlock_password_salt: string | null;
+  mercadopago_connected: boolean;
 }) {
-  return widget.monetization_enabled && Boolean(
-    widget.payment_url && widget.itinerary_price && widget.unlock_password_hash && widget.unlock_password_salt,
-  );
+  return widget.monetization_enabled && widget.mercadopago_connected && Boolean(widget.itinerary_price);
 }
 
 function firstDayPreview(markdown: string) {
@@ -94,13 +93,6 @@ function firstDayPreview(markdown: string) {
     .filter((index) => index >= 0);
   const end = dayHeadings.length > 1 ? dayHeadings[1] : lines.length;
   return lines.slice(0, end).join("\n").trim();
-}
-
-async function passwordMatches(password: string, hash: string | null, salt: string | null) {
-  if (!hash || !salt) return false;
-  const security = await import("@/lib/widget-monetization.server");
-  const candidate = await security.hashWidgetPassword(password, salt);
-  return security.safeHashEqual(candidate, hash);
 }
 
 async function aiText(system: string, prompt: string) {
@@ -150,7 +142,7 @@ export const Route = createFileRoute("/api/public/widget-itinerary")({
         const sb = await admin();
         const { data: widget } = await sb
           .from("trip_widgets")
-          .select("slug, headline, intro, owner_id, active, monetization_enabled, payment_url, itinerary_price, unlock_password_hash, unlock_password_salt")
+          .select("slug, headline, intro, owner_id, active, monetization_enabled, itinerary_price, mercadopago_connected")
           .eq("slug", slug)
           .eq("active", true)
           .maybeSingle();
@@ -186,7 +178,6 @@ export const Route = createFileRoute("/api/public/widget-itinerary")({
           itineraryCost: Number(itineraryCost ?? 0),
           translationCost: Number(translationCost ?? 0),
           monetized: isMonetized(widget),
-          paymentUrl: isMonetized(widget) ? widget.payment_url : null,
           price: isMonetized(widget) ? Number(widget.itinerary_price) : null,
         });
       },
@@ -202,7 +193,7 @@ export const Route = createFileRoute("/api/public/widget-itinerary")({
         const sb = await admin();
         const { data: widget } = await sb
           .from("trip_widgets")
-          .select("id, owner_id, active, allowed_domains, max_per_hour, max_per_day, monetization_enabled, payment_url, itinerary_price, unlock_password_hash, unlock_password_salt")
+          .select("id, owner_id, active, allowed_domains, max_per_hour, max_per_day, monetization_enabled, itinerary_price, mercadopago_connected")
           .eq("slug", slug)
           .eq("active", true)
           .maybeSingle();
@@ -220,44 +211,53 @@ export const Route = createFileRoute("/api/public/widget-itinerary")({
           if (!ok) return json({ error: "Domínio não autorizado para este widget." }, 403);
         }
 
-        if (input.action === "unlock") {
+        if (input.action === "start_pix") {
           const { data: generation } = await sb
             .from("trip_widget_generations")
-            .select("id, visitor_hash, protected_text, protected_original_text, unlock_attempt_count, unlock_window_started_at")
+            .select("id, visitor_hash, protected_text")
             .eq("id", input.generationId)
             .eq("widget_id", widget.id)
             .eq("owner_id", widget.owner_id)
             .eq("status", "ok")
             .maybeSingle();
-          if (!generation || !isMonetized(widget) || !generation.protected_text || !generation.protected_original_text) {
-            return json({ error: "Roteiro indisponível para desbloqueio." }, 404);
-          }
+          if (!generation || !isMonetized(widget) || !generation.protected_text) return json({ error: "Roteiro indisponível para pagamento." }, 404);
           const requestVisitorHash = visitorHash(request, slug);
-          if (generation.visitor_hash !== requestVisitorHash) return json({ error: "Roteiro indisponível para desbloqueio." }, 403);
+          if (generation.visitor_hash !== requestVisitorHash) return json({ error: "Roteiro indisponível para pagamento." }, 403);
+          const { data: existing } = await sb.from("widget_itinerary_purchases").select("id, qr_code, qr_code_base64, expires_at, status").eq("generation_id", generation.id).maybeSingle();
+          if (existing && existing.status === "pending" && (!existing.expires_at || new Date(existing.expires_at).getTime() > Date.now())) return json({ purchaseId: existing.id, qrCode: existing.qr_code, qrCodeBase64: existing.qr_code_base64, expiresAt: existing.expires_at });
+          const { data: connection } = await sb.from("mercadopago_connections").select("access_token_encrypted").eq("owner_id", widget.owner_id).maybeSingle();
+          if (!connection) return json({ error: "O recebimento deste link está temporariamente indisponível." }, 503);
+          const { connectedMpFetch, decryptMercadoPagoToken } = await import("@/lib/mercadopago-connect.server");
+          const expiration = new Date(Date.now() + 30 * 60 * 1000);
+          const payment = await connectedMpFetch(await decryptMercadoPagoToken(connection.access_token_encrypted), "/v1/payments", {
+            method: "POST",
+            headers: { "X-Idempotency-Key": `widget-${generation.id}` },
+            body: JSON.stringify({ transaction_amount: Number(widget.itinerary_price), description: `Roteiro ${slug}`, payment_method_id: "pix", date_of_expiration: expiration.toISOString(), payer: { email: `buyer-${generation.id}@jaqtryp.com` }, external_reference: generation.id, metadata: { kind: "widget_itinerary", generation_id: generation.id, widget_id: widget.id } }),
+          });
+          const tx = payment?.point_of_interaction?.transaction_data ?? {};
+          if (!payment?.id || !tx.qr_code) return json({ error: "Não foi possível gerar o Pix." }, 502);
+          const { data: purchase, error: purchaseError } = await sb.from("widget_itinerary_purchases").upsert({ generation_id: generation.id, widget_id: widget.id, owner_id: widget.owner_id, visitor_hash: requestVisitorHash, provider_payment_id: String(payment.id), amount_brl: Number(widget.itinerary_price), status: "pending", qr_code: tx.qr_code, qr_code_base64: tx.qr_code_base64 ?? null, ticket_url: tx.ticket_url ?? null, expires_at: expiration.toISOString() }, { onConflict: "generation_id" }).select("id").single();
+          if (purchaseError || !purchase) return json({ error: "Não foi possível preparar o pagamento." }, 500);
+          return json({ purchaseId: purchase.id, qrCode: tx.qr_code, qrCodeBase64: tx.qr_code_base64 ?? null, expiresAt: expiration.toISOString() });
+        }
 
-          const windowStarted = generation.unlock_window_started_at
-            ? new Date(generation.unlock_window_started_at).getTime()
-            : 0;
-          const windowExpired = Date.now() - windowStarted > 15 * 60 * 1000;
-          const attempts = windowExpired ? 0 : generation.unlock_attempt_count;
-          if (attempts >= 5) return json({ error: "Muitas tentativas. Aguarde 15 minutos." }, 429);
-
-          const valid = await passwordMatches(input.password, widget.unlock_password_hash, widget.unlock_password_salt);
-          if (!valid) {
-            await sb.from("trip_widget_generations").update({
-              unlock_attempt_count: attempts + 1,
-              unlock_window_started_at: windowExpired ? new Date().toISOString() : generation.unlock_window_started_at,
-            }).eq("id", generation.id);
-            return json({ error: "Senha incorreta." }, 401);
+        if (input.action === "payment_status") {
+          const requestVisitorHash = visitorHash(request, slug);
+          const { data: purchase } = await sb.from("widget_itinerary_purchases").select("id, provider_payment_id, visitor_hash, status").eq("id", input.purchaseId).eq("generation_id", input.generationId).eq("widget_id", widget.id).maybeSingle();
+          if (!purchase || purchase.visitor_hash !== requestVisitorHash) return json({ error: "Pagamento não encontrado." }, 404);
+          if (purchase.status !== "approved" && purchase.provider_payment_id) {
+            const { syncWidgetPixPayment } = await import("@/lib/widget-pix.server");
+            await syncWidgetPixPayment(sb, purchase.provider_payment_id);
           }
-          await sb.from("trip_widget_generations").update({ unlock_attempt_count: 0, unlock_window_started_at: null }).eq("id", generation.id);
-          return json({ text: generation.protected_text, originalText: generation.protected_original_text });
+          const { data: generation } = await sb.from("trip_widget_generations").select("protected_text, protected_original_text, payment_unlocked_at").eq("id", input.generationId).eq("widget_id", widget.id).maybeSingle();
+          if (!generation?.payment_unlocked_at) return json({ status: "pending", unlocked: false });
+          return json({ status: "approved", unlocked: true, text: generation.protected_text, originalText: generation.protected_original_text });
         }
 
         if (input.action === "translate") {
           const { data: generation } = await sb
             .from("trip_widget_generations")
-            .select("id, widget_id, owner_id, result_hash, credits_spent, translation_credits, translated_languages")
+            .select("id, widget_id, owner_id, result_hash, credits_spent, translation_credits, translated_languages, payment_unlocked_at")
             .eq("id", input.generationId)
             .eq("widget_id", widget.id)
             .eq("owner_id", widget.owner_id)
@@ -266,11 +266,7 @@ export const Route = createFileRoute("/api/public/widget-itinerary")({
           if (!generation || generation.result_hash !== resultHash(widget.id, input.originalText)) {
             return json({ error: "Roteiro inválido para tradução." }, 403);
           }
-          if (isMonetized(widget) && !(input.accessPassword && await passwordMatches(
-            input.accessPassword,
-            widget.unlock_password_hash,
-            widget.unlock_password_salt,
-          ))) {
+          if (isMonetized(widget) && !generation.payment_unlocked_at) {
             return json({ error: "Desbloqueie o roteiro antes de traduzir." }, 403);
           }
           const preTranslation = await checkBalance(widget.owner_id, TRANSLATION_FEATURE_KEY);
@@ -366,9 +362,10 @@ export const Route = createFileRoute("/api/public/widget-itinerary")({
         }
 
         const system = `Você é um planejador de viagens especialista. Monte um roteiro dia a dia claro e bem estruturado em português usando markdown (## Dia 1, listas). Inclua manhã/tarde/noite, ideias de restaurantes, dicas de transporte e um resumo de orçamento no final. TODOS os preços devem estar em ${currency}.${dateBlock}`;
+        const interestPrompt = itineraryInterestPrompt(input.interestIds, input.customInterests ?? "");
         const prompt = `Planeje uma viagem de ${input.days} dias para ${input.destination}${
           input.startDate ? ` começando em ${input.startDate}` : ""
-        }. Viajantes: ${input.travelers ?? 1}. Estilo: ${input.style || "geral"}. Orçamento: ${
+        }. Viajantes: ${input.travelers ?? 1}. Estilo: ${input.style || "geral"}. Interesses: ${interestPrompt || "geral"}. Priorize as principais atrações relacionadas a todos os interesses selecionados sem tornar o cronograma impraticável. Orçamento: ${
           input.budget ? `${input.budget} ${currency}` : "não informado"
         }.`;
 
