@@ -1,6 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import type { Json } from "@/integrations/supabase/types";
 
 const intentSchema = z.enum(["itinerary", "flight_search", "image_translation", "document_translation", "travel_budget", "direct"]);
 const eventSchema = z.enum(["signup_completed", "onboarding_started", "onboarding_completed", "first_action", "first_result", "second_action", "share_clicked", "feature_discovered", "return_visit", "subscription_started"]);
@@ -33,8 +34,8 @@ export const saveOnboarding = createServerFn({ method: "POST" })
       intent: data.intent,
       status: data.status,
       current_step: data.currentStep,
-      draft: data.draft as any,
-      source_context: data.sourceContext as any,
+      draft: data.draft as Json,
+      source_context: data.sourceContext as Json,
       variant: data.variant,
       completed_at: data.status === "completed" ? new Date().toISOString() : null,
       updated_at: new Date().toISOString(),
@@ -61,7 +62,7 @@ export const trackActivation = createServerFn({ method: "POST" })
       source: data.source ?? null,
       campaign: data.campaign ?? null,
       variant: data.variant,
-      properties: data.properties as any,
+      properties: data.properties as Json,
     });
     if (error) throw new Error(error.message);
     return { ok: true };
@@ -81,7 +82,7 @@ export const saveUserResult = createServerFn({ method: "POST" })
       kind: data.kind,
       title: data.title,
       summary: data.summary ?? null,
-      payload: data.payload as any,
+      payload: data.payload as Json,
     }).select("id").single();
     if (error) throw new Error(error.message);
     return { id: result.id };
@@ -105,4 +106,24 @@ export const shareUserResult = createServerFn({ method: "POST" })
     });
     if (insertError) throw new Error(insertError.message);
     return { slug, path: result.kind === "itinerary" ? `/roteiro/${slug}` : `/traducao/${slug}` };
+  });
+
+export const getActivationFunnel = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const { data: role } = await context.supabase.from("user_roles").select("role").eq("user_id", context.userId).eq("role", "admin").maybeSingle();
+    if (!role) throw new Error("Acesso negado");
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const since = new Date(Date.now() - 30 * 86400000).toISOString();
+    const { data, error } = await supabaseAdmin.from("activation_events").select("event_name,feature,source,campaign,variant,created_at,user_id,visitor_id").gte("created_at", since).order("created_at", { ascending: false }).limit(5000);
+    if (error) throw new Error(error.message);
+    const rows = data ?? [];
+    const counts = rows.reduce<Record<string, number>>((acc, row) => { acc[row.event_name] = (acc[row.event_name] ?? 0) + 1; return acc; }, {});
+    const byVariant = rows.reduce<Record<string, Record<string, number>>>((acc, row) => {
+      const variant = row.variant || "default";
+      acc[variant] ??= {};
+      acc[variant][row.event_name] = (acc[variant][row.event_name] ?? 0) + 1;
+      return acc;
+    }, {});
+    return { counts, byVariant, recent: rows.slice(0, 100) };
   });
