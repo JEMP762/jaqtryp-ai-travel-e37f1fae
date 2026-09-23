@@ -14,7 +14,7 @@ export const ITINERARY_INTERESTS = [
 export const ITINERARY_INTEREST_IDS = ITINERARY_INTERESTS.map((interest) => interest.id);
 
 export function itineraryInterestPrompt(ids: string[], custom = "") {
-  const selected = ITINERARY_INTERESTS
+  const selected: string[] = ITINERARY_INTERESTS
     .filter((interest) => ids.includes(interest.id))
     .map((interest) => interest.prompt);
   if (custom.trim()) selected.push(custom.trim());

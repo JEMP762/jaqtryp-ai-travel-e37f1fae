@@ -1,11 +1,13 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { Loader2, Sparkles, Download, Languages, LockKeyhole, ExternalLink } from "lucide-react";
+import { Loader2, Sparkles, Download, Languages, LockKeyhole, Copy, CheckCircle2 } from "lucide-react";
 import * as React from "react";
 import ReactMarkdown from "react-markdown";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { ItineraryInterestPicker } from "@/components/planner/ItineraryInterestPicker";
+import { itineraryInterestPrompt } from "@/lib/itinerary-interests";
 import {
   Select,
   SelectContent,
@@ -128,6 +130,8 @@ function PublicWidgetPage() {
   const [startDate, setStartDate] = React.useState("");
   const [travelers, setTravelers] = React.useState("2");
   const [style, setStyle] = React.useState("Conforto");
+  const [selectedInterests, setSelectedInterests] = React.useState<string[]>([]);
+  const [customInterests, setCustomInterests] = React.useState("");
   const [budget, setBudget] = React.useState("");
   const [currency, setCurrency] = React.useState("BRL");
   const [language, setLanguage] = React.useState("pt");
@@ -141,8 +145,8 @@ function PublicWidgetPage() {
   const [activeLanguage, setActiveLanguage] = React.useState("pt");
   const [versions, setVersions] = React.useState<Record<string, string>>({});
   const [locked, setLocked] = React.useState(false);
-  const [accessPassword, setAccessPassword] = React.useState("");
   const [unlocking, setUnlocking] = React.useState(false);
+  const [pix, setPix] = React.useState<{ purchaseId: string; qrCode: string; qrCodeBase64: string | null; expiresAt: string | null } | null>(null);
 
   React.useEffect(() => {
     fetch(`/api/public/widget-itinerary?slug=${encodeURIComponent(slug)}`)
@@ -170,6 +174,7 @@ function PublicWidgetPage() {
           startDate: startDate || null,
           travelers: Number(travelers) || 1,
           style,
+           interests: itineraryInterestPrompt(selectedInterests, customInterests),
           budget: budget || null,
           currency,
           language,
@@ -184,7 +189,7 @@ function PublicWidgetPage() {
       setActiveLanguage(data.language as string);
       setVersions({ pt: data.originalText as string, [data.language as string]: data.text as string });
       setLocked(data.locked === true);
-      setAccessPassword("");
+      setPix(null);
     } catch (e) {
       toast.error((e as Error).message);
     } finally {
@@ -205,7 +210,7 @@ function PublicWidgetPage() {
       const resp = await fetch("/api/public/widget-itinerary", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ action: "translate", slug, generationId, originalText: originalPlan, targetLanguage: translateTo, accessPassword }),
+        body: JSON.stringify({ action: "translate", slug, generationId, originalText: originalPlan, targetLanguage: translateTo }),
       });
       const data = await resp.json();
       if (!resp.ok) throw new Error(data.error || "Não foi possível traduzir agora.");
@@ -220,29 +225,46 @@ function PublicWidgetPage() {
     }
   };
 
-  const unlock = async () => {
+  const startPix = async () => {
     if (!generationId || unlocking) return;
-    if (accessPassword.trim().length < 6) return toast.error("Digite a senha de acesso.");
     setUnlocking(true);
     try {
       const response = await fetch("/api/public/widget-itinerary", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ action: "unlock", slug, generationId, password: accessPassword.trim() }),
+        body: JSON.stringify({ action: "start_pix", slug, generationId }),
       });
       const data = await response.json();
-      if (!response.ok) throw new Error(data.error || "Não foi possível liberar o roteiro.");
-      setPlan(data.text as string);
-      setOriginalPlan(data.originalText as string);
-      setVersions({ pt: data.originalText as string, [activeLanguage]: data.text as string });
-      setLocked(false);
-      toast.success("Roteiro liberado");
+      if (!response.ok) throw new Error(data.error || "Não foi possível gerar o Pix.");
+      setPix(data);
     } catch (error) {
       toast.error((error as Error).message);
     } finally {
       setUnlocking(false);
     }
   };
+
+  React.useEffect(() => {
+    if (!locked || !generationId || !pix?.purchaseId) return;
+    const check = async () => {
+      const response = await fetch("/api/public/widget-itinerary", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ action: "payment_status", slug, generationId, purchaseId: pix.purchaseId }),
+      });
+      const data = await response.json();
+      if (response.ok && data.unlocked) {
+        setPlan(data.text);
+        setOriginalPlan(data.originalText);
+        setVersions({ pt: data.originalText, [activeLanguage]: data.text });
+        setLocked(false);
+        toast.success("Pagamento confirmado. Roteiro liberado!");
+      }
+    };
+    void check();
+    const timer = window.setInterval(() => void check(), 4000);
+    return () => window.clearInterval(timer);
+  }, [activeLanguage, generationId, locked, pix?.purchaseId, slug]);
 
   if (notFound) {
     return (
@@ -336,6 +358,7 @@ function PublicWidgetPage() {
               </Select>
             </div>
           </div>
+          <ItineraryInterestPicker selected={selectedInterests} onSelectedChange={setSelectedInterests} custom={customInterests} onCustomChange={setCustomInterests} />
           <div className="space-y-1.5">
             <Label>Moeda do orçamento</Label>
             <Select value={currency} onValueChange={setCurrency}>
@@ -467,18 +490,19 @@ function PublicWidgetPage() {
                         <p className="font-semibold">Roteiro completo</p>
                         <p className="mt-1 text-2xl font-bold">{new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(info.price ?? 0)}</p>
                       </div>
-                      {info.paymentUrl && (
-                        <Button asChild className="w-full">
-                          <a href={info.paymentUrl} target="_blank" rel="noopener noreferrer">Pagar e Liberar Roteiro <ExternalLink className="h-4 w-4" /></a>
+                      {!pix ? (
+                        <Button className="w-full" onClick={startPix} disabled={unlocking}>
+                          {unlocking ? <Loader2 className="h-4 w-4 animate-spin" /> : <LockKeyhole className="h-4 w-4" />} Pagar com Pix
                         </Button>
+                      ) : (
+                        <div className="space-y-3">
+                          {pix.qrCodeBase64 ? <img src={`data:image/png;base64,${pix.qrCodeBase64}`} alt="QR Code Pix" className="mx-auto h-44 w-44 rounded-md bg-white p-2" /> : null}
+                          <Button variant="outline" className="w-full" onClick={() => navigator.clipboard.writeText(pix.qrCode).then(() => toast.success("Código Pix copiado"))}>
+                            <Copy className="h-4 w-4" /> Copiar código Pix
+                          </Button>
+                          <p className="flex items-center justify-center gap-2 text-xs text-muted-foreground"><Loader2 className="h-3.5 w-3.5 animate-spin" /> Aguardando confirmação do pagamento</p>
+                        </div>
                       )}
-                      <div className="space-y-2 text-left">
-                        <Label htmlFor="access-password">Já pagou? Digite a senha de acesso</Label>
-                        <Input id="access-password" type="password" value={accessPassword} onChange={(event) => setAccessPassword(event.target.value)} maxLength={100} autoComplete="off" onKeyDown={(event) => { if (event.key === "Enter") void unlock(); }} />
-                        <Button variant="outline" className="w-full" onClick={unlock} disabled={unlocking}>
-                          {unlocking ? <Loader2 className="h-4 w-4 animate-spin" /> : <LockKeyhole className="h-4 w-4" />} Liberar roteiro
-                        </Button>
-                      </div>
                     </div>
                   </div>
                 </div>

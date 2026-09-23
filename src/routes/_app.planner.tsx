@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import { authedJsonHeaders } from "@/lib/authed-fetch";
 import { handleCreditError } from "@/lib/credit-error";
 import { TripWidgetPanel } from "@/components/planner/TripWidgetPanel";
+import { ItineraryInterestPicker } from "@/components/planner/ItineraryInterestPicker";
 import { ResultActions } from "@/components/ResultActions";
 import { NextSteps } from "@/components/NextSteps";
 import { saveUserResult, trackActivation } from "@/lib/activation.functions";
@@ -33,6 +34,7 @@ import { useI18n } from "@/lib/i18n/I18nProvider";
 import { supabase } from "@/integrations/supabase/client";
 import { checkPremiumAccessClient } from "@/lib/premium-access";
 import { Switch } from "@/components/ui/switch";
+import { itineraryInterestPrompt } from "@/lib/itinerary-interests";
 import {
   type Branding,
   loadBranding,
@@ -182,6 +184,7 @@ function PlannerPage() {
   const [budget, setBudget] = React.useState(search.budget ?? "");
   const [currency, setCurrency] = React.useState("BRL");
   const [interests, setInterests] = React.useState(search.style ?? "");
+  const [selectedInterests, setSelectedInterests] = React.useState<string[]>([]);
   const [loading, setLoading] = React.useState(false);
   const [plan, setPlan] = React.useState("");
   const [resultId, setResultId] = React.useState<string | null>(null);
@@ -314,10 +317,11 @@ function PlannerPage() {
         lang === "en"
           ? `You are an expert travel planner. Build a clear, well-structured day-by-day itinerary in English using markdown (## Day 1, bullet lists). Include morning/afternoon/evening, restaurant ideas, transport tips, and a budget summary at the end. ALL prices and the budget summary MUST be in ${currency} (${symbol}).${dateBlockEn}`
           : `Você é um planejador de viagens especialista. Monte um roteiro dia a dia claro e bem estruturado em português usando markdown (## Dia 1, listas). Inclua manhã/tarde/noite, ideias de restaurantes, dicas de transporte e um resumo de orçamento no final. TODOS os preços e o resumo de orçamento DEVEM estar em ${currency} (${symbol}).${dateBlockPt}`;
+      const interestPrompt = itineraryInterestPrompt(selectedInterests, interests);
       const prompt =
         lang === "en"
-          ? `Plan a ${nDays}-day trip to ${destination}${startDate ? ` starting ${startDate}` : ""}. Budget: ${budgetText}. Interests: ${interests || "general"}.`
-          : `Planeje uma viagem de ${nDays} dias para ${destination}${startDate ? ` começando em ${startDate}` : ""}. Orçamento: ${budgetText}. Interesses: ${interests || "geral"}.`;
+          ? `Plan a ${nDays}-day trip to ${destination}${startDate ? ` starting ${startDate}` : ""}. Budget: ${budgetText}. Interests: ${interestPrompt || "general"}. Prioritize the main attractions matching every selected interest without making the schedule impractical.`
+          : `Planeje uma viagem de ${nDays} dias para ${destination}${startDate ? ` começando em ${startDate}` : ""}. Orçamento: ${budgetText}. Interesses: ${interestPrompt || "geral"}. Priorize as principais atrações relacionadas a todos os interesses selecionados sem tornar o cronograma impraticável.`;
 
 
 
@@ -341,7 +345,7 @@ function PlannerPage() {
         kind: "itinerary",
         title: `Roteiro de ${destination}`,
         summary: `${nDays} dias${startDate ? ` a partir de ${startDate}` : ""}`,
-        payload: { markdown: generatedPlan, destination, days: nDays, startDate, budget, currency, interests, travelers: search.travelers ?? "" },
+        payload: { markdown: generatedPlan, destination, days: nDays, startDate, budget, currency, interests: interestPrompt, interestTemplates: selectedInterests, travelers: search.travelers ?? "" },
       } });
       setResultId(saved.id);
       await trackActivation({ data: { event: "first_result", feature: "itinerary", properties: { days: nDays } } }).catch(() => {});
@@ -430,15 +434,7 @@ function PlannerPage() {
           </div>
 
 
-          <div className="space-y-1.5">
-            <Label>Interesses</Label>
-            <Textarea
-              value={interests}
-              onChange={(e) => setInterests(e.target.value)}
-              placeholder="gastronomia, museus, vida noturna..."
-              rows={3}
-            />
-          </div>
+          <ItineraryInterestPicker selected={selectedInterests} onSelectedChange={setSelectedInterests} custom={interests} onCustomChange={setInterests} />
           <div className="space-y-3 rounded-xl border border-border/70 bg-background/40 p-4">
             <div className="flex items-center justify-between">
               <Label className="text-sm font-semibold">Marca da empresa</Label>
