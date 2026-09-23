@@ -10,22 +10,37 @@ import { lovable } from "@/integrations/lovable";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useI18n } from "@/lib/i18n/I18nProvider";
+import { onboardingDestination, saveEntryContext } from "@/lib/onboarding-context";
 
 export const Route = createFileRoute("/login")({
   component: LoginPage,
+  validateSearch: (search: Record<string, unknown>): { intent?: string; ref?: string } => ({
+    intent: typeof search.intent === "string" ? search.intent : undefined,
+    ref: typeof search.ref === "string" ? search.ref : undefined,
+  }),
+  head: () => ({ meta: [
+    { title: "Entrar — JAQTRYP AI" },
+    { name: "description", content: "Entre para continuar sua viagem no JAQTRYP AI." },
+    { property: "og:title", content: "Entrar — JAQTRYP AI" },
+    { property: "og:description", content: "Entre para continuar sua viagem no JAQTRYP AI." },
+    { property: "og:type", content: "website" },
+    { name: "twitter:card", content: "summary" },
+  ] }),
 });
 
 function LoginPage() {
   const { t } = useI18n();
   const { user } = useAuth();
   const nav = useNavigate();
+  const search = Route.useSearch();
   const [email, setEmail] = React.useState("");
   const [password, setPassword] = React.useState("");
   const [loading, setLoading] = React.useState(false);
 
   React.useEffect(() => {
-    if (user) nav({ to: "/dashboard" });
-  }, [user, nav]);
+    if (search.ref || search.intent) saveEntryContext({ ref: search.ref, intent: search.intent as any });
+    if (user) nav({ to: onboardingDestination() });
+  }, [user, nav, search.intent, search.ref]);
 
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -33,7 +48,7 @@ function LoginPage() {
     const { error } = await supabase.auth.signInWithPassword({ email, password });
     setLoading(false);
     if (error) toast.error(error.message);
-    else nav({ to: "/dashboard" });
+    else nav({ to: onboardingDestination() });
   };
 
   const [googleLoading, setGoogleLoading] = React.useState(false);
@@ -49,7 +64,7 @@ function LoginPage() {
         toast.error("Não foi possível entrar com o Google. Tente novamente.");
         return;
       }
-      nav({ to: "/dashboard" });
+      nav({ to: onboardingDestination() });
     } catch {
       toast.error("Não foi possível entrar com o Google. Tente novamente.");
     } finally {
@@ -64,7 +79,7 @@ function LoginPage() {
       footer={
         <>
           {t("auth.no")}{" "}
-          <Link to="/signup" className="text-primary hover:underline">
+          <Link to="/signup" search={{ intent: search.intent, ref: search.ref }} className="text-primary hover:underline">
             {t("auth.signup")}
           </Link>
         </>

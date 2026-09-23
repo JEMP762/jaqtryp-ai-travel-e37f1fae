@@ -19,20 +19,21 @@ const ACTIONS = [
   { to: "/credits", icon: Coins, label: "Recarregar" },
 ] as const;
 
-export function QuickActions() {
+export function QuickActions({ priority }: { priority?: string }) {
+  const actions = priority ? [...ACTIONS].sort((a, b) => Number(b.to === priority) - Number(a.to === priority)) : ACTIONS;
   return (
     <section aria-label="Ações rápidas">
       <h2 className="mb-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
         Ações rápidas
       </h2>
       <div className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1 md:grid md:grid-cols-4 md:overflow-visible lg:grid-cols-7">
-        {ACTIONS.map((a) => {
+        {actions.map((a) => {
           const Icon = a.icon;
           return (
             <Link
               key={a.to}
               to={a.to}
-              className="group flex min-w-[92px] shrink-0 flex-col items-center gap-2 rounded-2xl border border-border bg-card/60 px-3 py-3 text-center transition-all hover:border-primary/50 hover:shadow-glow md:min-w-0"
+              className={`group flex min-w-[92px] shrink-0 flex-col items-center gap-2 rounded-2xl border bg-card/60 px-3 py-3 text-center transition-all hover:border-primary/50 hover:shadow-glow md:min-w-0 ${a.to === priority ? "border-primary shadow-glow" : "border-border"}`}
             >
               <span className="grid h-9 w-9 place-items-center rounded-xl bg-primary/10 text-primary transition-transform group-hover:scale-110">
                 <Icon className="h-4 w-4" />

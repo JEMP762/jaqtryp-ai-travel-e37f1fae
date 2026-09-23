@@ -14,6 +14,45 @@ export type Database = {
   }
   public: {
     Tables: {
+      activation_events: {
+        Row: {
+          campaign: string | null
+          created_at: string
+          event_name: string
+          feature: string | null
+          id: string
+          properties: Json
+          source: string | null
+          user_id: string | null
+          variant: string
+          visitor_id: string | null
+        }
+        Insert: {
+          campaign?: string | null
+          created_at?: string
+          event_name: string
+          feature?: string | null
+          id?: string
+          properties?: Json
+          source?: string | null
+          user_id?: string | null
+          variant?: string
+          visitor_id?: string | null
+        }
+        Update: {
+          campaign?: string | null
+          created_at?: string
+          event_name?: string
+          feature?: string | null
+          id?: string
+          properties?: Json
+          source?: string | null
+          user_id?: string | null
+          variant?: string
+          visitor_id?: string | null
+        }
+        Relationships: []
+      }
       affiliate_clicks: {
         Row: {
           clicked_at: string
@@ -943,6 +982,45 @@ export type Database = {
         }
         Relationships: []
       }
+      shared_results: {
+        Row: {
+          active: boolean
+          created_at: string
+          id: string
+          kind: string
+          owner_id: string
+          public_payload: Json
+          slug: string
+          summary: string | null
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          created_at?: string
+          id?: string
+          kind: string
+          owner_id: string
+          public_payload?: Json
+          slug: string
+          summary?: string | null
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          created_at?: string
+          id?: string
+          kind?: string
+          owner_id?: string
+          public_payload?: Json
+          slug?: string
+          summary?: string | null
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       stay_orders: {
         Row: {
           accommodation_name: string | null
@@ -1285,6 +1363,78 @@ export type Database = {
           monthly_grant?: number
           monthly_reset_at?: string | null
           topup_balance?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      user_onboarding: {
+        Row: {
+          completed_at: string | null
+          current_step: number
+          draft: Json
+          intent: string
+          source_context: Json
+          started_at: string
+          status: string
+          updated_at: string
+          user_id: string
+          variant: string
+        }
+        Insert: {
+          completed_at?: string | null
+          current_step?: number
+          draft?: Json
+          intent?: string
+          source_context?: Json
+          started_at?: string
+          status?: string
+          updated_at?: string
+          user_id: string
+          variant?: string
+        }
+        Update: {
+          completed_at?: string | null
+          current_step?: number
+          draft?: Json
+          intent?: string
+          source_context?: Json
+          started_at?: string
+          status?: string
+          updated_at?: string
+          user_id?: string
+          variant?: string
+        }
+        Relationships: []
+      }
+      user_results: {
+        Row: {
+          id: string
+          kind: string
+          occurred_at: string
+          payload: Json
+          summary: string | null
+          title: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          id?: string
+          kind: string
+          occurred_at?: string
+          payload?: Json
+          summary?: string | null
+          title: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          id?: string
+          kind?: string
+          occurred_at?: string
+          payload?: Json
+          summary?: string | null
+          title?: string
           updated_at?: string
           user_id?: string
         }

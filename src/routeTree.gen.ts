@@ -16,6 +16,8 @@ import { Route as ForgotPasswordRouteImport } from './routes/forgot-password'
 import { Route as CheapFlightsRouteImport } from './routes/cheap-flights'
 import { Route as AppRouteImport } from './routes/_app'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as TraducaoSlugRouteImport } from './routes/traducao.$slug'
+import { Route as RoteiroSlugRouteImport } from './routes/roteiro.$slug'
 import { Route as RSlugRouteImport } from './routes/r.$slug'
 import { Route as LiveRoomCodeRouteImport } from './routes/live-room.$code'
 import { Route as CheckoutReturnRouteImport } from './routes/checkout.return'
@@ -30,6 +32,7 @@ import { Route as AppStaysRouteImport } from './routes/_app.stays'
 import { Route as AppShieldRouteImport } from './routes/_app.shield'
 import { Route as AppReferralsRouteImport } from './routes/_app.referrals'
 import { Route as AppPlannerRouteImport } from './routes/_app.planner'
+import { Route as AppOnboardingRouteImport } from './routes/_app.onboarding'
 import { Route as AppLiveTranslatorRouteImport } from './routes/_app.live-translator'
 import { Route as AppFlightsRouteImport } from './routes/_app.flights'
 import { Route as AppFileTranslatorRouteImport } from './routes/_app.file-translator'
@@ -42,11 +45,14 @@ import { Route as ApiPublicWidgetItineraryRouteImport } from './routes/api.publi
 import { Route as ApiPublicTtsRouteImport } from './routes/api.public.tts'
 import { Route as ApiPublicTranslateBroadcastRouteImport } from './routes/api.public.translate-broadcast'
 import { Route as ApiPublicSttRouteImport } from './routes/api.public.stt'
+import { Route as ApiPublicActivationRouteImport } from './routes/api.public.activation'
 import { Route as AppSettingsAppearanceRouteImport } from './routes/_app.settings.appearance'
 import { Route as AppAdminSettingsRouteImport } from './routes/_app.admin.settings'
 import { Route as AppAdminMystiflyTestRouteImport } from './routes/_app.admin.mystifly-test'
 import { Route as AppAdminMystiflyRouteImport } from './routes/_app.admin.mystifly'
 import { Route as AppAdminFinancialRouteImport } from './routes/_app.admin.financial'
+import { Route as AppAdminActivationRouteImport } from './routes/_app.admin.activation'
+import { Route as ApiPublicSharedResultSlugRouteImport } from './routes/api.public.shared-result.$slug'
 import { Route as ApiPublicPaymentsWebhookRouteImport } from './routes/api.public.payments.webhook'
 import { Route as ApiPublicMercadopagoWebhookRouteImport } from './routes/api.public.mercadopago.webhook'
 
@@ -82,6 +88,16 @@ const AppRoute = AppRouteImport.update({
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const TraducaoSlugRoute = TraducaoSlugRouteImport.update({
+  id: '/traducao/$slug',
+  path: '/traducao/$slug',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const RoteiroSlugRoute = RoteiroSlugRouteImport.update({
+  id: '/roteiro/$slug',
+  path: '/roteiro/$slug',
   getParentRoute: () => rootRouteImport,
 } as any)
 const RSlugRoute = RSlugRouteImport.update({
@@ -154,6 +170,11 @@ const AppPlannerRoute = AppPlannerRouteImport.update({
   path: '/planner',
   getParentRoute: () => AppRoute,
 } as any)
+const AppOnboardingRoute = AppOnboardingRouteImport.update({
+  id: '/onboarding',
+  path: '/onboarding',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppLiveTranslatorRoute = AppLiveTranslatorRouteImport.update({
   id: '/live-translator',
   path: '/live-translator',
@@ -216,6 +237,11 @@ const ApiPublicSttRoute = ApiPublicSttRouteImport.update({
   path: '/api/public/stt',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPublicActivationRoute = ApiPublicActivationRouteImport.update({
+  id: '/api/public/activation',
+  path: '/api/public/activation',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AppSettingsAppearanceRoute = AppSettingsAppearanceRouteImport.update({
   id: '/settings/appearance',
   path: '/settings/appearance',
@@ -241,6 +267,17 @@ const AppAdminFinancialRoute = AppAdminFinancialRouteImport.update({
   path: '/admin/financial',
   getParentRoute: () => AppRoute,
 } as any)
+const AppAdminActivationRoute = AppAdminActivationRouteImport.update({
+  id: '/admin/activation',
+  path: '/admin/activation',
+  getParentRoute: () => AppRoute,
+} as any)
+const ApiPublicSharedResultSlugRoute =
+  ApiPublicSharedResultSlugRouteImport.update({
+    id: '/api/public/shared-result/$slug',
+    path: '/api/public/shared-result/$slug',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiPublicPaymentsWebhookRoute =
   ApiPublicPaymentsWebhookRouteImport.update({
     id: '/api/public/payments/webhook',
@@ -269,6 +306,7 @@ export interface FileRoutesByFullPath {
   '/file-translator': typeof AppFileTranslatorRoute
   '/flights': typeof AppFlightsRoute
   '/live-translator': typeof AppLiveTranslatorRoute
+  '/onboarding': typeof AppOnboardingRoute
   '/planner': typeof AppPlannerRoute
   '/referrals': typeof AppReferralsRoute
   '/shield': typeof AppShieldRoute
@@ -283,17 +321,22 @@ export interface FileRoutesByFullPath {
   '/checkout/return': typeof CheckoutReturnRoute
   '/live-room/$code': typeof LiveRoomCodeRoute
   '/r/$slug': typeof RSlugRoute
+  '/roteiro/$slug': typeof RoteiroSlugRoute
+  '/traducao/$slug': typeof TraducaoSlugRoute
+  '/admin/activation': typeof AppAdminActivationRoute
   '/admin/financial': typeof AppAdminFinancialRoute
   '/admin/mystifly': typeof AppAdminMystiflyRoute
   '/admin/mystifly-test': typeof AppAdminMystiflyTestRoute
   '/admin/settings': typeof AppAdminSettingsRoute
   '/settings/appearance': typeof AppSettingsAppearanceRoute
+  '/api/public/activation': typeof ApiPublicActivationRoute
   '/api/public/stt': typeof ApiPublicSttRoute
   '/api/public/translate-broadcast': typeof ApiPublicTranslateBroadcastRoute
   '/api/public/tts': typeof ApiPublicTtsRoute
   '/api/public/widget-itinerary': typeof ApiPublicWidgetItineraryRoute
   '/api/public/mercadopago/webhook': typeof ApiPublicMercadopagoWebhookRoute
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
+  '/api/public/shared-result/$slug': typeof ApiPublicSharedResultSlugRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -310,6 +353,7 @@ export interface FileRoutesByTo {
   '/file-translator': typeof AppFileTranslatorRoute
   '/flights': typeof AppFlightsRoute
   '/live-translator': typeof AppLiveTranslatorRoute
+  '/onboarding': typeof AppOnboardingRoute
   '/planner': typeof AppPlannerRoute
   '/referrals': typeof AppReferralsRoute
   '/shield': typeof AppShieldRoute
@@ -324,17 +368,22 @@ export interface FileRoutesByTo {
   '/checkout/return': typeof CheckoutReturnRoute
   '/live-room/$code': typeof LiveRoomCodeRoute
   '/r/$slug': typeof RSlugRoute
+  '/roteiro/$slug': typeof RoteiroSlugRoute
+  '/traducao/$slug': typeof TraducaoSlugRoute
+  '/admin/activation': typeof AppAdminActivationRoute
   '/admin/financial': typeof AppAdminFinancialRoute
   '/admin/mystifly': typeof AppAdminMystiflyRoute
   '/admin/mystifly-test': typeof AppAdminMystiflyTestRoute
   '/admin/settings': typeof AppAdminSettingsRoute
   '/settings/appearance': typeof AppSettingsAppearanceRoute
+  '/api/public/activation': typeof ApiPublicActivationRoute
   '/api/public/stt': typeof ApiPublicSttRoute
   '/api/public/translate-broadcast': typeof ApiPublicTranslateBroadcastRoute
   '/api/public/tts': typeof ApiPublicTtsRoute
   '/api/public/widget-itinerary': typeof ApiPublicWidgetItineraryRoute
   '/api/public/mercadopago/webhook': typeof ApiPublicMercadopagoWebhookRoute
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
+  '/api/public/shared-result/$slug': typeof ApiPublicSharedResultSlugRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -353,6 +402,7 @@ export interface FileRoutesById {
   '/_app/file-translator': typeof AppFileTranslatorRoute
   '/_app/flights': typeof AppFlightsRoute
   '/_app/live-translator': typeof AppLiveTranslatorRoute
+  '/_app/onboarding': typeof AppOnboardingRoute
   '/_app/planner': typeof AppPlannerRoute
   '/_app/referrals': typeof AppReferralsRoute
   '/_app/shield': typeof AppShieldRoute
@@ -367,17 +417,22 @@ export interface FileRoutesById {
   '/checkout/return': typeof CheckoutReturnRoute
   '/live-room/$code': typeof LiveRoomCodeRoute
   '/r/$slug': typeof RSlugRoute
+  '/roteiro/$slug': typeof RoteiroSlugRoute
+  '/traducao/$slug': typeof TraducaoSlugRoute
+  '/_app/admin/activation': typeof AppAdminActivationRoute
   '/_app/admin/financial': typeof AppAdminFinancialRoute
   '/_app/admin/mystifly': typeof AppAdminMystiflyRoute
   '/_app/admin/mystifly-test': typeof AppAdminMystiflyTestRoute
   '/_app/admin/settings': typeof AppAdminSettingsRoute
   '/_app/settings/appearance': typeof AppSettingsAppearanceRoute
+  '/api/public/activation': typeof ApiPublicActivationRoute
   '/api/public/stt': typeof ApiPublicSttRoute
   '/api/public/translate-broadcast': typeof ApiPublicTranslateBroadcastRoute
   '/api/public/tts': typeof ApiPublicTtsRoute
   '/api/public/widget-itinerary': typeof ApiPublicWidgetItineraryRoute
   '/api/public/mercadopago/webhook': typeof ApiPublicMercadopagoWebhookRoute
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
+  '/api/public/shared-result/$slug': typeof ApiPublicSharedResultSlugRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -396,6 +451,7 @@ export interface FileRouteTypes {
     | '/file-translator'
     | '/flights'
     | '/live-translator'
+    | '/onboarding'
     | '/planner'
     | '/referrals'
     | '/shield'
@@ -410,17 +466,22 @@ export interface FileRouteTypes {
     | '/checkout/return'
     | '/live-room/$code'
     | '/r/$slug'
+    | '/roteiro/$slug'
+    | '/traducao/$slug'
+    | '/admin/activation'
     | '/admin/financial'
     | '/admin/mystifly'
     | '/admin/mystifly-test'
     | '/admin/settings'
     | '/settings/appearance'
+    | '/api/public/activation'
     | '/api/public/stt'
     | '/api/public/translate-broadcast'
     | '/api/public/tts'
     | '/api/public/widget-itinerary'
     | '/api/public/mercadopago/webhook'
     | '/api/public/payments/webhook'
+    | '/api/public/shared-result/$slug'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -437,6 +498,7 @@ export interface FileRouteTypes {
     | '/file-translator'
     | '/flights'
     | '/live-translator'
+    | '/onboarding'
     | '/planner'
     | '/referrals'
     | '/shield'
@@ -451,17 +513,22 @@ export interface FileRouteTypes {
     | '/checkout/return'
     | '/live-room/$code'
     | '/r/$slug'
+    | '/roteiro/$slug'
+    | '/traducao/$slug'
+    | '/admin/activation'
     | '/admin/financial'
     | '/admin/mystifly'
     | '/admin/mystifly-test'
     | '/admin/settings'
     | '/settings/appearance'
+    | '/api/public/activation'
     | '/api/public/stt'
     | '/api/public/translate-broadcast'
     | '/api/public/tts'
     | '/api/public/widget-itinerary'
     | '/api/public/mercadopago/webhook'
     | '/api/public/payments/webhook'
+    | '/api/public/shared-result/$slug'
   id:
     | '__root__'
     | '/'
@@ -479,6 +546,7 @@ export interface FileRouteTypes {
     | '/_app/file-translator'
     | '/_app/flights'
     | '/_app/live-translator'
+    | '/_app/onboarding'
     | '/_app/planner'
     | '/_app/referrals'
     | '/_app/shield'
@@ -493,17 +561,22 @@ export interface FileRouteTypes {
     | '/checkout/return'
     | '/live-room/$code'
     | '/r/$slug'
+    | '/roteiro/$slug'
+    | '/traducao/$slug'
+    | '/_app/admin/activation'
     | '/_app/admin/financial'
     | '/_app/admin/mystifly'
     | '/_app/admin/mystifly-test'
     | '/_app/admin/settings'
     | '/_app/settings/appearance'
+    | '/api/public/activation'
     | '/api/public/stt'
     | '/api/public/translate-broadcast'
     | '/api/public/tts'
     | '/api/public/widget-itinerary'
     | '/api/public/mercadopago/webhook'
     | '/api/public/payments/webhook'
+    | '/api/public/shared-result/$slug'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -522,12 +595,16 @@ export interface RootRouteChildren {
   CheckoutReturnRoute: typeof CheckoutReturnRoute
   LiveRoomCodeRoute: typeof LiveRoomCodeRoute
   RSlugRoute: typeof RSlugRoute
+  RoteiroSlugRoute: typeof RoteiroSlugRoute
+  TraducaoSlugRoute: typeof TraducaoSlugRoute
+  ApiPublicActivationRoute: typeof ApiPublicActivationRoute
   ApiPublicSttRoute: typeof ApiPublicSttRoute
   ApiPublicTranslateBroadcastRoute: typeof ApiPublicTranslateBroadcastRoute
   ApiPublicTtsRoute: typeof ApiPublicTtsRoute
   ApiPublicWidgetItineraryRoute: typeof ApiPublicWidgetItineraryRoute
   ApiPublicMercadopagoWebhookRoute: typeof ApiPublicMercadopagoWebhookRoute
   ApiPublicPaymentsWebhookRoute: typeof ApiPublicPaymentsWebhookRoute
+  ApiPublicSharedResultSlugRoute: typeof ApiPublicSharedResultSlugRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -579,6 +656,20 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/traducao/$slug': {
+      id: '/traducao/$slug'
+      path: '/traducao/$slug'
+      fullPath: '/traducao/$slug'
+      preLoaderRoute: typeof TraducaoSlugRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/roteiro/$slug': {
+      id: '/roteiro/$slug'
+      path: '/roteiro/$slug'
+      fullPath: '/roteiro/$slug'
+      preLoaderRoute: typeof RoteiroSlugRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/r/$slug': {
@@ -679,6 +770,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppPlannerRouteImport
       parentRoute: typeof AppRoute
     }
+    '/_app/onboarding': {
+      id: '/_app/onboarding'
+      path: '/onboarding'
+      fullPath: '/onboarding'
+      preLoaderRoute: typeof AppOnboardingRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/_app/live-translator': {
       id: '/_app/live-translator'
       path: '/live-translator'
@@ -763,6 +861,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicSttRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/activation': {
+      id: '/api/public/activation'
+      path: '/api/public/activation'
+      fullPath: '/api/public/activation'
+      preLoaderRoute: typeof ApiPublicActivationRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/_app/settings/appearance': {
       id: '/_app/settings/appearance'
       path: '/settings/appearance'
@@ -798,6 +903,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppAdminFinancialRouteImport
       parentRoute: typeof AppRoute
     }
+    '/_app/admin/activation': {
+      id: '/_app/admin/activation'
+      path: '/admin/activation'
+      fullPath: '/admin/activation'
+      preLoaderRoute: typeof AppAdminActivationRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/api/public/shared-result/$slug': {
+      id: '/api/public/shared-result/$slug'
+      path: '/api/public/shared-result/$slug'
+      fullPath: '/api/public/shared-result/$slug'
+      preLoaderRoute: typeof ApiPublicSharedResultSlugRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/payments/webhook': {
       id: '/api/public/payments/webhook'
       path: '/api/public/payments/webhook'
@@ -824,12 +943,14 @@ interface AppRouteChildren {
   AppFileTranslatorRoute: typeof AppFileTranslatorRoute
   AppFlightsRoute: typeof AppFlightsRoute
   AppLiveTranslatorRoute: typeof AppLiveTranslatorRoute
+  AppOnboardingRoute: typeof AppOnboardingRoute
   AppPlannerRoute: typeof AppPlannerRoute
   AppReferralsRoute: typeof AppReferralsRoute
   AppShieldRoute: typeof AppShieldRoute
   AppStaysRoute: typeof AppStaysRoute
   AppTranslatorRoute: typeof AppTranslatorRoute
   AppWalletRoute: typeof AppWalletRoute
+  AppAdminActivationRoute: typeof AppAdminActivationRoute
   AppAdminFinancialRoute: typeof AppAdminFinancialRoute
   AppAdminMystiflyRoute: typeof AppAdminMystiflyRoute
   AppAdminMystiflyTestRoute: typeof AppAdminMystiflyTestRoute
@@ -846,12 +967,14 @@ const AppRouteChildren: AppRouteChildren = {
   AppFileTranslatorRoute: AppFileTranslatorRoute,
   AppFlightsRoute: AppFlightsRoute,
   AppLiveTranslatorRoute: AppLiveTranslatorRoute,
+  AppOnboardingRoute: AppOnboardingRoute,
   AppPlannerRoute: AppPlannerRoute,
   AppReferralsRoute: AppReferralsRoute,
   AppShieldRoute: AppShieldRoute,
   AppStaysRoute: AppStaysRoute,
   AppTranslatorRoute: AppTranslatorRoute,
   AppWalletRoute: AppWalletRoute,
+  AppAdminActivationRoute: AppAdminActivationRoute,
   AppAdminFinancialRoute: AppAdminFinancialRoute,
   AppAdminMystiflyRoute: AppAdminMystiflyRoute,
   AppAdminMystiflyTestRoute: AppAdminMystiflyTestRoute,
@@ -877,12 +1000,16 @@ const rootRouteChildren: RootRouteChildren = {
   CheckoutReturnRoute: CheckoutReturnRoute,
   LiveRoomCodeRoute: LiveRoomCodeRoute,
   RSlugRoute: RSlugRoute,
+  RoteiroSlugRoute: RoteiroSlugRoute,
+  TraducaoSlugRoute: TraducaoSlugRoute,
+  ApiPublicActivationRoute: ApiPublicActivationRoute,
   ApiPublicSttRoute: ApiPublicSttRoute,
   ApiPublicTranslateBroadcastRoute: ApiPublicTranslateBroadcastRoute,
   ApiPublicTtsRoute: ApiPublicTtsRoute,
   ApiPublicWidgetItineraryRoute: ApiPublicWidgetItineraryRoute,
   ApiPublicMercadopagoWebhookRoute: ApiPublicMercadopagoWebhookRoute,
   ApiPublicPaymentsWebhookRoute: ApiPublicPaymentsWebhookRoute,
+  ApiPublicSharedResultSlugRoute: ApiPublicSharedResultSlugRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

@@ -1,0 +1,13 @@
+{
+  "version": "7",
+  "dialect": "postgresql",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "7",
+      "when": 1790163349955,
+      "tag": "0000_add_contextual_onboarding_and_activation",
+      "breakpoints": true
+    }
+  ]
+}

@@ -14,8 +14,17 @@ import {
 import { useI18n } from "@/lib/i18n/I18nProvider";
 import { authedJsonHeaders } from "@/lib/authed-fetch";
 import { handleCreditError } from "@/lib/credit-error";
+import { ResultActions } from "@/components/ResultActions";
+import { NextSteps } from "@/components/NextSteps";
+import { saveUserResult, trackActivation } from "@/lib/activation.functions";
 
 export const Route = createFileRoute("/_app/translator")({
+  validateSearch: (search: Record<string, unknown>): { action?: string } => ({ action: typeof search.action === "string" ? search.action : undefined }),
+  head: () => ({ meta: [
+    { title: "Tradutor — JAQTRYP AI" }, { name: "description", content: "Traduza textos e imagens para sua viagem." },
+    { property: "og:title", content: "Tradutor — JAQTRYP AI" }, { property: "og:description", content: "Traduza textos e imagens para sua viagem." },
+    { property: "og:type", content: "website" }, { name: "twitter:card", content: "summary" },
+  ] }),
   component: TranslatorPage,
 });
 
@@ -43,6 +52,7 @@ function TranslatorPage() {
   const [to, setTo] = React.useState("en");
   const [src, setSrc] = React.useState("");
   const [out, setOut] = React.useState("");
+  const [resultId, setResultId] = React.useState<string | null>(null);
   const [loading, setLoading] = React.useState(false);
   const [listening, setListening] = React.useState(false);
   const recognitionRef = React.useRef<any>(null);
@@ -97,7 +107,11 @@ function TranslatorPage() {
         translation = cleaned;
       }
       if (original) setSrc(original);
-      setOut(translation || cleaned);
+      const translated = translation || cleaned;
+      setOut(translated);
+      const saved = await saveUserResult({ data: { kind: "translation", title: "Tradução de imagem", summary: `${fromName} → ${toName}`, payload: { original, translation: translated, from, to } } });
+      setResultId(saved.id);
+      await trackActivation({ data: { event: "first_result", feature: "image_translation", properties: {} } }).catch(() => {});
       toast.success("Texto extraído e traduzido!");
     } catch (e) {
       if (!handleCreditError(e)) toast.error((e as Error).message);
@@ -140,6 +154,9 @@ function TranslatorPage() {
     try {
       const res = await translateText(src, from, to);
       setOut(res);
+      const saved = await saveUserResult({ data: { kind: "translation", title: "Tradução", summary: `${LANGS.find((l) => l.code === from)?.name ?? from} → ${LANGS.find((l) => l.code === to)?.name ?? to}`, payload: { original: src, translation: res, from, to } } });
+      setResultId(saved.id);
+      await trackActivation({ data: { event: "first_result", feature: "translation", properties: {} } }).catch(() => {});
     } catch (e) {
       if (!handleCreditError(e)) toast.error((e as Error).message);
     } finally {
@@ -437,6 +454,8 @@ function TranslatorPage() {
               out || <span className="text-muted-foreground">Tradução aparecerá aqui</span>
             )}
           </div>
+          {out && resultId && <ResultActions resultId={resultId} title="Tradução" />}
+          {out && <NextSteps kind="translation" />}
         </div>
       </div>
 

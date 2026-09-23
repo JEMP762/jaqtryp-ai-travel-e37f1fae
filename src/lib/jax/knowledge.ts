@@ -14,6 +14,13 @@ export type JaxTopic = {
 
 export const JAX_TOPICS: JaxTopic[] = [
   {
+    path: "/onboarding",
+    name: "Primeiros passos",
+    what: "Ajuda o usuário a concluir apenas a ação escolhida, preservando as respostas já informadas.",
+    steps: ["Responda ao passo atual.", "Continue para revisar e gerar o primeiro resultado."],
+    suggestions: ["O que preciso preencher agora?", "Posso alterar isso depois?"],
+  },
+  {
     path: "/dashboard",
     name: "Painel (Dashboard)",
     what: "Tela inicial com resumo da conta, saldo de créditos, atalhos para todos os recursos e ativação de notificações.",

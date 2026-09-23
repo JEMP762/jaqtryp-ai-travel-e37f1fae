@@ -6,6 +6,9 @@ import { toast } from "sonner";
 import { authedJsonHeaders } from "@/lib/authed-fetch";
 import { handleCreditError } from "@/lib/credit-error";
 import { TripWidgetPanel } from "@/components/planner/TripWidgetPanel";
+import { ResultActions } from "@/components/ResultActions";
+import { NextSteps } from "@/components/NextSteps";
+import { saveUserResult, trackActivation } from "@/lib/activation.functions";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -141,6 +144,19 @@ function loadingHtml(msg: string) {
 }
 
 export const Route = createFileRoute("/_app/planner")({
+  validateSearch: (search: Record<string, unknown>): { destination?: string; startDate?: string; days?: string; travelers?: string; style?: string; budget?: string } => ({
+    destination: typeof search.destination === "string" ? search.destination : undefined,
+    startDate: typeof search.startDate === "string" ? search.startDate : undefined,
+    days: typeof search.days === "string" ? search.days : undefined,
+    travelers: typeof search.travelers === "string" ? search.travelers : undefined,
+    style: typeof search.style === "string" ? search.style : undefined,
+    budget: typeof search.budget === "string" ? search.budget : undefined,
+  }),
+  head: () => ({ meta: [
+    { title: "Planejador de viagem — JAQTRYP AI" }, { name: "description", content: "Crie e salve um roteiro completo com inteligência artificial." },
+    { property: "og:title", content: "Planejador de viagem — JAQTRYP AI" }, { property: "og:description", content: "Crie e salve um roteiro completo com inteligência artificial." },
+    { property: "og:type", content: "website" }, { name: "twitter:card", content: "summary" },
+  ] }),
   component: PlannerPage,
 });
 
@@ -159,14 +175,16 @@ const CURRENCIES = [
 
 function PlannerPage() {
   const { lang } = useI18n();
-  const [destination, setDestination] = React.useState("");
-  const [days, setDays] = React.useState<string>("");
-  const [startDate, setStartDate] = React.useState<string>("");
-  const [budget, setBudget] = React.useState("");
+  const search = Route.useSearch();
+  const [destination, setDestination] = React.useState(search.destination ?? "");
+  const [days, setDays] = React.useState<string>(search.days ?? "");
+  const [startDate, setStartDate] = React.useState<string>(search.startDate ?? "");
+  const [budget, setBudget] = React.useState(search.budget ?? "");
   const [currency, setCurrency] = React.useState("BRL");
-  const [interests, setInterests] = React.useState("");
+  const [interests, setInterests] = React.useState(search.style ?? "");
   const [loading, setLoading] = React.useState(false);
   const [plan, setPlan] = React.useState("");
+  const [resultId, setResultId] = React.useState<string | null>(null);
   const [exporting, setExporting] = React.useState(false);
   const [isPro, setIsPro] = React.useState<boolean | null>(null);
   const [branding, setBranding] = React.useState<Branding>({
@@ -317,7 +335,16 @@ function PlannerPage() {
       const data = await resp.json();
       if (resp.status === 402) throw new Error(data.error || "Créditos insuficientes. Adicione créditos em /billing.");
       if (!resp.ok) throw new Error(data.error || "Erro");
-      setPlan(data.text as string);
+      const generatedPlan = data.text as string;
+      setPlan(generatedPlan);
+      const saved = await saveUserResult({ data: {
+        kind: "itinerary",
+        title: `Roteiro de ${destination}`,
+        summary: `${nDays} dias${startDate ? ` a partir de ${startDate}` : ""}`,
+        payload: { markdown: generatedPlan, destination, days: nDays, startDate, budget, currency, interests, travelers: search.travelers ?? "" },
+      } });
+      setResultId(saved.id);
+      await trackActivation({ data: { event: "first_result", feature: "itinerary", properties: { days: nDays } } }).catch(() => {});
       setPlanBrand(
         branded
           ? { logoUrl: branding.logoUrl, company: companyName.trim() || null }
@@ -567,6 +594,8 @@ function PlannerPage() {
               <div className="prose prose-sm prose-invert max-w-none">
                 <ReactMarkdown>{plan}</ReactMarkdown>
               </div>
+              {resultId && <ResultActions resultId={resultId} title={`Roteiro de ${destination}`} />}
+              <NextSteps kind="itinerary" />
             </>
           ) : (
             <div className="grid h-full place-items-center text-center text-muted-foreground">
