@@ -36,6 +36,13 @@
       "when": 1790165265705,
       "tag": "0004_extend_widget_itinerary_languages",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1790166649012,
+      "tag": "0005_add_widget_link_monetization",
+      "breakpoints": true
     }
   ]
 }
