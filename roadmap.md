@@ -22,3 +22,4 @@
 - [x] Corrigir e validar o salvamento seguro da senha de venda no ambiente publicado
 - [x] Adicionar preferências combináveis aos geradores principal e público
 - [ ] Conectar cada proprietário ao Mercado Pago e validar o Pix real com credenciais de marketplace
+- [x] Garantir que usuários conectem o Mercado Pago sem informar credenciais técnicas
