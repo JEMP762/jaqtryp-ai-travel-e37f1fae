@@ -1,6 +1,8 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import * as React from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { Button } from "@/components/ui/button";
+import { onboardingDestination } from "@/lib/onboarding-context";
 
 export const Route = createFileRoute("/auth/callback")({
   component: AuthCallback,
@@ -29,7 +31,7 @@ function AuthCallback() {
     const go = () => {
       if (done) return;
       done = true;
-      let dest = "/dashboard";
+      let dest = onboardingDestination();
       try {
         const saved = window.sessionStorage.getItem(DEST_KEY);
         if (saved && saved.startsWith("/") && !saved.startsWith("//")) dest = saved;
@@ -69,12 +71,11 @@ function AuthCallback() {
           <p className="text-sm text-muted-foreground">
             Tente novamente pela tela de entrada.
           </p>
-          <button
+          <Button
             onClick={() => nav({ to: "/login", replace: true })}
-            className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground"
           >
             Voltar para o login
-          </button>
+          </Button>
         </div>
       ) : (
         <div className="space-y-3">

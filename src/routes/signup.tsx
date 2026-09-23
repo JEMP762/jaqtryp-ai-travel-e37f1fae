@@ -11,9 +11,19 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useI18n } from "@/lib/i18n/I18nProvider";
 import { applyReferralCode } from "@/lib/referrals.functions";
+import { onboardingDestination, saveEntryContext } from "@/lib/onboarding-context";
+import { trackActivation } from "@/lib/activation.functions";
 
 export const Route = createFileRoute("/signup")({
   component: SignupPage,
+  head: () => ({ meta: [
+    { title: "Criar conta — JAQTRYP AI" },
+    { name: "description", content: "Crie sua conta e continue sua primeira experiência no JAQTRYP AI." },
+    { property: "og:title", content: "Criar conta — JAQTRYP AI" },
+    { property: "og:description", content: "Crie sua conta e continue sua primeira experiência no JAQTRYP AI." },
+    { property: "og:type", content: "website" },
+    { name: "twitter:card", content: "summary" },
+  ] }),
   validateSearch: (
     search: Record<string, unknown>,
   ): { intent?: string; ref?: string } => ({
@@ -40,10 +50,8 @@ function SignupPage() {
   // Persist ?ref= for signup flows that pass through Google OAuth
   React.useEffect(() => {
     if (typeof window === "undefined") return;
-    if (search.ref) {
-      window.sessionStorage.setItem(REF_STORAGE_KEY, search.ref);
-    }
-  }, [search.ref]);
+    if (search.ref || search.intent) saveEntryContext({ ref: search.ref, intent: search.intent as any });
+  }, [search.ref, search.intent]);
 
   const consumeRefAndApply = React.useCallback(async () => {
     if (typeof window === "undefined") return;
@@ -61,7 +69,7 @@ function SignupPage() {
 
   React.useEffect(() => {
     if (user) {
-      consumeRefAndApply().finally(() => nav({ to: "/dashboard" }));
+      consumeRefAndApply().finally(() => nav({ to: onboardingDestination() }));
     }
   }, [user, nav, consumeRefAndApply]);
 
@@ -91,7 +99,7 @@ function SignupPage() {
       email,
       password,
       options: {
-        emailRedirectTo: `${window.location.origin}/dashboard`,
+        emailRedirectTo: `${window.location.origin}/auth/callback`,
         data: { full_name: name },
       },
     });
@@ -103,7 +111,8 @@ function SignupPage() {
     } else {
       toast.success("Conta criada com sucesso!");
       await consumeRefAndApply();
-      nav({ to: "/dashboard" });
+      await trackActivation({ data: { event: "signup_completed", feature: search.intent, properties: {} } }).catch(() => {});
+      nav({ to: onboardingDestination() });
     }
   };
 
@@ -119,7 +128,7 @@ function SignupPage() {
         toast.error("Não foi possível entrar com o Google. Tente novamente.");
         return;
       }
-      nav({ to: "/dashboard" });
+      nav({ to: onboardingDestination() });
     } catch {
       toast.error("Não foi possível entrar com o Google. Tente novamente.");
     } finally {
@@ -135,7 +144,7 @@ function SignupPage() {
         <div className="space-y-1 text-center">
           <div>
             {t("auth.have")}{" "}
-            <Link to="/login" className="text-primary hover:underline">
+            <Link to="/login" search={{ intent: search.intent, ref: search.ref }} className="text-primary hover:underline">
               {t("auth.signin")}
             </Link>
           </div>
