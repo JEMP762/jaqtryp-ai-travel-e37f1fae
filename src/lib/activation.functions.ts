@@ -81,7 +81,7 @@ export const saveUserResult = createServerFn({ method: "POST" })
       kind: data.kind,
       title: data.title,
       summary: data.summary ?? null,
-      payload: data.payload,
+      payload: data.payload as any,
     }).select("id").single();
     if (error) throw new Error(error.message);
     return { id: result.id };
