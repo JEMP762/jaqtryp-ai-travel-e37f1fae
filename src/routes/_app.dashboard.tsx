@@ -6,6 +6,7 @@ import { useI18n } from "@/lib/i18n/I18nProvider";
 import { DashboardCreditsCard } from "@/components/DashboardCreditsCard";
 import { PushOptIn } from "@/components/PushOptIn";
 import { QuickActions } from "@/components/QuickActions";
+import { Button } from "@/components/ui/button";
 import { getActivationState, trackActivation } from "@/lib/activation.functions";
 import { optionFor } from "@/lib/onboarding-config";
 

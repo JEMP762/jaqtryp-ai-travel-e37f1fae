@@ -51,6 +51,7 @@ import { Route as AppAdminSettingsRouteImport } from './routes/_app.admin.settin
 import { Route as AppAdminMystiflyTestRouteImport } from './routes/_app.admin.mystifly-test'
 import { Route as AppAdminMystiflyRouteImport } from './routes/_app.admin.mystifly'
 import { Route as AppAdminFinancialRouteImport } from './routes/_app.admin.financial'
+import { Route as AppAdminActivationRouteImport } from './routes/_app.admin.activation'
 import { Route as ApiPublicSharedResultSlugRouteImport } from './routes/api.public.shared-result.$slug'
 import { Route as ApiPublicPaymentsWebhookRouteImport } from './routes/api.public.payments.webhook'
 import { Route as ApiPublicMercadopagoWebhookRouteImport } from './routes/api.public.mercadopago.webhook'
@@ -266,6 +267,11 @@ const AppAdminFinancialRoute = AppAdminFinancialRouteImport.update({
   path: '/admin/financial',
   getParentRoute: () => AppRoute,
 } as any)
+const AppAdminActivationRoute = AppAdminActivationRouteImport.update({
+  id: '/admin/activation',
+  path: '/admin/activation',
+  getParentRoute: () => AppRoute,
+} as any)
 const ApiPublicSharedResultSlugRoute =
   ApiPublicSharedResultSlugRouteImport.update({
     id: '/api/public/shared-result/$slug',
@@ -317,6 +323,7 @@ export interface FileRoutesByFullPath {
   '/r/$slug': typeof RSlugRoute
   '/roteiro/$slug': typeof RoteiroSlugRoute
   '/traducao/$slug': typeof TraducaoSlugRoute
+  '/admin/activation': typeof AppAdminActivationRoute
   '/admin/financial': typeof AppAdminFinancialRoute
   '/admin/mystifly': typeof AppAdminMystiflyRoute
   '/admin/mystifly-test': typeof AppAdminMystiflyTestRoute
@@ -363,6 +370,7 @@ export interface FileRoutesByTo {
   '/r/$slug': typeof RSlugRoute
   '/roteiro/$slug': typeof RoteiroSlugRoute
   '/traducao/$slug': typeof TraducaoSlugRoute
+  '/admin/activation': typeof AppAdminActivationRoute
   '/admin/financial': typeof AppAdminFinancialRoute
   '/admin/mystifly': typeof AppAdminMystiflyRoute
   '/admin/mystifly-test': typeof AppAdminMystiflyTestRoute
@@ -411,6 +419,7 @@ export interface FileRoutesById {
   '/r/$slug': typeof RSlugRoute
   '/roteiro/$slug': typeof RoteiroSlugRoute
   '/traducao/$slug': typeof TraducaoSlugRoute
+  '/_app/admin/activation': typeof AppAdminActivationRoute
   '/_app/admin/financial': typeof AppAdminFinancialRoute
   '/_app/admin/mystifly': typeof AppAdminMystiflyRoute
   '/_app/admin/mystifly-test': typeof AppAdminMystiflyTestRoute
@@ -459,6 +468,7 @@ export interface FileRouteTypes {
     | '/r/$slug'
     | '/roteiro/$slug'
     | '/traducao/$slug'
+    | '/admin/activation'
     | '/admin/financial'
     | '/admin/mystifly'
     | '/admin/mystifly-test'
@@ -505,6 +515,7 @@ export interface FileRouteTypes {
     | '/r/$slug'
     | '/roteiro/$slug'
     | '/traducao/$slug'
+    | '/admin/activation'
     | '/admin/financial'
     | '/admin/mystifly'
     | '/admin/mystifly-test'
@@ -552,6 +563,7 @@ export interface FileRouteTypes {
     | '/r/$slug'
     | '/roteiro/$slug'
     | '/traducao/$slug'
+    | '/_app/admin/activation'
     | '/_app/admin/financial'
     | '/_app/admin/mystifly'
     | '/_app/admin/mystifly-test'
@@ -891,6 +903,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppAdminFinancialRouteImport
       parentRoute: typeof AppRoute
     }
+    '/_app/admin/activation': {
+      id: '/_app/admin/activation'
+      path: '/admin/activation'
+      fullPath: '/admin/activation'
+      preLoaderRoute: typeof AppAdminActivationRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/api/public/shared-result/$slug': {
       id: '/api/public/shared-result/$slug'
       path: '/api/public/shared-result/$slug'
@@ -931,6 +950,7 @@ interface AppRouteChildren {
   AppStaysRoute: typeof AppStaysRoute
   AppTranslatorRoute: typeof AppTranslatorRoute
   AppWalletRoute: typeof AppWalletRoute
+  AppAdminActivationRoute: typeof AppAdminActivationRoute
   AppAdminFinancialRoute: typeof AppAdminFinancialRoute
   AppAdminMystiflyRoute: typeof AppAdminMystiflyRoute
   AppAdminMystiflyTestRoute: typeof AppAdminMystiflyTestRoute
@@ -954,6 +974,7 @@ const AppRouteChildren: AppRouteChildren = {
   AppStaysRoute: AppStaysRoute,
   AppTranslatorRoute: AppTranslatorRoute,
   AppWalletRoute: AppWalletRoute,
+  AppAdminActivationRoute: AppAdminActivationRoute,
   AppAdminFinancialRoute: AppAdminFinancialRoute,
   AppAdminMystiflyRoute: AppAdminMystiflyRoute,
   AppAdminMystiflyTestRoute: AppAdminMystiflyTestRoute,
