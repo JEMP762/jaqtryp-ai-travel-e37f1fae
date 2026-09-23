@@ -29,6 +29,8 @@ function ReferralsPage() {
     const base = typeof window !== "undefined" ? window.location.origin : "https://jaqtryp.com";
     return `${base}/signup?ref=${data.code}`;
   }, [data?.code]);
+  const activated = data?.journeys?.filter((journey) => Boolean(journey.activated_at)).length ?? 0;
+  const registered = data?.journeys?.filter((journey) => Boolean(journey.registered_at)).length ?? 0;
 
   const copy = async (text: string, label: string) => {
     try {
@@ -57,10 +59,11 @@ function ReferralsPage() {
         </p>
       </header>
 
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+      <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
         <Stat icon={Users} label="Indicados" value={data?.referredCount ?? 0} loading={isLoading} />
+        <Stat icon={Users} label="Cadastros confirmados" value={registered} loading={isLoading} />
+        <Stat icon={Gift} label="Ativações" value={activated} loading={isLoading} />
         <Stat icon={Coins} label="Créditos ganhos" value={data?.totalCredits ?? 0} loading={isLoading} />
-        <Stat icon={Gift} label="Recompensas" value={data?.rewards?.length ?? 0} loading={isLoading} />
       </div>
 
       <div className="rounded-2xl border border-border bg-gradient-card p-6">
@@ -97,6 +100,9 @@ function ReferralsPage() {
           <li>• <strong>Pacote de créditos:</strong> você ganha 10% em créditos (ex.: 700 → 70).</li>
           <li>• <strong>Assinatura Pro:</strong> 100 créditos a cada renovação paga.</li>
           <li>• <strong>Assinatura Ultra:</strong> 200 créditos a cada renovação paga.</li>
+          {data?.settings?.filter((setting) => setting.enabled).map((setting) => (
+            <li key={setting.event_key}>• <strong>{setting.event_key === "registration" ? "Cadastro válido" : "Primeiro resultado"}:</strong> {setting.credits} créditos.</li>
+          ))}
           <li>• O vínculo é permanente — cada indicado só conta para quem o convidou primeiro.</li>
         </ul>
       </div>
@@ -109,7 +115,7 @@ function ReferralsPage() {
               <div key={r.id} className="flex items-center justify-between py-3 text-sm">
                 <div>
                   <div className="font-medium">
-                    {r.source === "pack" ? "Compra de pacote" : r.source === "sub_ultra" ? "Assinatura Ultra" : "Assinatura Pro"}
+                    {r.source === "pack" ? "Compra de pacote" : r.source === "sub_ultra" ? "Assinatura Ultra" : r.source === "sub_pro" ? "Assinatura Pro" : r.source === "registration" ? "Cadastro confirmado" : "Primeira ativação"}
                   </div>
                   <div className="text-xs text-muted-foreground">{new Date(r.created_at).toLocaleString("pt-BR")}</div>
                 </div>

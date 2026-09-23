@@ -38,6 +38,7 @@ import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { ThemeQuickSwatches } from "@/components/ThemeSwitcher";
 import { AppearanceModeQuickToggle } from "@/components/AppearanceModeSwitcher";
 import { applyReferralCode } from "@/lib/referrals.functions";
+import { readEntryContext } from "@/lib/onboarding-context";
 import { toast } from "sonner";
 import { UpgradeGateDialog } from "@/components/UpgradeGateDialog";
 import { JaxLauncher } from "@/components/jax/JaxLauncher";
@@ -86,13 +87,16 @@ function AppShell() {
     if (!user || typeof window === "undefined") return;
     const code = window.sessionStorage.getItem(REF_STORAGE_KEY);
     if (!code) return;
-    window.sessionStorage.removeItem(REF_STORAGE_KEY);
-    applyReferralCode({ data: { code } })
+    const entry = readEntryContext();
+    applyReferralCode({ data: { code, visitorId: entry?.visitorId, shareSlug: entry?.contentSlug } })
       .then((res: any) => {
         if (res?.ok) toast.success("Código de indicação aplicado!");
       })
       .catch(() => {
         /* ignore */
+      })
+      .finally(() => {
+        window.sessionStorage.removeItem(REF_STORAGE_KEY);
       });
   }, [user]);
 

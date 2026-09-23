@@ -1,5 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { createHash } from "crypto";
+import { z } from "zod";
 
 export const getMyReferral = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
@@ -18,6 +20,17 @@ export const getMyReferral = createServerFn({ method: "GET" })
       .order("created_at", { ascending: false })
       .limit(100);
 
+    const { data: journeys } = await supabase
+      .from("viral_referrals")
+      .select("id,status,feature,source,registered_at,activated_at,rewarded_at,reward_credits,created_at")
+      .eq("referrer_id", userId)
+      .order("created_at", { ascending: false })
+      .limit(100);
+
+    const { data: settings } = await supabase
+      .from("viral_reward_settings")
+      .select("event_key,credits,enabled");
+
     const { count: referredCount } = await supabase
       .from("profiles")
       .select("id", { count: "exact", head: true })
@@ -31,18 +44,24 @@ export const getMyReferral = createServerFn({ method: "GET" })
       referredCount: referredCount ?? 0,
       totalCredits,
       rewards: rewards ?? [],
+      journeys: journeys ?? [],
+      settings: settings ?? [],
     };
   });
 
 export const applyReferralCode = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((i: { code: string }) => {
-    if (!i?.code || typeof i.code !== "string") throw new Error("code required");
-    return { code: i.code.trim().toUpperCase().slice(0, 32) };
-  })
+  .inputValidator((input: unknown) => z.object({
+    code: z.string().min(1).max(32).transform((value) => value.trim().toUpperCase()),
+    visitorId: z.string().min(8).max(100).optional(),
+    shareSlug: z.string().max(100).optional(),
+  }).parse(input))
   .handler(async ({ data, context }) => {
-    const { data: result, error } = await context.supabase.rpc("apply_referral_code", {
+    const visitorHash = data.visitorId ? createHash("sha256").update(data.visitorId).digest("hex") : undefined;
+    const { data: result, error } = await context.supabase.rpc("register_viral_referral", {
       _code: data.code,
+      _visitor_hash: visitorHash,
+      _share_slug: data.shareSlug ?? "",
     });
     if (error) throw new Error(error.message);
     return result as { ok: boolean; reason?: string; referrer_id?: string };

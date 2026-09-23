@@ -10,6 +10,7 @@ const schema = z.object({
   campaign: z.string().max(120).optional(),
   variant: z.string().max(40).default("default"),
   slug: z.string().max(100).optional(),
+  ref: z.string().max(32).optional(),
 });
 
 export const Route = createFileRoute("/api/public/activation")({
@@ -18,6 +19,14 @@ export const Route = createFileRoute("/api/public/activation")({
     if (!parsed.success) return new Response(JSON.stringify({ error: "invalid" }), { status: 400, headers: { "content-type": "application/json" } });
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const visitorHash = createHash("sha256").update(parsed.data.visitorId).digest("hex");
+    if (parsed.data.ref) {
+      await supabaseAdmin.rpc("capture_viral_click", {
+        _code: parsed.data.ref,
+        _share_slug: parsed.data.slug ?? "",
+        _visitor_hash: visitorHash,
+        _source: parsed.data.source ?? "shared_result",
+      });
+    }
     const { error } = await supabaseAdmin.from("activation_events").insert({
       visitor_id: visitorHash,
       event_name: parsed.data.event,

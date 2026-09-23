@@ -8,6 +8,27 @@
       "when": 1790163349955,
       "tag": "0000_add_contextual_onboarding_and_activation",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1790163811027,
+      "tag": "0001_add_viral_referral_engine",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1790164016880,
+      "tag": "0002_extend_safe_shared_result_types",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1790164113338,
+      "tag": "0003_harden_viral_reward_idempotency",
+      "breakpoints": true
     }
   ]
 }

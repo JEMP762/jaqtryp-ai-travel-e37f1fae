@@ -301,6 +301,9 @@ async function handleSubscriptionEvent(event: any, env: "sandbox" | "live") {
               _pack_credits: 0,
               _stripe_ref: `ref:sub:${obj.id}:${periodStart ?? "now"}`,
             });
+            await supabaseAdmin.rpc("record_viral_payment", {
+              _paid_user: userId, _external_ref: `sub:${obj.id}:${periodStart ?? "now"}`, _kind: refKind,
+            });
           }
         }
       }
@@ -449,6 +452,9 @@ async function handleCreditPackEvent(event: any, env: "sandbox" | "live") {
       _stripe_ref: `ref:pack:${paymentIntentId}`,
     });
     if (refErr) console.warn("[credit_pack] referral reward error", refErr.message);
+    await supabaseAdmin.rpc("record_viral_payment", {
+      _paid_user: userId, _external_ref: `pack:${paymentIntentId}`, _kind: "pack",
+    });
   } catch (e: any) {
     console.warn("[credit_pack] referral reward threw", e?.message || e);
   }

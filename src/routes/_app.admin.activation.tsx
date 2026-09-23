@@ -3,7 +3,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { useQuery } from "@tanstack/react-query";
 import { Activity, ArrowRight, BarChart3, Users } from "lucide-react";
 import { checkIsAdmin } from "@/lib/commission.functions";
-import { getActivationFunnel } from "@/lib/activation.functions";
+import { getActivationFunnel, getGrowthEngine } from "@/lib/activation.functions";
 
 export const Route = createFileRoute("/_app/admin/activation")({
   head: () => ({ meta: [
@@ -23,14 +23,22 @@ const stages = [
 function ActivationAdmin() {
   const check = useServerFn(checkIsAdmin);
   const funnel = useServerFn(getActivationFunnel);
+  const growth = useServerFn(getGrowthEngine);
   const admin = useQuery({ queryKey: ["is-admin"], queryFn: () => check(), retry: false });
   const query = useQuery({ queryKey: ["activation-funnel", "30d"], queryFn: () => funnel(), enabled: admin.data?.isAdmin === true, retry: false });
+  const growthQuery = useQuery({ queryKey: ["growth-engine", "30d"], queryFn: () => growth(), enabled: admin.data?.isAdmin === true, retry: false });
   if (admin.isLoading) return <div className="p-8 text-sm text-muted-foreground">Carregando…</div>;
   if (!admin.data?.isAdmin) return <div className="mx-auto max-w-xl p-8 text-center"><h1 className="text-xl font-bold">Acesso restrito</h1><p className="mt-2 text-sm text-muted-foreground">Esta área é exclusiva para administradores.</p></div>;
   const counts = query.data?.counts ?? {};
   return (
     <main className="mx-auto max-w-7xl px-4 py-8 md:px-10">
-      <header className="mb-7"><div className="flex items-center gap-3"><BarChart3 className="h-8 w-8 text-primary" /><div><h1 className="text-2xl font-bold">Funil de ativação</h1><p className="text-sm text-muted-foreground">Últimos 30 dias</p></div></div></header>
+       <header className="mb-7"><div className="flex items-center gap-3"><BarChart3 className="h-8 w-8 text-primary" /><div><h1 className="text-2xl font-bold">Motor de crescimento</h1><p className="text-sm text-muted-foreground">Aquisição, ativação e indicação nos últimos 30 dias</p></div></div></header>
+       <section className="mb-8 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+         <Stat label="Compartilhamentos" value={growthQuery.data?.counts.share_created ?? 0} />
+         <Stat label="Cliques" value={growthQuery.data?.counts.share_clicked ?? 0} />
+         <Stat label="Cadastros indicados" value={growthQuery.data?.counts.referral_signup ?? 0} />
+         <Stat label="Ativações indicadas" value={growthQuery.data?.counts.referral_activation ?? 0} />
+       </section>
       <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         {stages.map(([key, label], index) => {
           const count = counts[key] ?? 0;
@@ -43,4 +51,8 @@ function ActivationAdmin() {
       <p className="mt-5 flex items-center gap-2 text-xs text-muted-foreground"><Users className="h-4 w-4" />Dados agregados de ativação; nenhum conteúdo privado é exibido.</p>
     </main>
   );
+}
+
+function Stat({ label, value }: { label: string; value: number }) {
+  return <div className="rounded-md border border-border bg-card p-4"><p className="text-xs text-muted-foreground">{label}</p><p className="mt-2 text-3xl font-bold">{value}</p></div>;
 }

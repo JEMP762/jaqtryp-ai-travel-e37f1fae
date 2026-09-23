@@ -7,7 +7,7 @@ import { saveEntryContext, type EntryIntent } from "@/lib/onboarding-context";
 
 type SharedResult = {
   slug: string;
-  kind: "itinerary" | "translation";
+  kind: "itinerary" | "translation" | "travel_budget" | "document_translation" | "flight_search";
   title: string;
   summary: string | null;
   public_payload: Record<string, unknown>;
@@ -29,6 +29,7 @@ export function SharedResultPage({ slug, intent }: { slug: string; intent: Entry
 
   React.useEffect(() => {
     const params = new URLSearchParams(window.location.search);
+    const currentVisitor = visitorId();
     const context = {
       intent,
       ref: params.get("ref") ?? undefined,
@@ -36,6 +37,7 @@ export function SharedResultPage({ slug, intent }: { slug: string; intent: Entry
       medium: params.get("utm_medium") ?? undefined,
       campaign: params.get("utm_campaign") ?? undefined,
       contentSlug: slug,
+      visitorId: currentVisitor,
     };
     saveEntryContext(context);
     fetch(`/api/public/shared-result/${encodeURIComponent(slug)}`)
@@ -48,7 +50,7 @@ export function SharedResultPage({ slug, intent }: { slug: string; intent: Entry
         fetch("/api/public/activation", {
           method: "POST",
           headers: { "content-type": "application/json" },
-          body: JSON.stringify({ event: "shared_content_viewed", visitorId: visitorId(), feature: data.kind, source: context.source, campaign: context.campaign, slug }),
+          body: JSON.stringify({ event: "shared_content_viewed", visitorId: currentVisitor, feature: data.kind, source: context.source, campaign: context.campaign, slug, ref: context.ref }),
         }).catch(() => {});
       })
       .catch(() => setMissing(true));
@@ -63,6 +65,7 @@ export function SharedResultPage({ slug, intent }: { slug: string; intent: Entry
       medium: params.get("utm_medium") ?? undefined,
       campaign: params.get("utm_campaign") ?? undefined,
       contentSlug: slug,
+      visitorId: visitorId(),
     });
     fetch("/api/public/activation", {
       method: "POST",
@@ -75,13 +78,13 @@ export function SharedResultPage({ slug, intent }: { slug: string; intent: Entry
   if (!result) return <div className="grid min-h-screen place-items-center"><div className="h-9 w-9 animate-spin rounded-full border-2 border-primary border-t-transparent" /></div>;
 
   const isTrip = result.kind === "itinerary";
-  const markdown = String(result.public_payload.markdown ?? result.public_payload.translation ?? result.summary ?? "");
+  const markdown = String(result.public_payload.markdown ?? result.public_payload.translation ?? result.public_payload.summary ?? result.summary ?? "");
   return (
     <main className="min-h-screen bg-background">
       <div className="mx-auto max-w-3xl px-4 py-6 sm:py-10">
         <header className="mb-6 border-b border-border pb-5">
           <div className="mb-3 inline-flex items-center gap-2 text-sm font-medium text-primary">
-            {isTrip ? <MapPin className="h-4 w-4" /> : <Languages className="h-4 w-4" />}
+             {isTrip || result.kind === "travel_budget" || result.kind === "flight_search" ? <MapPin className="h-4 w-4" /> : <Languages className="h-4 w-4" />}
             Criado com JAQTRYP AI
           </div>
           <h1 className="text-2xl font-bold sm:text-4xl">{result.title}</h1>
@@ -92,8 +95,8 @@ export function SharedResultPage({ slug, intent }: { slug: string; intent: Entry
           <p className="font-semibold">Gostou desse resultado?</p>
           <p className="mb-3 text-sm text-muted-foreground">Crie o seu gratuitamente.</p>
           <Button asChild size="lg" className="h-12 w-full sm:w-auto">
-            <Link to="/signup" search={{ intent, ref: new URLSearchParams(window.location.search).get("ref") ?? undefined }} onClick={start}>
-              {isTrip ? "Criar meu roteiro" : "Traduzir minha imagem"}<ArrowRight />
+             <Link to="/signup" search={{ intent, ref: new URLSearchParams(window.location.search).get("ref") ?? undefined }} onClick={start}>
+               {intent === "itinerary" ? "Criar meu roteiro" : intent === "travel_budget" ? "Criar meu orçamento" : intent === "flight_search" ? "Buscar meus voos" : intent === "document_translation" ? "Traduzir meu arquivo" : "Traduzir minha imagem"}<ArrowRight />
             </Link>
           </Button>
         </section>

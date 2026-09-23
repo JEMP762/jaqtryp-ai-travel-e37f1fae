@@ -15,6 +15,7 @@ export type EntryContext = {
   medium?: string;
   campaign?: string;
   contentSlug?: string;
+  visitorId?: string;
   destination?: string;
   origin?: string;
   startDate?: string;
@@ -44,6 +45,7 @@ export function normalizeEntryContext(value: Partial<EntryContext>): EntryContex
     medium: clean(value.medium, 80),
     campaign: clean(value.campaign, 120),
     contentSlug: clean(value.contentSlug, 100),
+    visitorId: clean(value.visitorId, 100),
     destination: clean(value.destination, 120),
     origin: clean(value.origin, 120),
     startDate: clean(value.startDate, 20),
@@ -64,7 +66,15 @@ export function readEntryContext(): EntryContext | null {
 
 export function saveEntryContext(value: Partial<EntryContext>) {
   if (typeof window === "undefined") return;
-  const next = normalizeEntryContext({ ...readEntryContext(), ...value });
+  const current = readEntryContext();
+  const next = normalizeEntryContext({
+    ...current,
+    ...value,
+    // Referral attribution is first-touch: later links never replace it.
+    ref: current?.ref ?? value.ref,
+    contentSlug: current?.ref ? current.contentSlug : value.contentSlug,
+    visitorId: current?.visitorId ?? value.visitorId,
+  });
   window.localStorage.setItem(ENTRY_CONTEXT_KEY, JSON.stringify(next));
   if (next.ref) window.sessionStorage.setItem("jq_pending_ref", next.ref);
   window.sessionStorage.setItem("jq_post_login_dest", "/onboarding");

@@ -16,10 +16,13 @@ import { Route as ForgotPasswordRouteImport } from './routes/forgot-password'
 import { Route as CheapFlightsRouteImport } from './routes/cheap-flights'
 import { Route as AppRouteImport } from './routes/_app'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as VooSlugRouteImport } from './routes/voo.$slug'
 import { Route as TraducaoSlugRouteImport } from './routes/traducao.$slug'
 import { Route as RoteiroSlugRouteImport } from './routes/roteiro.$slug'
 import { Route as RSlugRouteImport } from './routes/r.$slug'
+import { Route as OrcamentoSlugRouteImport } from './routes/orcamento.$slug'
 import { Route as LiveRoomCodeRouteImport } from './routes/live-room.$code'
+import { Route as DocumentoSlugRouteImport } from './routes/documento.$slug'
 import { Route as CheckoutReturnRouteImport } from './routes/checkout.return'
 import { Route as AuthCallbackRouteImport } from './routes/auth.callback'
 import { Route as ApiTtsRouteImport } from './routes/api.tts'
@@ -90,6 +93,11 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const VooSlugRoute = VooSlugRouteImport.update({
+  id: '/voo/$slug',
+  path: '/voo/$slug',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const TraducaoSlugRoute = TraducaoSlugRouteImport.update({
   id: '/traducao/$slug',
   path: '/traducao/$slug',
@@ -105,9 +113,19 @@ const RSlugRoute = RSlugRouteImport.update({
   path: '/r/$slug',
   getParentRoute: () => rootRouteImport,
 } as any)
+const OrcamentoSlugRoute = OrcamentoSlugRouteImport.update({
+  id: '/orcamento/$slug',
+  path: '/orcamento/$slug',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const LiveRoomCodeRoute = LiveRoomCodeRouteImport.update({
   id: '/live-room/$code',
   path: '/live-room/$code',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DocumentoSlugRoute = DocumentoSlugRouteImport.update({
+  id: '/documento/$slug',
+  path: '/documento/$slug',
   getParentRoute: () => rootRouteImport,
 } as any)
 const CheckoutReturnRoute = CheckoutReturnRouteImport.update({
@@ -319,10 +337,13 @@ export interface FileRoutesByFullPath {
   '/api/tts': typeof ApiTtsRoute
   '/auth/callback': typeof AuthCallbackRoute
   '/checkout/return': typeof CheckoutReturnRoute
+  '/documento/$slug': typeof DocumentoSlugRoute
   '/live-room/$code': typeof LiveRoomCodeRoute
+  '/orcamento/$slug': typeof OrcamentoSlugRoute
   '/r/$slug': typeof RSlugRoute
   '/roteiro/$slug': typeof RoteiroSlugRoute
   '/traducao/$slug': typeof TraducaoSlugRoute
+  '/voo/$slug': typeof VooSlugRoute
   '/admin/activation': typeof AppAdminActivationRoute
   '/admin/financial': typeof AppAdminFinancialRoute
   '/admin/mystifly': typeof AppAdminMystiflyRoute
@@ -366,10 +387,13 @@ export interface FileRoutesByTo {
   '/api/tts': typeof ApiTtsRoute
   '/auth/callback': typeof AuthCallbackRoute
   '/checkout/return': typeof CheckoutReturnRoute
+  '/documento/$slug': typeof DocumentoSlugRoute
   '/live-room/$code': typeof LiveRoomCodeRoute
+  '/orcamento/$slug': typeof OrcamentoSlugRoute
   '/r/$slug': typeof RSlugRoute
   '/roteiro/$slug': typeof RoteiroSlugRoute
   '/traducao/$slug': typeof TraducaoSlugRoute
+  '/voo/$slug': typeof VooSlugRoute
   '/admin/activation': typeof AppAdminActivationRoute
   '/admin/financial': typeof AppAdminFinancialRoute
   '/admin/mystifly': typeof AppAdminMystiflyRoute
@@ -415,10 +439,13 @@ export interface FileRoutesById {
   '/api/tts': typeof ApiTtsRoute
   '/auth/callback': typeof AuthCallbackRoute
   '/checkout/return': typeof CheckoutReturnRoute
+  '/documento/$slug': typeof DocumentoSlugRoute
   '/live-room/$code': typeof LiveRoomCodeRoute
+  '/orcamento/$slug': typeof OrcamentoSlugRoute
   '/r/$slug': typeof RSlugRoute
   '/roteiro/$slug': typeof RoteiroSlugRoute
   '/traducao/$slug': typeof TraducaoSlugRoute
+  '/voo/$slug': typeof VooSlugRoute
   '/_app/admin/activation': typeof AppAdminActivationRoute
   '/_app/admin/financial': typeof AppAdminFinancialRoute
   '/_app/admin/mystifly': typeof AppAdminMystiflyRoute
@@ -464,10 +491,13 @@ export interface FileRouteTypes {
     | '/api/tts'
     | '/auth/callback'
     | '/checkout/return'
+    | '/documento/$slug'
     | '/live-room/$code'
+    | '/orcamento/$slug'
     | '/r/$slug'
     | '/roteiro/$slug'
     | '/traducao/$slug'
+    | '/voo/$slug'
     | '/admin/activation'
     | '/admin/financial'
     | '/admin/mystifly'
@@ -511,10 +541,13 @@ export interface FileRouteTypes {
     | '/api/tts'
     | '/auth/callback'
     | '/checkout/return'
+    | '/documento/$slug'
     | '/live-room/$code'
+    | '/orcamento/$slug'
     | '/r/$slug'
     | '/roteiro/$slug'
     | '/traducao/$slug'
+    | '/voo/$slug'
     | '/admin/activation'
     | '/admin/financial'
     | '/admin/mystifly'
@@ -559,10 +592,13 @@ export interface FileRouteTypes {
     | '/api/tts'
     | '/auth/callback'
     | '/checkout/return'
+    | '/documento/$slug'
     | '/live-room/$code'
+    | '/orcamento/$slug'
     | '/r/$slug'
     | '/roteiro/$slug'
     | '/traducao/$slug'
+    | '/voo/$slug'
     | '/_app/admin/activation'
     | '/_app/admin/financial'
     | '/_app/admin/mystifly'
@@ -593,10 +629,13 @@ export interface RootRouteChildren {
   ApiTtsRoute: typeof ApiTtsRoute
   AuthCallbackRoute: typeof AuthCallbackRoute
   CheckoutReturnRoute: typeof CheckoutReturnRoute
+  DocumentoSlugRoute: typeof DocumentoSlugRoute
   LiveRoomCodeRoute: typeof LiveRoomCodeRoute
+  OrcamentoSlugRoute: typeof OrcamentoSlugRoute
   RSlugRoute: typeof RSlugRoute
   RoteiroSlugRoute: typeof RoteiroSlugRoute
   TraducaoSlugRoute: typeof TraducaoSlugRoute
+  VooSlugRoute: typeof VooSlugRoute
   ApiPublicActivationRoute: typeof ApiPublicActivationRoute
   ApiPublicSttRoute: typeof ApiPublicSttRoute
   ApiPublicTranslateBroadcastRoute: typeof ApiPublicTranslateBroadcastRoute
@@ -658,6 +697,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/voo/$slug': {
+      id: '/voo/$slug'
+      path: '/voo/$slug'
+      fullPath: '/voo/$slug'
+      preLoaderRoute: typeof VooSlugRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/traducao/$slug': {
       id: '/traducao/$slug'
       path: '/traducao/$slug'
@@ -679,11 +725,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof RSlugRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/orcamento/$slug': {
+      id: '/orcamento/$slug'
+      path: '/orcamento/$slug'
+      fullPath: '/orcamento/$slug'
+      preLoaderRoute: typeof OrcamentoSlugRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/live-room/$code': {
       id: '/live-room/$code'
       path: '/live-room/$code'
       fullPath: '/live-room/$code'
       preLoaderRoute: typeof LiveRoomCodeRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/documento/$slug': {
+      id: '/documento/$slug'
+      path: '/documento/$slug'
+      fullPath: '/documento/$slug'
+      preLoaderRoute: typeof DocumentoSlugRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/checkout/return': {
@@ -998,10 +1058,13 @@ const rootRouteChildren: RootRouteChildren = {
   ApiTtsRoute: ApiTtsRoute,
   AuthCallbackRoute: AuthCallbackRoute,
   CheckoutReturnRoute: CheckoutReturnRoute,
+  DocumentoSlugRoute: DocumentoSlugRoute,
   LiveRoomCodeRoute: LiveRoomCodeRoute,
+  OrcamentoSlugRoute: OrcamentoSlugRoute,
   RSlugRoute: RSlugRoute,
   RoteiroSlugRoute: RoteiroSlugRoute,
   TraducaoSlugRoute: TraducaoSlugRoute,
+  VooSlugRoute: VooSlugRoute,
   ApiPublicActivationRoute: ApiPublicActivationRoute,
   ApiPublicSttRoute: ApiPublicSttRoute,
   ApiPublicTranslateBroadcastRoute: ApiPublicTranslateBroadcastRoute,

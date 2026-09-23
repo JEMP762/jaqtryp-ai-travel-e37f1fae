@@ -986,11 +986,14 @@ export type Database = {
         Row: {
           active: boolean
           created_at: string
+          feature: string | null
           id: string
           kind: string
           owner_id: string
           public_payload: Json
+          referral_code_snapshot: string | null
           slug: string
+          source_result_id: string | null
           summary: string | null
           title: string
           updated_at: string
@@ -998,11 +1001,14 @@ export type Database = {
         Insert: {
           active?: boolean
           created_at?: string
+          feature?: string | null
           id?: string
           kind: string
           owner_id: string
           public_payload?: Json
+          referral_code_snapshot?: string | null
           slug: string
+          source_result_id?: string | null
           summary?: string | null
           title: string
           updated_at?: string
@@ -1010,11 +1016,14 @@ export type Database = {
         Update: {
           active?: boolean
           created_at?: string
+          feature?: string | null
           id?: string
           kind?: string
           owner_id?: string
           public_payload?: Json
+          referral_code_snapshot?: string | null
           slug?: string
+          source_result_id?: string | null
           summary?: string | null
           title?: string
           updated_at?: string
@@ -1461,6 +1470,155 @@ export type Database = {
         }
         Relationships: []
       }
+      viral_events: {
+        Row: {
+          created_at: string
+          event_name: string
+          feature: string | null
+          id: string
+          idempotency_key: string | null
+          journey_id: string | null
+          properties: Json
+          referred_id: string | null
+          referrer_id: string | null
+          share_id: string | null
+          source: string | null
+          visitor_hash: string | null
+        }
+        Insert: {
+          created_at?: string
+          event_name: string
+          feature?: string | null
+          id?: string
+          idempotency_key?: string | null
+          journey_id?: string | null
+          properties?: Json
+          referred_id?: string | null
+          referrer_id?: string | null
+          share_id?: string | null
+          source?: string | null
+          visitor_hash?: string | null
+        }
+        Update: {
+          created_at?: string
+          event_name?: string
+          feature?: string | null
+          id?: string
+          idempotency_key?: string | null
+          journey_id?: string | null
+          properties?: Json
+          referred_id?: string | null
+          referrer_id?: string | null
+          share_id?: string | null
+          source?: string | null
+          visitor_hash?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "viral_events_journey_id_fkey"
+            columns: ["journey_id"]
+            isOneToOne: false
+            referencedRelation: "viral_referrals"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "viral_events_share_id_fkey"
+            columns: ["share_id"]
+            isOneToOne: false
+            referencedRelation: "shared_results"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      viral_referrals: {
+        Row: {
+          activated_at: string | null
+          created_at: string
+          feature: string | null
+          id: string
+          referral_code: string
+          referred_id: string | null
+          referrer_id: string
+          registered_at: string | null
+          reject_reason: string | null
+          reward_credits: number
+          rewarded_at: string | null
+          share_id: string | null
+          source: string | null
+          status: string
+          updated_at: string
+          visitor_hash: string | null
+        }
+        Insert: {
+          activated_at?: string | null
+          created_at?: string
+          feature?: string | null
+          id?: string
+          referral_code: string
+          referred_id?: string | null
+          referrer_id: string
+          registered_at?: string | null
+          reject_reason?: string | null
+          reward_credits?: number
+          rewarded_at?: string | null
+          share_id?: string | null
+          source?: string | null
+          status?: string
+          updated_at?: string
+          visitor_hash?: string | null
+        }
+        Update: {
+          activated_at?: string | null
+          created_at?: string
+          feature?: string | null
+          id?: string
+          referral_code?: string
+          referred_id?: string | null
+          referrer_id?: string
+          registered_at?: string | null
+          reject_reason?: string | null
+          reward_credits?: number
+          rewarded_at?: string | null
+          share_id?: string | null
+          source?: string | null
+          status?: string
+          updated_at?: string
+          visitor_hash?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "viral_referrals_share_id_fkey"
+            columns: ["share_id"]
+            isOneToOne: false
+            referencedRelation: "shared_results"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      viral_reward_settings: {
+        Row: {
+          credits: number
+          enabled: boolean
+          event_key: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          credits?: number
+          enabled?: boolean
+          event_key: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          credits?: number
+          enabled?: boolean
+          event_key?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: []
+      }
       wallet_alerts: {
         Row: {
           created_at: string
@@ -1664,6 +1822,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      activate_viral_referral: { Args: { _user: string }; Returns: Json }
       add_credits: {
         Args: {
           _amount: number
@@ -1676,6 +1835,15 @@ export type Database = {
         Returns: undefined
       }
       apply_referral_code: { Args: { _code: string }; Returns: Json }
+      capture_viral_click: {
+        Args: {
+          _code: string
+          _share_slug: string
+          _source?: string
+          _visitor_hash: string
+        }
+        Returns: Json
+      }
       claim_room_host: { Args: { _code: string }; Returns: string }
       generate_referral_code: { Args: { _uid: string }; Returns: string }
       get_public_trip_widget: {
@@ -1706,6 +1874,14 @@ export type Database = {
       }
       is_room_member: { Args: { _code: string }; Returns: boolean }
       process_monthly_resets: { Args: never; Returns: number }
+      record_viral_payment: {
+        Args: { _external_ref: string; _kind: string; _paid_user: string }
+        Returns: undefined
+      }
+      register_viral_referral: {
+        Args: { _code: string; _share_slug?: string; _visitor_hash?: string }
+        Returns: Json
+      }
       reward_referrer: {
         Args: {
           _kind: string
