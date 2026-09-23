@@ -16,4 +16,5 @@
 - [ ] Testar o loop viral completo e regressões A–N
 - [x] Adicionar moeda e idioma ao gerador público de roteiros
 - [x] Cobrar traduções do proprietário pelo custo vigente do tradutor
-- [ ] Validar geração, tradução, PDF e cobrança do widget em celular e computador
+- [x] Validar página, preços e seletores do widget em celular e computador
+- [ ] Validar geração, tradução, PDF e débitos reais com uma execução autorizada
