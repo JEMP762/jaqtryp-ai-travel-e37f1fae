@@ -120,10 +120,11 @@ function FileTranslatorPage() {
     enabled: !!user?.id,
     retry: 1,
     queryFn: async () => {
+      if (!user) return 0;
       const { data } = await supabase
         .from("user_credits")
         .select("free_balance,monthly_balance,topup_balance")
-        .eq("user_id", user!.id)
+        .eq("user_id", user.id)
         .maybeSingle();
       return (
         (data?.free_balance ?? 0) + (data?.monthly_balance ?? 0) + (data?.topup_balance ?? 0)
