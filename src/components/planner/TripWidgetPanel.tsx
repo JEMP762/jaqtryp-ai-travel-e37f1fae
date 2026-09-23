@@ -43,6 +43,7 @@ export function TripWidgetPanel({ companyName }: { companyName: string }) {
   const [salesEnabled, setSalesEnabled] = React.useState(false);
   const [price, setPrice] = React.useState("");
   const [mercadoPagoConnected, setMercadoPagoConnected] = React.useState(false);
+  const [mercadoPagoAvailable, setMercadoPagoAvailable] = React.useState(false);
   const [savingSales, setSavingSales] = React.useState(false);
   const loadMonetization = useServerFn(getWidgetMonetization);
   const saveMonetization = useServerFn(saveWidgetMonetization);
@@ -98,6 +99,7 @@ export function TripWidgetPanel({ companyName }: { companyName: string }) {
         setSalesEnabled(sales.enabled);
         setPrice(sales.price);
         setMercadoPagoConnected(sales.connected);
+        setMercadoPagoAvailable(sales.connectionAvailable);
       } else {
         setSlug(slugify(companyName) || "");
       }
@@ -318,10 +320,11 @@ export function TripWidgetPanel({ companyName }: { companyName: string }) {
                       {mercadoPagoConnected ? <BadgeCheck className="h-4 w-4 text-primary" /> : <LockKeyhole className="h-4 w-4 text-muted-foreground" />}
                       {mercadoPagoConnected ? "Mercado Pago conectado" : "Conecte sua conta para receber por Pix"}
                     </div>
-                    <Button type="button" size="sm" variant="outline" onClick={mercadoPagoConnected ? removeMercadoPagoConnection : startMercadoPagoConnection}>
+                    <Button type="button" size="sm" variant="outline" disabled={!mercadoPagoConnected && !mercadoPagoAvailable} onClick={mercadoPagoConnected ? removeMercadoPagoConnection : startMercadoPagoConnection}>
                       {mercadoPagoConnected ? "Desconectar" : "Conectar Mercado Pago"}
                     </Button>
                   </div>
+                  {!mercadoPagoConnected && !mercadoPagoAvailable ? <p className="text-[11px] text-muted-foreground">Recebimento automático em ativação pelo JAQTRYP.</p> : null}
                   <div className="space-y-1.5">
                     <Label htmlFor="itinerary-price" className="text-xs">Valor do Roteiro</Label>
                     <Input id="itinerary-price" inputMode="decimal" value={price} onChange={(event) => setPrice(event.target.value)} placeholder="39,00" maxLength={12} />

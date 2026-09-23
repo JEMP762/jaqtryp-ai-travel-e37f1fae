@@ -20,6 +20,7 @@ export const getWidgetMonetization = createServerFn({ method: "GET" })
       enabled: data?.monetization_enabled === true,
       price: data?.itinerary_price == null ? "" : String(data.itinerary_price),
       connected: data?.mercadopago_connected === true,
+      connectionAvailable: Boolean(process.env["MERCADOPAGO_CLIENT_ID"] && process.env["MERCADOPAGO_CLIENT_SECRET"]),
     };
   });
 
