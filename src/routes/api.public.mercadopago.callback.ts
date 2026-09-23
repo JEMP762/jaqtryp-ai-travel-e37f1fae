@@ -13,8 +13,8 @@ export const Route = createFileRoute("/api/public/mercadopago/callback")({
           const parsed = readMercadoPagoState(state);
           const clientId = process.env["MERCADOPAGO_CLIENT_ID"];
           const clientSecret = process.env["MERCADOPAGO_CLIENT_SECRET"];
-          if (!parsed || !clientId || !clientSecret) throw new Error("invalid connection");
-          const ownerId = parsed.userId;
+          const ownerId = parsed?.userId;
+          if (!ownerId || !clientId || !clientSecret) throw new Error("invalid connection");
           const redirectUri = `${url.origin}/api/public/mercadopago/callback`;
           const response = await fetch("https://api.mercadopago.com/oauth/token", {
             method: "POST",
