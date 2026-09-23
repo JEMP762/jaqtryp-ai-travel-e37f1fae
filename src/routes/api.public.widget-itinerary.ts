@@ -134,10 +134,12 @@ export const Route = createFileRoute("/api/public/widget-itinerary")({
           logoUrl = data?.signedUrl ?? null;
         }
 
-        const [{ data: itineraryCost }, { data: translationCost }] = await Promise.all([
-          sb.from("credit_costs").select("cost").eq("feature_key", FEATURE_KEY).eq("active", true).maybeSingle(),
-          sb.from("credit_costs").select("cost").eq("feature_key", TRANSLATION_FEATURE_KEY).eq("active", true).maybeSingle(),
+        const [itineraryPricing, translationPricing] = await Promise.all([
+          checkBalance(widget.owner_id, FEATURE_KEY),
+          checkBalance(widget.owner_id, TRANSLATION_FEATURE_KEY),
         ]);
+        const itineraryCost = itineraryPricing.ok ? itineraryPricing.cost : itineraryPricing.needed;
+        const translationCost = translationPricing.ok ? translationPricing.cost : translationPricing.needed;
 
         return json({
           slug: widget.slug,
@@ -145,8 +147,8 @@ export const Route = createFileRoute("/api/public/widget-itinerary")({
           intro: widget.intro,
           companyName: brand?.company_name ?? null,
           logoUrl,
-          itineraryCost: Number(itineraryCost?.cost ?? 0),
-          translationCost: Number(translationCost?.cost ?? 0),
+          itineraryCost: Number(itineraryCost ?? 0),
+          translationCost: Number(translationCost ?? 0),
         });
       },
 
