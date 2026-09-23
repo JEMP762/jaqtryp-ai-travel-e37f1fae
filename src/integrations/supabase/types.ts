@@ -1172,33 +1172,48 @@ export type Database = {
         Row: {
           created_at: string
           credits_spent: number
+          currency: string
           days: number
           destination: string
           id: string
           owner_id: string
+          result_hash: string | null
+          source_language: string
           status: string
+          translated_languages: string[]
+          translation_credits: number
           visitor_hash: string | null
           widget_id: string
         }
         Insert: {
           created_at?: string
           credits_spent?: number
+          currency?: string
           days: number
           destination: string
           id?: string
           owner_id: string
+          result_hash?: string | null
+          source_language?: string
           status?: string
+          translated_languages?: string[]
+          translation_credits?: number
           visitor_hash?: string | null
           widget_id: string
         }
         Update: {
           created_at?: string
           credits_spent?: number
+          currency?: string
           days?: number
           destination?: string
           id?: string
           owner_id?: string
+          result_hash?: string | null
+          source_language?: string
           status?: string
+          translated_languages?: string[]
+          translation_credits?: number
           visitor_hash?: string | null
           widget_id?: string
         }

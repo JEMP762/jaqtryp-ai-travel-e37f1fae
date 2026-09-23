@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { Loader2, Sparkles, Download } from "lucide-react";
+import { Loader2, Sparkles, Download, Languages } from "lucide-react";
 import * as React from "react";
 import ReactMarkdown from "react-markdown";
 import { toast } from "sonner";
@@ -20,6 +20,8 @@ type WidgetInfo = {
   intro: string | null;
   companyName: string | null;
   logoUrl: string | null;
+  itineraryCost: number;
+  translationCost: number;
 };
 
 export const Route = createFileRoute("/r/$slug")({
@@ -47,6 +49,31 @@ export const Route = createFileRoute("/r/$slug")({
 });
 
 const STYLES = ["Econômico", "Conforto", "Família", "Romântico", "Aventura", "Luxo"];
+const CURRENCIES = [
+  { code: "BRL", label: "Real (R$)", symbol: "R$" },
+  { code: "USD", label: "Dólar (US$)", symbol: "US$" },
+  { code: "EUR", label: "Euro (€)", symbol: "€" },
+  { code: "GBP", label: "Libra (£)", symbol: "£" },
+  { code: "ARS", label: "Peso argentino (AR$)", symbol: "AR$" },
+  { code: "CLP", label: "Peso chileno (CL$)", symbol: "CL$" },
+  { code: "JPY", label: "Iene (¥)", symbol: "¥" },
+  { code: "CHF", label: "Franco suíço (CHF)", symbol: "CHF" },
+  { code: "CAD", label: "Dólar canadense (C$)", symbol: "C$" },
+  { code: "AUD", label: "Dólar australiano (A$)", symbol: "A$" },
+];
+const LANGUAGES = [
+  { code: "pt", label: "Português" },
+  { code: "en", label: "English" },
+  { code: "es", label: "Español" },
+  { code: "fr", label: "Français" },
+  { code: "it", label: "Italiano" },
+  { code: "de", label: "Deutsch" },
+  { code: "ja", label: "日本語" },
+  { code: "zh", label: "中文" },
+  { code: "ko", label: "한국어" },
+  { code: "ar", label: "العربية" },
+  { code: "ru", label: "Русский" },
+] as const;
 
 function printItinerary(
   title: string,
@@ -99,9 +126,17 @@ function PublicWidgetPage() {
   const [travelers, setTravelers] = React.useState("2");
   const [style, setStyle] = React.useState("Conforto");
   const [budget, setBudget] = React.useState("");
+  const [currency, setCurrency] = React.useState("BRL");
+  const [language, setLanguage] = React.useState("pt");
+  const [translateTo, setTranslateTo] = React.useState("en");
   const [honeypot, setHoneypot] = React.useState("");
   const [loading, setLoading] = React.useState(false);
+  const [translating, setTranslating] = React.useState(false);
   const [plan, setPlan] = React.useState("");
+  const [originalPlan, setOriginalPlan] = React.useState("");
+  const [generationId, setGenerationId] = React.useState<string | null>(null);
+  const [activeLanguage, setActiveLanguage] = React.useState("pt");
+  const [versions, setVersions] = React.useState<Record<string, string>>({});
 
   React.useEffect(() => {
     fetch(`/api/public/widget-itinerary?slug=${encodeURIComponent(slug)}`)
@@ -130,17 +165,50 @@ function PublicWidgetPage() {
           travelers: Number(travelers) || 1,
           style,
           budget: budget || null,
-          currency: "BRL",
+          currency,
+          language,
           website: honeypot,
         }),
       });
       const data = await resp.json();
       if (!resp.ok) throw new Error(data.error || "Não foi possível gerar agora.");
       setPlan(data.text as string);
+      setOriginalPlan(data.originalText as string);
+      setGenerationId(data.generationId as string | null);
+      setActiveLanguage(data.language as string);
+      setVersions({ pt: data.originalText as string, [data.language as string]: data.text as string });
     } catch (e) {
       toast.error((e as Error).message);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const translate = async () => {
+    if (!generationId || !originalPlan || translating) return;
+    const existing = versions[translateTo];
+    if (existing) {
+      setPlan(existing);
+      setActiveLanguage(translateTo);
+      return;
+    }
+    setTranslating(true);
+    try {
+      const resp = await fetch("/api/public/widget-itinerary", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ action: "translate", slug, generationId, originalText: originalPlan, targetLanguage: translateTo }),
+      });
+      const data = await resp.json();
+      if (!resp.ok) throw new Error(data.error || "Não foi possível traduzir agora.");
+      setVersions((current) => ({ ...current, [translateTo]: data.text as string }));
+      setPlan(data.text as string);
+      setActiveLanguage(translateTo);
+      toast.success("Roteiro traduzido");
+    } catch (error) {
+      toast.error((error as Error).message);
+    } finally {
+      setTranslating(false);
     }
   };
 
@@ -237,13 +305,36 @@ function PublicWidgetPage() {
             </div>
           </div>
           <div className="space-y-1.5">
-            <Label>Orçamento (R$, opcional)</Label>
+            <Label>Moeda do orçamento</Label>
+            <Select value={currency} onValueChange={setCurrency}>
+              <SelectTrigger><SelectValue>{CURRENCIES.find((item) => item.code === currency)?.label}</SelectValue></SelectTrigger>
+              <SelectContent>
+                {CURRENCIES.map((item) => <SelectItem key={item.code} value={item.code}>{item.label}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-1.5">
+            <Label>Orçamento ({CURRENCIES.find((item) => item.code === currency)?.symbol}, opcional)</Label>
             <Input
               value={budget}
               onChange={(e) => setBudget(e.target.value)}
               inputMode="numeric"
               placeholder="Ex: 8000"
             />
+          </div>
+          <div className="space-y-1.5">
+            <Label>Idioma do roteiro</Label>
+            <Select value={language} onValueChange={setLanguage}>
+              <SelectTrigger><SelectValue>{LANGUAGES.find((item) => item.code === language)?.label}</SelectValue></SelectTrigger>
+              <SelectContent>
+                {LANGUAGES.map((item) => <SelectItem key={item.code} value={item.code}>{item.label}</SelectItem>)}
+              </SelectContent>
+            </Select>
+            <p className="text-xs text-muted-foreground">
+              {language === "pt"
+                ? `${info?.itineraryCost ?? 0} créditos da conta responsável pelo link.`
+                : `${(info?.itineraryCost ?? 0) + (info?.translationCost ?? 0)} créditos: roteiro e tradução.`}
+            </p>
           </div>
 
           {/* honeypot anti-robô */}
@@ -276,7 +367,7 @@ function PublicWidgetPage() {
         <div className="min-h-[320px] rounded-2xl border border-border bg-gradient-card p-5">
           {plan ? (
             <>
-              <div className="mb-4 flex items-center justify-between gap-3">
+              <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
                 <div className="flex items-center gap-2">
                   {info?.logoUrl && (
                     <img
@@ -301,6 +392,28 @@ function PublicWidgetPage() {
                 >
                   <Download className="h-4 w-4" /> Baixar PDF
                 </Button>
+              </div>
+              <div className="mb-5 flex flex-col gap-2 border-y border-border py-3 sm:flex-row sm:items-end">
+                <div className="min-w-0 flex-1 space-y-1.5">
+                  <Label>Traduzir roteiro</Label>
+                  <Select value={translateTo} onValueChange={setTranslateTo}>
+                    <SelectTrigger><SelectValue>{LANGUAGES.find((item) => item.code === translateTo)?.label}</SelectValue></SelectTrigger>
+                    <SelectContent>
+                      {LANGUAGES.filter((item) => item.code !== "pt").map((item) => (
+                        <SelectItem key={item.code} value={item.code}>{item.label}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <Button variant="outline" onClick={translate} disabled={translating || translateTo === activeLanguage}>
+                  {translating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Languages className="h-4 w-4" />}
+                  {versions[translateTo] ? "Ver tradução" : `Traduzir · ${info?.translationCost ?? 0} créditos`}
+                </Button>
+                {activeLanguage !== "pt" && (
+                  <Button variant="ghost" onClick={() => { setPlan(originalPlan); setActiveLanguage("pt"); }}>
+                    Ver original
+                  </Button>
+                )}
               </div>
               <div className="prose prose-sm max-w-none dark:prose-invert">
                 <ReactMarkdown>{plan}</ReactMarkdown>

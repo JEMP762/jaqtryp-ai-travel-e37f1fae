@@ -5,6 +5,23 @@ import { chargeFeature, checkBalance } from "@/lib/credit-charge.server";
 
 const BRAND_BUCKET = "brand-logos";
 const FEATURE_KEY = "trip_create_branded";
+const TRANSLATION_FEATURE_KEY = "translate_text";
+const LANGUAGES = {
+  pt: "Português",
+  en: "English",
+  es: "Español",
+  fr: "Français",
+  it: "Italiano",
+  de: "Deutsch",
+  ja: "日本語",
+  zh: "中文",
+  ko: "한국어",
+  ar: "العربية",
+  ru: "Русский",
+} as const;
+const CURRENCIES = ["BRL", "USD", "EUR", "GBP", "ARS", "CLP", "JPY", "CHF", "CAD", "AUD"] as const;
+const languageSchema = z.enum(["pt", "en", "es", "fr", "it", "de", "ja", "zh", "ko", "ar", "ru"]);
+const currencySchema = z.enum(CURRENCIES);
 
 function json(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), {
@@ -21,7 +38,8 @@ async function admin() {
   return createClient(url, key, { auth: { persistSession: false, autoRefreshToken: false } });
 }
 
-const payloadSchema = z.object({
+const generateSchema = z.object({
+  action: z.literal("generate").optional(),
   slug: z.string().min(2).max(40),
   destination: z.string().min(2).max(120),
   days: z.number().int().min(1).max(30),
@@ -29,10 +47,46 @@ const payloadSchema = z.object({
   travelers: z.number().int().min(1).max(20).optional().nullable(),
   style: z.string().max(80).optional().nullable(),
   budget: z.string().max(40).optional().nullable(),
-  currency: z.string().max(6).optional().nullable(),
+  currency: currencySchema.optional().default("BRL"),
+  language: languageSchema.optional().default("pt"),
   // honeypot — must stay empty
   website: z.string().max(0).optional().nullable(),
 });
+
+const translateSchema = z.object({
+  action: z.literal("translate"),
+  slug: z.string().min(2).max(40),
+  generationId: z.string().uuid(),
+  originalText: z.string().min(20).max(100000),
+  targetLanguage: languageSchema.exclude(["pt"]),
+});
+
+const payloadSchema = z.union([generateSchema, translateSchema]);
+
+function resultHash(widgetId: string, text: string) {
+  return createHash("sha256").update(`${widgetId}:${text}`).digest("hex");
+}
+
+async function aiText(system: string, prompt: string) {
+  const apiKey = process.env["LOVABLE_API_KEY"];
+  if (!apiKey) throw new Error("AI_NOT_CONFIGURED");
+  const resp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+    method: "POST",
+    headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
+    body: JSON.stringify({
+      model: "google/gemini-3.5-flash",
+      messages: [
+        { role: "system", content: system },
+        { role: "user", content: prompt },
+      ],
+    }),
+  });
+  if (!resp.ok) throw new Error("AI_FAILED");
+  const data = await resp.json();
+  const text = (data?.choices?.[0]?.message?.content ?? "") as string;
+  if (!text.trim()) throw new Error("AI_FAILED");
+  return text;
+}
 
 function hostFrom(value: string | null): string | null {
   if (!value) return null;
@@ -80,12 +134,21 @@ export const Route = createFileRoute("/api/public/widget-itinerary")({
           logoUrl = data?.signedUrl ?? null;
         }
 
+        const [itineraryPricing, translationPricing] = await Promise.all([
+          checkBalance(widget.owner_id, FEATURE_KEY),
+          checkBalance(widget.owner_id, TRANSLATION_FEATURE_KEY),
+        ]);
+        const itineraryCost = itineraryPricing.ok ? itineraryPricing.cost : itineraryPricing.needed;
+        const translationCost = translationPricing.ok ? translationPricing.cost : translationPricing.needed;
+
         return json({
           slug: widget.slug,
           headline: widget.headline,
           intro: widget.intro,
           companyName: brand?.company_name ?? null,
           logoUrl,
+          itineraryCost: Number(itineraryCost ?? 0),
+          translationCost: Number(translationCost ?? 0),
         });
       },
 
@@ -94,7 +157,7 @@ export const Route = createFileRoute("/api/public/widget-itinerary")({
         const parsed = payloadSchema.safeParse(raw);
         if (!parsed.success) return json({ error: "Dados inválidos." }, 400);
         const input = parsed.data;
-        if (input.website) return json({ error: "Dados inválidos." }, 400);
+        if ("website" in input && input.website) return json({ error: "Dados inválidos." }, 400);
 
         const slug = input.slug.toLowerCase().trim();
         const sb = await admin();
@@ -106,7 +169,7 @@ export const Route = createFileRoute("/api/public/widget-itinerary")({
           .maybeSingle();
         if (!widget) return json({ error: "Este link não está disponível." }, 404);
 
-        // Domain allowlist (only enforced for external embeds)
+        // Domain allowlist applies to both generation and translation requests.
         const selfHost = hostFrom(request.url);
         const callerHost =
           hostFrom(request.headers.get("origin")) || hostFrom(request.headers.get("referer"));
@@ -116,6 +179,45 @@ export const Route = createFileRoute("/api/public/widget-itinerary")({
             (d) => callerHost === d.toLowerCase() || callerHost.endsWith(`.${d.toLowerCase()}`),
           );
           if (!ok) return json({ error: "Domínio não autorizado para este widget." }, 403);
+        }
+
+        if (input.action === "translate") {
+          const { data: generation } = await sb
+            .from("trip_widget_generations")
+            .select("id, widget_id, owner_id, result_hash, credits_spent, translation_credits, translated_languages")
+            .eq("id", input.generationId)
+            .eq("widget_id", widget.id)
+            .eq("owner_id", widget.owner_id)
+            .eq("status", "ok")
+            .maybeSingle();
+          if (!generation || generation.result_hash !== resultHash(widget.id, input.originalText)) {
+            return json({ error: "Roteiro inválido para tradução." }, 403);
+          }
+          const preTranslation = await checkBalance(widget.owner_id, TRANSLATION_FEATURE_KEY);
+          if (!preTranslation.ok) return json({ error: "Serviço indisponível no momento. Tente mais tarde." }, 402);
+          try {
+            const translated = await aiText(
+              `You are a professional translator. Translate the travel itinerary markdown to ${LANGUAGES[input.targetLanguage]}. Preserve all markdown, numbers, prices, currency symbols, and place names. Return only the translated markdown.`,
+              input.originalText,
+            );
+            const spend = await chargeFeature(widget.owner_id, TRANSLATION_FEATURE_KEY, {
+              route: "widget_translation",
+              slug,
+              generation_id: generation.id,
+              target_language: input.targetLanguage,
+            });
+            if (!spend.ok) return json({ error: "Serviço indisponível no momento. Tente mais tarde." }, 402);
+            const languages = Array.from(new Set([...(generation.translated_languages ?? []), input.targetLanguage]));
+            const { error: updateError } = await sb.from("trip_widget_generations").update({
+              credits_spent: generation.credits_spent + spend.spent,
+              translation_credits: generation.translation_credits + spend.spent,
+              translated_languages: languages,
+            }).eq("id", generation.id);
+            if (updateError) throw updateError;
+            return json({ text: translated, language: input.targetLanguage, creditsSpent: spend.spent });
+          } catch {
+            return json({ error: "Não foi possível traduzir agora. Tente novamente." }, 502);
+          }
         }
 
         // Rate limits
@@ -157,10 +259,15 @@ export const Route = createFileRoute("/api/public/widget-itinerary")({
           return json({ error: "Serviço indisponível no momento. Tente mais tarde." }, 402);
         }
 
-        const apiKey = process.env["LOVABLE_API_KEY"];
-        if (!apiKey) return json({ error: "Serviço indisponível." }, 500);
+        let translationPre: Awaited<ReturnType<typeof checkBalance>> | null = null;
+        if (input.language !== "pt") {
+          translationPre = await checkBalance(widget.owner_id, TRANSLATION_FEATURE_KEY);
+          if (!translationPre.ok || pre.have < pre.cost + translationPre.cost) {
+            return json({ error: "Serviço indisponível no momento. Tente mais tarde." }, 402);
+          }
+        }
 
-        const currency = (input.currency || "BRL").toUpperCase();
+        const currency = input.currency;
         let dateBlock = "";
         if (input.startDate) {
           const start = new Date(`${input.startDate}T00:00:00`);
@@ -185,41 +292,62 @@ export const Route = createFileRoute("/api/public/widget-itinerary")({
           input.budget ? `${input.budget} ${currency}` : "não informado"
         }.`;
 
-        const resp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-          method: "POST",
-          headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
-          body: JSON.stringify({
-            model: "google/gemini-3.5-flash",
-            messages: [
-              { role: "system", content: system },
-              { role: "user", content: prompt },
-            ],
-          }),
-        });
-        if (!resp.ok) {
+        let originalText: string;
+        try {
+          originalText = await aiText(system, prompt);
+        } catch {
           return json({ error: "Não foi possível gerar agora. Tente novamente." }, 502);
         }
-        const data = await resp.json();
-        const text = (data?.choices?.[0]?.message?.content ?? "") as string;
-        if (!text.trim()) return json({ error: "Não foi possível gerar agora." }, 502);
 
         const spend = await chargeFeature(widget.owner_id, FEATURE_KEY, {
           route: "widget",
           slug,
         });
-        const spent = spend.ok === true ? spend.spent : 0;
+        if (!spend.ok) return json({ error: "Serviço indisponível no momento. Tente mais tarde." }, 402);
+        let text = originalText;
+        let translationSpent = 0;
+        let deliveredLanguage = "pt";
+        if (input.language !== "pt") {
+          try {
+            text = await aiText(
+              `You are a professional translator. Translate the travel itinerary markdown to ${LANGUAGES[input.language]}. Preserve all markdown, numbers, prices, currency symbols, and place names. Return only the translated markdown.`,
+              originalText,
+            );
+            const translationSpend = await chargeFeature(widget.owner_id, TRANSLATION_FEATURE_KEY, {
+              route: "widget_initial_translation",
+              slug,
+              target_language: input.language,
+            });
+            if (translationSpend.ok) {
+              translationSpent = translationSpend.spent;
+              deliveredLanguage = input.language;
+            } else {
+              text = originalText;
+            }
+          } catch {
+            text = originalText;
+          }
+        }
 
-        await sb.from("trip_widget_generations").insert({
+        const { data: generation, error: generationError } = await sb.from("trip_widget_generations").insert({
           widget_id: widget.id,
           owner_id: widget.owner_id,
           destination: input.destination,
           days: input.days,
-          credits_spent: spent,
+          credits_spent: spend.spent + translationSpent,
           visitor_hash: vhash,
-          status: spend.ok === true ? "ok" : "unpaid",
-        });
+          status: "ok",
+          currency,
+          source_language: "pt",
+          result_hash: resultHash(widget.id, originalText),
+          translation_credits: translationSpent,
+          translated_languages: deliveredLanguage === "pt" ? [] : [deliveredLanguage],
+        }).select("id").single();
+        if (generationError || !generation) {
+          return json({ error: "O roteiro foi criado, mas não pôde ser preparado para tradução." }, 500);
+        }
 
-        return json({ text });
+        return json({ text, originalText, language: deliveredLanguage, generationId: generation.id });
       },
     },
   },
