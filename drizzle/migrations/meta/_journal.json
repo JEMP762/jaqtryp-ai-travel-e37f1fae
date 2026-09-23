@@ -43,6 +43,20 @@
       "when": 1790166649012,
       "tag": "0005_add_widget_link_monetization",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1790170714443,
+      "tag": "0006_add_widget_pix_sales",
+      "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1790170910635,
+      "tag": "0007_harden_mercadopago_connections",
+      "breakpoints": true
     }
   ]
 }

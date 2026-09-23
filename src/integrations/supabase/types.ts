@@ -649,6 +649,36 @@ export type Database = {
         }
         Relationships: []
       }
+      mercadopago_connections: {
+        Row: {
+          access_token_encrypted: string
+          connected_at: string
+          mp_user_id: string
+          owner_id: string
+          refresh_token_encrypted: string | null
+          token_expires_at: string | null
+          updated_at: string
+        }
+        Insert: {
+          access_token_encrypted: string
+          connected_at?: string
+          mp_user_id: string
+          owner_id: string
+          refresh_token_encrypted?: string | null
+          token_expires_at?: string | null
+          updated_at?: string
+        }
+        Update: {
+          access_token_encrypted?: string
+          connected_at?: string
+          mp_user_id?: string
+          owner_id?: string
+          refresh_token_encrypted?: string | null
+          token_expires_at?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       mystifly_api_logs: {
         Row: {
           booking_id: string | null
@@ -1177,6 +1207,7 @@ export type Database = {
           destination: string
           id: string
           owner_id: string
+          payment_unlocked_at: string | null
           protected_original_text: string | null
           protected_text: string | null
           result_hash: string | null
@@ -1197,6 +1228,7 @@ export type Database = {
           destination: string
           id?: string
           owner_id: string
+          payment_unlocked_at?: string | null
           protected_original_text?: string | null
           protected_text?: string | null
           result_hash?: string | null
@@ -1217,6 +1249,7 @@ export type Database = {
           destination?: string
           id?: string
           owner_id?: string
+          payment_unlocked_at?: string | null
           protected_original_text?: string | null
           protected_text?: string | null
           result_hash?: string | null
@@ -1250,6 +1283,7 @@ export type Database = {
           itinerary_price: number | null
           max_per_day: number
           max_per_hour: number
+          mercadopago_connected: boolean
           monetization_enabled: boolean
           owner_id: string
           payment_url: string | null
@@ -1268,6 +1302,7 @@ export type Database = {
           itinerary_price?: number | null
           max_per_day?: number
           max_per_hour?: number
+          mercadopago_connected?: boolean
           monetization_enabled?: boolean
           owner_id: string
           payment_url?: string | null
@@ -1286,6 +1321,7 @@ export type Database = {
           itinerary_price?: number | null
           max_per_day?: number
           max_per_hour?: number
+          mercadopago_connected?: boolean
           monetization_enabled?: boolean
           owner_id?: string
           payment_url?: string | null
@@ -1858,6 +1894,81 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      widget_itinerary_purchases: {
+        Row: {
+          amount_brl: number
+          created_at: string
+          expires_at: string | null
+          generation_id: string
+          id: string
+          owner_id: string
+          paid_at: string | null
+          provider: string
+          provider_payment_id: string | null
+          qr_code: string | null
+          qr_code_base64: string | null
+          status: string
+          ticket_url: string | null
+          unlocked_at: string | null
+          updated_at: string
+          visitor_hash: string
+          widget_id: string
+        }
+        Insert: {
+          amount_brl: number
+          created_at?: string
+          expires_at?: string | null
+          generation_id: string
+          id?: string
+          owner_id: string
+          paid_at?: string | null
+          provider?: string
+          provider_payment_id?: string | null
+          qr_code?: string | null
+          qr_code_base64?: string | null
+          status?: string
+          ticket_url?: string | null
+          unlocked_at?: string | null
+          updated_at?: string
+          visitor_hash: string
+          widget_id: string
+        }
+        Update: {
+          amount_brl?: number
+          created_at?: string
+          expires_at?: string | null
+          generation_id?: string
+          id?: string
+          owner_id?: string
+          paid_at?: string | null
+          provider?: string
+          provider_payment_id?: string | null
+          qr_code?: string | null
+          qr_code_base64?: string | null
+          status?: string
+          ticket_url?: string | null
+          unlocked_at?: string | null
+          updated_at?: string
+          visitor_hash?: string
+          widget_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "widget_itinerary_purchases_generation_id_fkey"
+            columns: ["generation_id"]
+            isOneToOne: true
+            referencedRelation: "trip_widget_generations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "widget_itinerary_purchases_widget_id_fkey"
+            columns: ["widget_id"]
+            isOneToOne: false
+            referencedRelation: "trip_widgets"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Views: {

@@ -28,9 +28,12 @@ export const Route = createFileRoute("/api/public/mercadopago/webhook")({
 
         try {
           // A verdade vem sempre da API do Mercado Pago, nunca do corpo recebido.
-          const { syncPixPaymentStatus } = await import("@/lib/pix.server");
           const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-          const res = await syncPixPaymentStatus(supabaseAdmin, String(paymentId));
+          const { syncWidgetPixPayment } = await import("@/lib/widget-pix.server");
+          const widgetResult = await syncWidgetPixPayment(supabaseAdmin, String(paymentId));
+          const res = widgetResult.found
+            ? widgetResult
+            : await (await import("@/lib/pix.server")).syncPixPaymentStatus(supabaseAdmin, String(paymentId));
           console.log("[mp/webhook] payment", paymentId, res);
         } catch (e: any) {
           // Retorna 200 para o Mercado Pago não ficar reenviando notificações

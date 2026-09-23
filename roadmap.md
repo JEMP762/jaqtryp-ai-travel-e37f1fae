@@ -20,3 +20,5 @@
 - [ ] Validar geração, tradução, PDF e débitos reais com uma execução autorizada
 - [x] Implementar e validar monetização opcional no link de roteiro com logo
 - [x] Corrigir e validar o salvamento seguro da senha de venda no ambiente publicado
+- [x] Adicionar preferências combináveis aos geradores principal e público
+- [ ] Conectar cada proprietário ao Mercado Pago e validar o Pix real com credenciais de marketplace
