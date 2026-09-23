@@ -232,7 +232,7 @@ export const Route = createFileRoute("/api/public/widget-itinerary")({
           const payment = await connectedMpFetch(await decryptMercadoPagoToken(connection.access_token_encrypted), "/v1/payments", {
             method: "POST",
             headers: { "X-Idempotency-Key": `widget-${generation.id}` },
-            body: JSON.stringify({ transaction_amount: Number(widget.itinerary_price), description: `Roteiro ${slug}`, payment_method_id: "pix", date_of_expiration: expiration.toISOString(), payer: { email: `buyer-${generation.id}@jaqtryp.com` }, external_reference: generation.id, metadata: { kind: "widget_itinerary", generation_id: generation.id, widget_id: widget.id } }),
+            body: JSON.stringify({ transaction_amount: Number(widget.itinerary_price), description: `Roteiro ${slug}`, payment_method_id: "pix", date_of_expiration: expiration.toISOString(), notification_url: `${new URL(request.url).origin}/api/public/mercadopago/webhook`, payer: { email: `buyer-${generation.id}@jaqtryp.com` }, external_reference: generation.id, metadata: { kind: "widget_itinerary", generation_id: generation.id, widget_id: widget.id } }),
           });
           const tx = payment?.point_of_interaction?.transaction_data ?? {};
           if (!payment?.id || !tx.qr_code) return json({ error: "Não foi possível gerar o Pix." }, 502);

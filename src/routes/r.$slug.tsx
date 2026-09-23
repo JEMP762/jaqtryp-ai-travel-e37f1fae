@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { Loader2, Sparkles, Download, Languages, LockKeyhole, Copy, CheckCircle2 } from "lucide-react";
+import { Loader2, Sparkles, Download, Languages, LockKeyhole, Copy } from "lucide-react";
 import * as React from "react";
 import ReactMarkdown from "react-markdown";
 import { toast } from "sonner";
