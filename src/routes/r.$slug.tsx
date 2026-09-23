@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { Loader2, Sparkles, Download, Languages } from "lucide-react";
+import { Loader2, Sparkles, Download, Languages, LockKeyhole, ExternalLink } from "lucide-react";
 import * as React from "react";
 import ReactMarkdown from "react-markdown";
 import { toast } from "sonner";
@@ -22,6 +22,9 @@ type WidgetInfo = {
   logoUrl: string | null;
   itineraryCost: number;
   translationCost: number;
+  monetized: boolean;
+  paymentUrl: string | null;
+  price: number | null;
 };
 
 export const Route = createFileRoute("/r/$slug")({
@@ -137,6 +140,9 @@ function PublicWidgetPage() {
   const [generationId, setGenerationId] = React.useState<string | null>(null);
   const [activeLanguage, setActiveLanguage] = React.useState("pt");
   const [versions, setVersions] = React.useState<Record<string, string>>({});
+  const [locked, setLocked] = React.useState(false);
+  const [accessPassword, setAccessPassword] = React.useState("");
+  const [unlocking, setUnlocking] = React.useState(false);
 
   React.useEffect(() => {
     fetch(`/api/public/widget-itinerary?slug=${encodeURIComponent(slug)}`)
@@ -177,6 +183,8 @@ function PublicWidgetPage() {
       setGenerationId(data.generationId as string | null);
       setActiveLanguage(data.language as string);
       setVersions({ pt: data.originalText as string, [data.language as string]: data.text as string });
+      setLocked(data.locked === true);
+      setAccessPassword("");
     } catch (e) {
       toast.error((e as Error).message);
     } finally {
@@ -185,7 +193,7 @@ function PublicWidgetPage() {
   };
 
   const translate = async () => {
-    if (!generationId || !originalPlan || translating) return;
+    if (!generationId || !originalPlan || translating || locked) return;
     const existing = versions[translateTo];
     if (existing) {
       setPlan(existing);
@@ -197,7 +205,7 @@ function PublicWidgetPage() {
       const resp = await fetch("/api/public/widget-itinerary", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ action: "translate", slug, generationId, originalText: originalPlan, targetLanguage: translateTo }),
+        body: JSON.stringify({ action: "translate", slug, generationId, originalText: originalPlan, targetLanguage: translateTo, accessPassword }),
       });
       const data = await resp.json();
       if (!resp.ok) throw new Error(data.error || "Não foi possível traduzir agora.");
@@ -209,6 +217,30 @@ function PublicWidgetPage() {
       toast.error((error as Error).message);
     } finally {
       setTranslating(false);
+    }
+  };
+
+  const unlock = async () => {
+    if (!generationId || unlocking) return;
+    if (accessPassword.trim().length < 6) return toast.error("Digite a senha de acesso.");
+    setUnlocking(true);
+    try {
+      const response = await fetch("/api/public/widget-itinerary", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ action: "unlock", slug, generationId, password: accessPassword.trim() }),
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || "Não foi possível liberar o roteiro.");
+      setPlan(data.text as string);
+      setOriginalPlan(data.originalText as string);
+      setVersions({ pt: data.originalText as string, [activeLanguage]: data.text as string });
+      setLocked(false);
+      toast.success("Roteiro liberado");
+    } catch (error) {
+      toast.error((error as Error).message);
+    } finally {
+      setUnlocking(false);
     }
   };
 
@@ -380,7 +412,7 @@ function PublicWidgetPage() {
                     <span className="text-sm font-semibold">{info.companyName}</span>
                   )}
                 </div>
-                <Button
+                {!locked && <Button
                   variant="outline"
                   size="sm"
                   onClick={() =>
@@ -391,9 +423,9 @@ function PublicWidgetPage() {
                   }
                 >
                   <Download className="h-4 w-4" /> Baixar PDF
-                </Button>
+                </Button>}
               </div>
-              <div className="mb-5 flex flex-col gap-2 border-y border-border py-3 sm:flex-row sm:items-end">
+              {!locked && <div className="mb-5 flex flex-col gap-2 border-y border-border py-3 sm:flex-row sm:items-end">
                 <div className="min-w-0 flex-1 space-y-1.5">
                   <Label>Traduzir roteiro</Label>
                   <Select value={translateTo} onValueChange={setTranslateTo}>
@@ -414,10 +446,43 @@ function PublicWidgetPage() {
                     Ver original
                   </Button>
                 )}
-              </div>
+              </div>}
               <div className="prose prose-sm max-w-none dark:prose-invert">
                 <ReactMarkdown>{plan}</ReactMarkdown>
               </div>
+              {locked && info?.monetized && (
+                <div className="relative mt-5 overflow-hidden rounded-md border border-border">
+                  <div aria-hidden="true" className="select-none space-y-3 p-5 blur-sm">
+                    <div className="h-5 w-1/3 rounded bg-muted" />
+                    <div className="h-3 w-full rounded bg-muted" />
+                    <div className="h-3 w-5/6 rounded bg-muted" />
+                    <div className="h-3 w-4/5 rounded bg-muted" />
+                    <div className="h-5 w-1/4 rounded bg-muted" />
+                    <div className="h-3 w-full rounded bg-muted" />
+                  </div>
+                  <div className="absolute inset-0 grid place-items-center bg-background/75 p-4 backdrop-blur-sm">
+                    <div className="w-full max-w-sm space-y-4 rounded-md border border-border bg-card p-5 text-center shadow-lg">
+                      <LockKeyhole className="mx-auto h-7 w-7 text-primary" />
+                      <div>
+                        <p className="font-semibold">Roteiro completo</p>
+                        <p className="mt-1 text-2xl font-bold">{new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(info.price ?? 0)}</p>
+                      </div>
+                      {info.paymentUrl && (
+                        <Button asChild className="w-full">
+                          <a href={info.paymentUrl} target="_blank" rel="noopener noreferrer">Pagar e Liberar Roteiro <ExternalLink className="h-4 w-4" /></a>
+                        </Button>
+                      )}
+                      <div className="space-y-2 text-left">
+                        <Label htmlFor="access-password">Já pagou? Digite a senha de acesso</Label>
+                        <Input id="access-password" type="password" value={accessPassword} onChange={(event) => setAccessPassword(event.target.value)} maxLength={100} autoComplete="off" onKeyDown={(event) => { if (event.key === "Enter") void unlock(); }} />
+                        <Button variant="outline" className="w-full" onClick={unlock} disabled={unlocking}>
+                          {unlocking ? <Loader2 className="h-4 w-4 animate-spin" /> : <LockKeyhole className="h-4 w-4" />} Liberar roteiro
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
             </>
           ) : (
             <div className="grid h-full place-items-center text-center text-muted-foreground">

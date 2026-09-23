@@ -59,12 +59,48 @@ const translateSchema = z.object({
   generationId: z.string().uuid(),
   originalText: z.string().min(20).max(100000),
   targetLanguage: languageSchema.exclude(["pt"]),
+  accessPassword: z.string().min(6).max(100).optional(),
 });
 
-const payloadSchema = z.union([generateSchema, translateSchema]);
+const unlockSchema = z.object({
+  action: z.literal("unlock"),
+  slug: z.string().min(2).max(40),
+  generationId: z.string().uuid(),
+  password: z.string().min(6).max(100),
+});
+
+const payloadSchema = z.union([generateSchema, translateSchema, unlockSchema]);
 
 function resultHash(widgetId: string, text: string) {
   return createHash("sha256").update(`${widgetId}:${text}`).digest("hex");
+}
+
+function isMonetized(widget: {
+  monetization_enabled: boolean;
+  payment_url: string | null;
+  itinerary_price: number | null;
+  unlock_password_hash: string | null;
+  unlock_password_salt: string | null;
+}) {
+  return widget.monetization_enabled && Boolean(
+    widget.payment_url && widget.itinerary_price && widget.unlock_password_hash && widget.unlock_password_salt,
+  );
+}
+
+function firstDayPreview(markdown: string) {
+  const lines = markdown.split("\n");
+  const dayHeadings = lines
+    .map((line, index) => (/^#{1,3}\s*(?:dia|day|día|jour|giorno|tag)\s*\d+/i.test(line.trim()) ? index : -1))
+    .filter((index) => index >= 0);
+  const end = dayHeadings.length > 1 ? dayHeadings[1] : lines.length;
+  return lines.slice(0, end).join("\n").trim();
+}
+
+async function passwordMatches(password: string, hash: string | null, salt: string | null) {
+  if (!hash || !salt) return false;
+  const security = await import("@/lib/widget-monetization.server");
+  const candidate = await security.hashWidgetPassword(password, salt);
+  return security.safeHashEqual(candidate, hash);
 }
 
 async function aiText(system: string, prompt: string) {
@@ -114,7 +150,7 @@ export const Route = createFileRoute("/api/public/widget-itinerary")({
         const sb = await admin();
         const { data: widget } = await sb
           .from("trip_widgets")
-          .select("slug, headline, intro, owner_id, active")
+          .select("slug, headline, intro, owner_id, active, monetization_enabled, payment_url, itinerary_price, unlock_password_hash, unlock_password_salt")
           .eq("slug", slug)
           .eq("active", true)
           .maybeSingle();
@@ -149,6 +185,9 @@ export const Route = createFileRoute("/api/public/widget-itinerary")({
           logoUrl,
           itineraryCost: Number(itineraryCost ?? 0),
           translationCost: Number(translationCost ?? 0),
+          monetized: isMonetized(widget),
+          paymentUrl: isMonetized(widget) ? widget.payment_url : null,
+          price: isMonetized(widget) ? Number(widget.itinerary_price) : null,
         });
       },
 
@@ -163,7 +202,7 @@ export const Route = createFileRoute("/api/public/widget-itinerary")({
         const sb = await admin();
         const { data: widget } = await sb
           .from("trip_widgets")
-          .select("id, owner_id, active, allowed_domains, max_per_hour, max_per_day")
+          .select("id, owner_id, active, allowed_domains, max_per_hour, max_per_day, monetization_enabled, payment_url, itinerary_price, unlock_password_hash, unlock_password_salt")
           .eq("slug", slug)
           .eq("active", true)
           .maybeSingle();
@@ -181,6 +220,40 @@ export const Route = createFileRoute("/api/public/widget-itinerary")({
           if (!ok) return json({ error: "Domínio não autorizado para este widget." }, 403);
         }
 
+        if (input.action === "unlock") {
+          const { data: generation } = await sb
+            .from("trip_widget_generations")
+            .select("id, visitor_hash, protected_text, protected_original_text, unlock_attempt_count, unlock_window_started_at")
+            .eq("id", input.generationId)
+            .eq("widget_id", widget.id)
+            .eq("owner_id", widget.owner_id)
+            .eq("status", "ok")
+            .maybeSingle();
+          if (!generation || !isMonetized(widget) || !generation.protected_text || !generation.protected_original_text) {
+            return json({ error: "Roteiro indisponível para desbloqueio." }, 404);
+          }
+          const requestVisitorHash = visitorHash(request, slug);
+          if (generation.visitor_hash !== requestVisitorHash) return json({ error: "Roteiro indisponível para desbloqueio." }, 403);
+
+          const windowStarted = generation.unlock_window_started_at
+            ? new Date(generation.unlock_window_started_at).getTime()
+            : 0;
+          const windowExpired = Date.now() - windowStarted > 15 * 60 * 1000;
+          const attempts = windowExpired ? 0 : generation.unlock_attempt_count;
+          if (attempts >= 5) return json({ error: "Muitas tentativas. Aguarde 15 minutos." }, 429);
+
+          const valid = await passwordMatches(input.password, widget.unlock_password_hash, widget.unlock_password_salt);
+          if (!valid) {
+            await sb.from("trip_widget_generations").update({
+              unlock_attempt_count: attempts + 1,
+              unlock_window_started_at: windowExpired ? new Date().toISOString() : generation.unlock_window_started_at,
+            }).eq("id", generation.id);
+            return json({ error: "Senha incorreta." }, 401);
+          }
+          await sb.from("trip_widget_generations").update({ unlock_attempt_count: 0, unlock_window_started_at: null }).eq("id", generation.id);
+          return json({ text: generation.protected_text, originalText: generation.protected_original_text });
+        }
+
         if (input.action === "translate") {
           const { data: generation } = await sb
             .from("trip_widget_generations")
@@ -192,6 +265,13 @@ export const Route = createFileRoute("/api/public/widget-itinerary")({
             .maybeSingle();
           if (!generation || generation.result_hash !== resultHash(widget.id, input.originalText)) {
             return json({ error: "Roteiro inválido para tradução." }, 403);
+          }
+          if (isMonetized(widget) && !(input.accessPassword && await passwordMatches(
+            input.accessPassword,
+            widget.unlock_password_hash,
+            widget.unlock_password_salt,
+          ))) {
+            return json({ error: "Desbloqueie o roteiro antes de traduzir." }, 403);
           }
           const preTranslation = await checkBalance(widget.owner_id, TRANSLATION_FEATURE_KEY);
           if (!preTranslation.ok) return json({ error: "Serviço indisponível no momento. Tente mais tarde." }, 402);
@@ -329,6 +409,7 @@ export const Route = createFileRoute("/api/public/widget-itinerary")({
           }
         }
 
+        const monetized = isMonetized(widget);
         const { data: generation, error: generationError } = await sb.from("trip_widget_generations").insert({
           widget_id: widget.id,
           owner_id: widget.owner_id,
@@ -342,12 +423,23 @@ export const Route = createFileRoute("/api/public/widget-itinerary")({
           result_hash: resultHash(widget.id, originalText),
           translation_credits: translationSpent,
           translated_languages: deliveredLanguage === "pt" ? [] : [deliveredLanguage],
+          protected_text: monetized ? text : null,
+          protected_original_text: monetized ? originalText : null,
         }).select("id").single();
         if (generationError || !generation) {
           return json({ error: "O roteiro foi criado, mas não pôde ser preparado para tradução." }, 500);
         }
 
-        return json({ text, originalText, language: deliveredLanguage, generationId: generation.id });
+        if (monetized) {
+          return json({
+            text: firstDayPreview(text),
+            originalText: "",
+            language: deliveredLanguage,
+            generationId: generation.id,
+            locked: true,
+          });
+        }
+        return json({ text, originalText, language: deliveredLanguage, generationId: generation.id, locked: false });
       },
     },
   },
