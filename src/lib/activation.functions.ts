@@ -6,6 +6,17 @@ import type { Json } from "@/integrations/supabase/types";
 const intentSchema = z.enum(["itinerary", "flight_search", "image_translation", "document_translation", "travel_budget", "direct"]);
 const eventSchema = z.enum(["signup_completed", "onboarding_started", "onboarding_completed", "first_action", "first_result", "second_action", "share_clicked", "feature_discovered", "return_visit", "subscription_started"]);
 
+const shareableKinds = ["itinerary", "translation", "travel_budget", "document_translation", "flight_search"] as const;
+
+function publicSnapshot(kind: string, payload: Record<string, unknown>) {
+  if (kind === "itinerary") return { markdown: payload.markdown, destination: payload.destination, days: payload.days, currency: payload.currency };
+  if (kind === "translation") return { translation: payload.translation, from: payload.from, to: payload.to };
+  if (kind === "travel_budget") return { markdown: payload.markdown, currency: payload.currency, total: payload.total, daily: payload.daily };
+  if (kind === "document_translation") return { summary: payload.summary, sourceLanguage: payload.sourceLanguage, targetLanguage: payload.targetLanguage };
+  if (kind === "flight_search") return { summary: payload.summary, origin: payload.origin, destination: payload.destination, departureDate: payload.departureDate };
+  return {};
+}
+
 export const getActivationState = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
@@ -41,6 +52,9 @@ export const saveOnboarding = createServerFn({ method: "POST" })
       updated_at: new Date().toISOString(),
     });
     if (error) throw new Error(error.message);
+    if (data.event === "first_result") {
+      await context.supabase.rpc("activate_viral_referral", { _user: context.userId });
+    }
     return { ok: true };
   });
 
@@ -90,22 +104,58 @@ export const saveUserResult = createServerFn({ method: "POST" })
 
 export const shareUserResult = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input: unknown) => z.object({ resultId: z.string().uuid() }).parse(input))
+  .inputValidator((input: unknown) => z.object({ resultId: z.string().uuid(), confirmedPublic: z.literal(true) }).parse(input))
   .handler(async ({ data, context }) => {
     const { data: result, error } = await context.supabase.from("user_results").select("kind,title,summary,payload").eq("id", data.resultId).eq("user_id", context.userId).single();
     if (error || !result) throw new Error("Resultado não encontrado");
-    if (result.kind !== "itinerary" && result.kind !== "translation") throw new Error("Este resultado não pode ser compartilhado");
-    const slug = `${result.kind === "itinerary" ? "rot" : "tra"}-${crypto.randomUUID().replaceAll("-", "").slice(0, 12)}`;
-    const { error: insertError } = await context.supabase.from("shared_results").insert({
+    if (!shareableKinds.includes(result.kind as typeof shareableKinds[number])) throw new Error("Este resultado não pode ser compartilhado");
+    const [{ data: existing }, { data: profile }] = await Promise.all([
+      context.supabase.from("shared_results").select("id,slug,kind").eq("owner_id", context.userId).eq("source_result_id", data.resultId).eq("active", true).maybeSingle(),
+      context.supabase.from("profiles").select("referral_code").eq("id", context.userId).single(),
+    ]);
+    const routeByKind: Record<string, string> = { itinerary: "roteiro", translation: "traducao", travel_budget: "orcamento", document_translation: "documento", flight_search: "voo" };
+    if (existing) {
+      const query = profile?.referral_code ? `?ref=${encodeURIComponent(profile.referral_code)}` : "";
+      return { shareId: existing.id, slug: existing.slug, path: `/${routeByKind[existing.kind]}/${existing.slug}${query}` };
+    }
+    const prefixByKind: Record<string, string> = { itinerary: "rot", translation: "tra", travel_budget: "orc", document_translation: "doc", flight_search: "voo" };
+    const slug = `${prefixByKind[result.kind]}-${crypto.randomUUID().replaceAll("-", "").slice(0, 12)}`;
+    const { data: shared, error: insertError } = await context.supabase.from("shared_results").insert({
       slug,
       owner_id: context.userId,
+      source_result_id: data.resultId,
+      referral_code_snapshot: profile?.referral_code ?? null,
+      feature: result.kind,
       kind: result.kind,
       title: result.title,
       summary: result.summary,
-      public_payload: result.payload,
-    });
+      public_payload: publicSnapshot(result.kind, result.payload as Record<string, unknown>) as Json,
+    }).select("id").single();
     if (insertError) throw new Error(insertError.message);
-    return { slug, path: result.kind === "itinerary" ? `/roteiro/${slug}` : `/traducao/${slug}` };
+    const { error: eventError } = await context.supabase.from("viral_events").insert({
+      share_id: shared.id, referrer_id: context.userId, event_name: "share_created", feature: result.kind,
+      source: "result", idempotency_key: `share:${shared.id}`,
+    });
+    if (eventError) throw new Error(eventError.message);
+    const query = profile?.referral_code ? `?ref=${encodeURIComponent(profile.referral_code)}` : "";
+    return { shareId: shared.id, slug, path: `/${routeByKind[result.kind]}/${slug}${query}` };
+  });
+
+export const getGrowthEngine = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const { data: role } = await context.supabase.from("user_roles").select("role").eq("user_id", context.userId).eq("role", "admin").maybeSingle();
+    if (!role) throw new Error("Acesso negado");
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const since = new Date(Date.now() - 30 * 86400000).toISOString();
+    const [{ data: events }, { data: journeys }, { data: rewards }] = await Promise.all([
+      supabaseAdmin.from("viral_events").select("event_name,feature,source,created_at").gte("created_at", since).limit(10000),
+      supabaseAdmin.from("viral_referrals").select("status,feature,reward_credits,created_at").gte("created_at", since).limit(10000),
+      supabaseAdmin.from("referral_rewards").select("source,credits,created_at").gte("created_at", since).limit(10000),
+    ]);
+    const counts = (events ?? []).reduce<Record<string, number>>((acc, row) => { acc[row.event_name] = (acc[row.event_name] ?? 0) + 1; return acc; }, {});
+    const byFeature = (events ?? []).reduce<Record<string, number>>((acc, row) => { const key = row.feature ?? "general"; acc[key] = (acc[key] ?? 0) + 1; return acc; }, {});
+    return { counts, byFeature, journeys: journeys ?? [], rewards: rewards ?? [] };
   });
 
 export const getActivationFunnel = createServerFn({ method: "GET" })

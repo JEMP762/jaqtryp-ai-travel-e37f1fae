@@ -7,7 +7,7 @@ import { saveEntryContext, type EntryIntent } from "@/lib/onboarding-context";
 
 type SharedResult = {
   slug: string;
-  kind: "itinerary" | "translation";
+  kind: "itinerary" | "translation" | "travel_budget" | "document_translation" | "flight_search";
   title: string;
   summary: string | null;
   public_payload: Record<string, unknown>;
@@ -29,6 +29,7 @@ export function SharedResultPage({ slug, intent }: { slug: string; intent: Entry
 
   React.useEffect(() => {
     const params = new URLSearchParams(window.location.search);
+    const currentVisitor = visitorId();
     const context = {
       intent,
       ref: params.get("ref") ?? undefined,
@@ -36,6 +37,7 @@ export function SharedResultPage({ slug, intent }: { slug: string; intent: Entry
       medium: params.get("utm_medium") ?? undefined,
       campaign: params.get("utm_campaign") ?? undefined,
       contentSlug: slug,
+      visitorId: currentVisitor,
     };
     saveEntryContext(context);
     fetch(`/api/public/shared-result/${encodeURIComponent(slug)}`)
@@ -48,7 +50,7 @@ export function SharedResultPage({ slug, intent }: { slug: string; intent: Entry
         fetch("/api/public/activation", {
           method: "POST",
           headers: { "content-type": "application/json" },
-          body: JSON.stringify({ event: "shared_content_viewed", visitorId: visitorId(), feature: data.kind, source: context.source, campaign: context.campaign, slug }),
+          body: JSON.stringify({ event: "shared_content_viewed", visitorId: currentVisitor, feature: data.kind, source: context.source, campaign: context.campaign, slug, ref: context.ref }),
         }).catch(() => {});
       })
       .catch(() => setMissing(true));
@@ -63,6 +65,7 @@ export function SharedResultPage({ slug, intent }: { slug: string; intent: Entry
       medium: params.get("utm_medium") ?? undefined,
       campaign: params.get("utm_campaign") ?? undefined,
       contentSlug: slug,
+      visitorId: visitorId(),
     });
     fetch("/api/public/activation", {
       method: "POST",

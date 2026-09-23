@@ -10,7 +10,9 @@ export function ResultActions({ resultId, title }: { resultId: string; title: st
 
   const getUrl = async () => {
     if (url) return url;
-    const result = await shareUserResult({ data: { resultId } });
+    const confirmed = window.confirm("Ao continuar, uma versão segura deste resultado ficará acessível publicamente por este link. Deseja compartilhar?");
+    if (!confirmed) throw new DOMException("Cancelado", "AbortError");
+    const result = await shareUserResult({ data: { resultId, confirmedPublic: true } });
     const next = `${window.location.origin}${result.path}`;
     setUrl(next);
     return next;
