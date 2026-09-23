@@ -1177,11 +1177,15 @@ export type Database = {
           destination: string
           id: string
           owner_id: string
+          protected_original_text: string | null
+          protected_text: string | null
           result_hash: string | null
           source_language: string
           status: string
           translated_languages: string[]
           translation_credits: number
+          unlock_attempt_count: number
+          unlock_window_started_at: string | null
           visitor_hash: string | null
           widget_id: string
         }
@@ -1193,11 +1197,15 @@ export type Database = {
           destination: string
           id?: string
           owner_id: string
+          protected_original_text?: string | null
+          protected_text?: string | null
           result_hash?: string | null
           source_language?: string
           status?: string
           translated_languages?: string[]
           translation_credits?: number
+          unlock_attempt_count?: number
+          unlock_window_started_at?: string | null
           visitor_hash?: string | null
           widget_id: string
         }
@@ -1209,11 +1217,15 @@ export type Database = {
           destination?: string
           id?: string
           owner_id?: string
+          protected_original_text?: string | null
+          protected_text?: string | null
           result_hash?: string | null
           source_language?: string
           status?: string
           translated_languages?: string[]
           translation_credits?: number
+          unlock_attempt_count?: number
+          unlock_window_started_at?: string | null
           visitor_hash?: string | null
           widget_id?: string
         }
@@ -1235,10 +1247,15 @@ export type Database = {
           headline: string | null
           id: string
           intro: string | null
+          itinerary_price: number | null
           max_per_day: number
           max_per_hour: number
+          monetization_enabled: boolean
           owner_id: string
+          payment_url: string | null
           slug: string
+          unlock_password_hash: string | null
+          unlock_password_salt: string | null
           updated_at: string
         }
         Insert: {
@@ -1248,10 +1265,15 @@ export type Database = {
           headline?: string | null
           id?: string
           intro?: string | null
+          itinerary_price?: number | null
           max_per_day?: number
           max_per_hour?: number
+          monetization_enabled?: boolean
           owner_id: string
+          payment_url?: string | null
           slug: string
+          unlock_password_hash?: string | null
+          unlock_password_salt?: string | null
           updated_at?: string
         }
         Update: {
@@ -1261,10 +1283,15 @@ export type Database = {
           headline?: string | null
           id?: string
           intro?: string | null
+          itinerary_price?: number | null
           max_per_day?: number
           max_per_hour?: number
+          monetization_enabled?: boolean
           owner_id?: string
+          payment_url?: string | null
           slug?: string
+          unlock_password_hash?: string | null
+          unlock_password_salt?: string | null
           updated_at?: string
         }
         Relationships: []
