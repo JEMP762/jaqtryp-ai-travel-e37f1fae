@@ -58,6 +58,7 @@ import { Route as AppAdminActivationRouteImport } from './routes/_app.admin.acti
 import { Route as ApiPublicSharedResultSlugRouteImport } from './routes/api.public.shared-result.$slug'
 import { Route as ApiPublicPaymentsWebhookRouteImport } from './routes/api.public.payments.webhook'
 import { Route as ApiPublicMercadopagoWebhookRouteImport } from './routes/api.public.mercadopago.webhook'
+import { Route as ApiPublicMercadopagoCallbackRouteImport } from './routes/api.public.mercadopago.callback'
 
 const SignupRoute = SignupRouteImport.update({
   id: '/signup',
@@ -308,6 +309,12 @@ const ApiPublicMercadopagoWebhookRoute =
     path: '/api/public/mercadopago/webhook',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiPublicMercadopagoCallbackRoute =
+  ApiPublicMercadopagoCallbackRouteImport.update({
+    id: '/api/public/mercadopago/callback',
+    path: '/api/public/mercadopago/callback',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -355,6 +362,7 @@ export interface FileRoutesByFullPath {
   '/api/public/translate-broadcast': typeof ApiPublicTranslateBroadcastRoute
   '/api/public/tts': typeof ApiPublicTtsRoute
   '/api/public/widget-itinerary': typeof ApiPublicWidgetItineraryRoute
+  '/api/public/mercadopago/callback': typeof ApiPublicMercadopagoCallbackRoute
   '/api/public/mercadopago/webhook': typeof ApiPublicMercadopagoWebhookRoute
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
   '/api/public/shared-result/$slug': typeof ApiPublicSharedResultSlugRoute
@@ -405,6 +413,7 @@ export interface FileRoutesByTo {
   '/api/public/translate-broadcast': typeof ApiPublicTranslateBroadcastRoute
   '/api/public/tts': typeof ApiPublicTtsRoute
   '/api/public/widget-itinerary': typeof ApiPublicWidgetItineraryRoute
+  '/api/public/mercadopago/callback': typeof ApiPublicMercadopagoCallbackRoute
   '/api/public/mercadopago/webhook': typeof ApiPublicMercadopagoWebhookRoute
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
   '/api/public/shared-result/$slug': typeof ApiPublicSharedResultSlugRoute
@@ -457,6 +466,7 @@ export interface FileRoutesById {
   '/api/public/translate-broadcast': typeof ApiPublicTranslateBroadcastRoute
   '/api/public/tts': typeof ApiPublicTtsRoute
   '/api/public/widget-itinerary': typeof ApiPublicWidgetItineraryRoute
+  '/api/public/mercadopago/callback': typeof ApiPublicMercadopagoCallbackRoute
   '/api/public/mercadopago/webhook': typeof ApiPublicMercadopagoWebhookRoute
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
   '/api/public/shared-result/$slug': typeof ApiPublicSharedResultSlugRoute
@@ -509,6 +519,7 @@ export interface FileRouteTypes {
     | '/api/public/translate-broadcast'
     | '/api/public/tts'
     | '/api/public/widget-itinerary'
+    | '/api/public/mercadopago/callback'
     | '/api/public/mercadopago/webhook'
     | '/api/public/payments/webhook'
     | '/api/public/shared-result/$slug'
@@ -559,6 +570,7 @@ export interface FileRouteTypes {
     | '/api/public/translate-broadcast'
     | '/api/public/tts'
     | '/api/public/widget-itinerary'
+    | '/api/public/mercadopago/callback'
     | '/api/public/mercadopago/webhook'
     | '/api/public/payments/webhook'
     | '/api/public/shared-result/$slug'
@@ -610,6 +622,7 @@ export interface FileRouteTypes {
     | '/api/public/translate-broadcast'
     | '/api/public/tts'
     | '/api/public/widget-itinerary'
+    | '/api/public/mercadopago/callback'
     | '/api/public/mercadopago/webhook'
     | '/api/public/payments/webhook'
     | '/api/public/shared-result/$slug'
@@ -641,6 +654,7 @@ export interface RootRouteChildren {
   ApiPublicTranslateBroadcastRoute: typeof ApiPublicTranslateBroadcastRoute
   ApiPublicTtsRoute: typeof ApiPublicTtsRoute
   ApiPublicWidgetItineraryRoute: typeof ApiPublicWidgetItineraryRoute
+  ApiPublicMercadopagoCallbackRoute: typeof ApiPublicMercadopagoCallbackRoute
   ApiPublicMercadopagoWebhookRoute: typeof ApiPublicMercadopagoWebhookRoute
   ApiPublicPaymentsWebhookRoute: typeof ApiPublicPaymentsWebhookRoute
   ApiPublicSharedResultSlugRoute: typeof ApiPublicSharedResultSlugRoute
@@ -991,6 +1005,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicMercadopagoWebhookRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/mercadopago/callback': {
+      id: '/api/public/mercadopago/callback'
+      path: '/api/public/mercadopago/callback'
+      fullPath: '/api/public/mercadopago/callback'
+      preLoaderRoute: typeof ApiPublicMercadopagoCallbackRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -1070,6 +1091,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPublicTranslateBroadcastRoute: ApiPublicTranslateBroadcastRoute,
   ApiPublicTtsRoute: ApiPublicTtsRoute,
   ApiPublicWidgetItineraryRoute: ApiPublicWidgetItineraryRoute,
+  ApiPublicMercadopagoCallbackRoute: ApiPublicMercadopagoCallbackRoute,
   ApiPublicMercadopagoWebhookRoute: ApiPublicMercadopagoWebhookRoute,
   ApiPublicPaymentsWebhookRoute: ApiPublicPaymentsWebhookRoute,
   ApiPublicSharedResultSlugRoute: ApiPublicSharedResultSlugRoute,

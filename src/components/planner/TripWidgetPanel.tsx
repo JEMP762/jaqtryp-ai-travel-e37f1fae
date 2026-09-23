@@ -1,5 +1,5 @@
 import * as React from "react";
-import { Copy, Loader2, Link2, LockKeyhole } from "lucide-react";
+import { Copy, Loader2, Link2, LockKeyhole, BadgeCheck } from "lucide-react";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { supabase } from "@/integrations/supabase/client";
-import { getWidgetMonetization, saveWidgetMonetization } from "@/lib/widget-monetization.functions";
+import { disconnectMercadoPago, getMercadoPagoConnectUrl, getWidgetMonetization, saveWidgetMonetization } from "@/lib/widget-monetization.functions";
 
 type Widget = {
   id: string;
@@ -41,13 +41,13 @@ export function TripWidgetPanel({ companyName }: { companyName: string }) {
   const [stats, setStats] = React.useState({ total: 0, credits: 0 });
   const [costs, setCosts] = React.useState({ itinerary: 0, translation: 0 });
   const [salesEnabled, setSalesEnabled] = React.useState(false);
-  const [paymentUrl, setPaymentUrl] = React.useState("");
   const [price, setPrice] = React.useState("");
-  const [password, setPassword] = React.useState("");
-  const [hasPassword, setHasPassword] = React.useState(false);
+  const [mercadoPagoConnected, setMercadoPagoConnected] = React.useState(false);
   const [savingSales, setSavingSales] = React.useState(false);
   const loadMonetization = useServerFn(getWidgetMonetization);
   const saveMonetization = useServerFn(saveWidgetMonetization);
+  const connectMercadoPago = useServerFn(getMercadoPagoConnectUrl);
+  const disconnectMp = useServerFn(disconnectMercadoPago);
 
   const origin = typeof window !== "undefined" ? window.location.origin : "";
   const publicUrl = slug ? `${origin}/r/${slug}` : "";
@@ -96,9 +96,8 @@ export function TripWidgetPanel({ companyName }: { companyName: string }) {
         });
         const sales = await loadMonetization();
         setSalesEnabled(sales.enabled);
-        setPaymentUrl(sales.paymentUrl);
         setPrice(sales.price);
-        setHasPassword(sales.hasPassword);
+        setMercadoPagoConnected(sales.connected);
       } else {
         setSlug(slugify(companyName) || "");
       }
@@ -112,44 +111,42 @@ export function TripWidgetPanel({ companyName }: { companyName: string }) {
     try {
       if (!salesEnabled) {
         await saveMonetization({ data: { enabled: false } });
-        setPaymentUrl("");
         setPrice("");
-        setPassword("");
-        setHasPassword(false);
         toast.success("Venda desativada. O roteiro voltou ao modo gratuito.");
         return;
       }
       const numericPrice = Number(price.replace(",", "."));
-      let parsedUrl: URL;
-      try {
-        parsedUrl = new URL(paymentUrl.trim());
-      } catch {
-        throw new Error("Informe um link de recebimento válido.");
-      }
-      if (parsedUrl.protocol !== "https:") throw new Error("O link precisa começar com https://");
+      if (!mercadoPagoConnected) throw new Error("Conecte sua conta Mercado Pago antes de ativar a venda.");
       if (!Number.isFinite(numericPrice) || numericPrice <= 0 || numericPrice > 999999.99) {
         throw new Error("Informe um valor válido para o roteiro.");
       }
-      if (!hasPassword && password.trim().length < 6) {
-        throw new Error("Use uma senha com pelo menos 6 caracteres.");
-      }
-      if (password.trim() && password.trim().length < 6) {
-        throw new Error("Use uma senha com pelo menos 6 caracteres.");
-      }
       const result = await saveMonetization({ data: {
         enabled: true,
-        paymentUrl: paymentUrl.trim(),
         price: numericPrice,
-        password: password.trim() || undefined,
       } });
-      setHasPassword(result.hasPassword);
-      setPassword("");
+      setSalesEnabled(result.enabled);
       toast.success("Configuração de venda salva");
     } catch (error) {
       toast.error((error as Error).message);
     } finally {
       setSavingSales(false);
     }
+  };
+
+  const startMercadoPagoConnection = async () => {
+    try {
+      const result = await connectMercadoPago({ data: { origin: window.location.origin } });
+      window.location.assign(result.url);
+    } catch (error) {
+      toast.error((error as Error).message);
+    }
+  };
+
+  const removeMercadoPagoConnection = async () => {
+    await disconnectMp();
+    setMercadoPagoConnected(false);
+    setSalesEnabled(false);
+    toast.success("Mercado Pago desconectado. A venda foi desativada.");
   };
 
   const save = async () => {
@@ -310,24 +307,24 @@ export function TripWidgetPanel({ companyName }: { companyName: string }) {
               <div className="flex items-center justify-between gap-3">
                 <div>
                   <Label htmlFor="widget-sales" className="text-xs">Vender o roteiro gerado</Label>
-                  <p className="mt-1 text-[11px] text-muted-foreground">O pagamento é recebido pelo seu link externo.</p>
+                  <p className="mt-1 text-[11px] text-muted-foreground">O valor é recebido diretamente na sua conta Mercado Pago.</p>
                 </div>
                 <Switch id="widget-sales" checked={salesEnabled} onCheckedChange={setSalesEnabled} />
               </div>
               {salesEnabled && (
                 <div className="space-y-4">
-                  <div className="space-y-1.5">
-                    <Label htmlFor="payment-url" className="text-xs">Link de Recebimento</Label>
-                    <Input id="payment-url" type="url" value={paymentUrl} onChange={(event) => setPaymentUrl(event.target.value)} placeholder="https://..." maxLength={1000} />
+                  <div className="flex items-center justify-between gap-3 rounded-md border border-border p-3">
+                    <div className="flex items-center gap-2 text-xs">
+                      {mercadoPagoConnected ? <BadgeCheck className="h-4 w-4 text-primary" /> : <LockKeyhole className="h-4 w-4 text-muted-foreground" />}
+                      {mercadoPagoConnected ? "Mercado Pago conectado" : "Conecte sua conta para receber por Pix"}
+                    </div>
+                    <Button type="button" size="sm" variant="outline" onClick={mercadoPagoConnected ? removeMercadoPagoConnection : startMercadoPagoConnection}>
+                      {mercadoPagoConnected ? "Desconectar" : "Conectar Mercado Pago"}
+                    </Button>
                   </div>
                   <div className="space-y-1.5">
                     <Label htmlFor="itinerary-price" className="text-xs">Valor do Roteiro</Label>
                     <Input id="itinerary-price" inputMode="decimal" value={price} onChange={(event) => setPrice(event.target.value)} placeholder="39,00" maxLength={12} />
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label htmlFor="unlock-password" className="text-xs">Senha de Desbloqueio</Label>
-                    <Input id="unlock-password" type="password" value={password} onChange={(event) => setPassword(event.target.value)} placeholder={hasPassword ? "Deixe vazio para manter a senha atual" : "Mínimo de 6 caracteres"} minLength={6} maxLength={100} autoComplete="new-password" />
-                    {hasPassword && <p className="text-[11px] text-muted-foreground">Uma senha já está configurada. Digite outra apenas para substituí-la.</p>}
                   </div>
                 </div>
               )}

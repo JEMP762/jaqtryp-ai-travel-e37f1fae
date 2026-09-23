@@ -25,7 +25,6 @@ type WidgetInfo = {
   itineraryCost: number;
   translationCost: number;
   monetized: boolean;
-  paymentUrl: string | null;
   price: number | null;
 };
 
@@ -174,7 +173,8 @@ function PublicWidgetPage() {
           startDate: startDate || null,
           travelers: Number(travelers) || 1,
           style,
-           interests: itineraryInterestPrompt(selectedInterests, customInterests),
+           interestIds: selectedInterests,
+           customInterests,
           budget: budget || null,
           currency,
           language,
