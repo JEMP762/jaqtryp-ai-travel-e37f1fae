@@ -120,6 +120,22 @@ export function TripWidgetPanel({ companyName }: { companyName: string }) {
         return;
       }
       const numericPrice = Number(price.replace(",", "."));
+      let parsedUrl: URL;
+      try {
+        parsedUrl = new URL(paymentUrl.trim());
+      } catch {
+        throw new Error("Informe um link de recebimento válido.");
+      }
+      if (parsedUrl.protocol !== "https:") throw new Error("O link precisa começar com https://");
+      if (!Number.isFinite(numericPrice) || numericPrice <= 0 || numericPrice > 999999.99) {
+        throw new Error("Informe um valor válido para o roteiro.");
+      }
+      if (!hasPassword && password.trim().length < 6) {
+        throw new Error("Use uma senha com pelo menos 6 caracteres.");
+      }
+      if (password.trim() && password.trim().length < 6) {
+        throw new Error("Use uma senha com pelo menos 6 caracteres.");
+      }
       const result = await saveMonetization({ data: {
         enabled: true,
         paymentUrl: paymentUrl.trim(),
