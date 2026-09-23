@@ -145,7 +145,7 @@ export const Route = createFileRoute("/api/public/widget-itinerary")({
           intro: widget.intro,
           companyName: brand?.company_name ?? null,
           logoUrl,
-          itineraryCost: Number(itineraryCost?.cost ?? 25),
+          itineraryCost: Number(itineraryCost?.cost ?? 0),
           translationCost: Number(translationCost?.cost ?? 0),
         });
       },

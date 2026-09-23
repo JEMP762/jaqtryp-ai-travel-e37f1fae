@@ -307,7 +307,7 @@ function PublicWidgetPage() {
           <div className="space-y-1.5">
             <Label>Moeda do orçamento</Label>
             <Select value={currency} onValueChange={setCurrency}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectTrigger><SelectValue>{CURRENCIES.find((item) => item.code === currency)?.label}</SelectValue></SelectTrigger>
               <SelectContent>
                 {CURRENCIES.map((item) => <SelectItem key={item.code} value={item.code}>{item.label}</SelectItem>)}
               </SelectContent>
@@ -325,15 +325,15 @@ function PublicWidgetPage() {
           <div className="space-y-1.5">
             <Label>Idioma do roteiro</Label>
             <Select value={language} onValueChange={setLanguage}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectTrigger><SelectValue>{LANGUAGES.find((item) => item.code === language)?.label}</SelectValue></SelectTrigger>
               <SelectContent>
                 {LANGUAGES.map((item) => <SelectItem key={item.code} value={item.code}>{item.label}</SelectItem>)}
               </SelectContent>
             </Select>
             <p className="text-xs text-muted-foreground">
               {language === "pt"
-                ? `${info?.itineraryCost ?? 25} créditos da conta responsável pelo link.`
-                : `${(info?.itineraryCost ?? 25) + (info?.translationCost ?? 0)} créditos: roteiro e tradução.`}
+                ? `${info?.itineraryCost ?? 0} créditos da conta responsável pelo link.`
+                : `${(info?.itineraryCost ?? 0) + (info?.translationCost ?? 0)} créditos: roteiro e tradução.`}
             </p>
           </div>
 
@@ -397,7 +397,7 @@ function PublicWidgetPage() {
                 <div className="min-w-0 flex-1 space-y-1.5">
                   <Label>Traduzir roteiro</Label>
                   <Select value={translateTo} onValueChange={setTranslateTo}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectTrigger><SelectValue>{LANGUAGES.find((item) => item.code === translateTo)?.label}</SelectValue></SelectTrigger>
                     <SelectContent>
                       {LANGUAGES.filter((item) => item.code !== "pt").map((item) => (
                         <SelectItem key={item.code} value={item.code}>{item.label}</SelectItem>

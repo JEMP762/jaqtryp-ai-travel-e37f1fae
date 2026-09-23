@@ -37,6 +37,7 @@ export function TripWidgetPanel({ companyName }: { companyName: string }) {
   const [loading, setLoading] = React.useState(true);
   const [saving, setSaving] = React.useState(false);
   const [stats, setStats] = React.useState({ total: 0, credits: 0 });
+  const [costs, setCosts] = React.useState({ itinerary: 0, translation: 0 });
 
   const origin = typeof window !== "undefined" ? window.location.origin : "";
   const publicUrl = slug ? `${origin}/r/${slug}` : "";
@@ -52,6 +53,15 @@ export function TripWidgetPanel({ companyName }: { companyName: string }) {
         setLoading(false);
         return;
       }
+      const { data: creditCosts } = await supabase
+        .from("credit_costs")
+        .select("feature_key, cost")
+        .in("feature_key", ["trip_create_branded", "translate_text"])
+        .eq("active", true);
+      setCosts({
+        itinerary: creditCosts?.find((item) => item.feature_key === "trip_create_branded")?.cost ?? 0,
+        translation: creditCosts?.find((item) => item.feature_key === "translate_text")?.cost ?? 0,
+      });
       const { data } = await supabase
         .from("trip_widgets")
         .select("id, slug, active, headline, intro, allowed_domains")
@@ -140,8 +150,8 @@ export function TripWidgetPanel({ companyName }: { companyName: string }) {
       </div>
       <p className="text-xs text-muted-foreground">
         Publique uma página com a sua marca para que seus clientes gerem roteiros sozinhos. Cada
-        roteiro gerado consome 25 créditos da sua conta. Traduções adicionais usam o custo vigente
-        da tradução de texto.
+        roteiro gerado consome {costs.itinerary} créditos da sua conta. Cada novo idioma consome
+        mais {costs.translation} créditos.
       </p>
 
       {loading ? (
