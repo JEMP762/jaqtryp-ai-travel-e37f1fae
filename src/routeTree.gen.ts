@@ -16,6 +16,8 @@ import { Route as ForgotPasswordRouteImport } from './routes/forgot-password'
 import { Route as CheapFlightsRouteImport } from './routes/cheap-flights'
 import { Route as AppRouteImport } from './routes/_app'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as TraducaoSlugRouteImport } from './routes/traducao.$slug'
+import { Route as RoteiroSlugRouteImport } from './routes/roteiro.$slug'
 import { Route as RSlugRouteImport } from './routes/r.$slug'
 import { Route as LiveRoomCodeRouteImport } from './routes/live-room.$code'
 import { Route as CheckoutReturnRouteImport } from './routes/checkout.return'
@@ -30,6 +32,7 @@ import { Route as AppStaysRouteImport } from './routes/_app.stays'
 import { Route as AppShieldRouteImport } from './routes/_app.shield'
 import { Route as AppReferralsRouteImport } from './routes/_app.referrals'
 import { Route as AppPlannerRouteImport } from './routes/_app.planner'
+import { Route as AppOnboardingRouteImport } from './routes/_app.onboarding'
 import { Route as AppLiveTranslatorRouteImport } from './routes/_app.live-translator'
 import { Route as AppFlightsRouteImport } from './routes/_app.flights'
 import { Route as AppFileTranslatorRouteImport } from './routes/_app.file-translator'
@@ -84,6 +87,16 @@ const AppRoute = AppRouteImport.update({
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const TraducaoSlugRoute = TraducaoSlugRouteImport.update({
+  id: '/traducao/$slug',
+  path: '/traducao/$slug',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const RoteiroSlugRoute = RoteiroSlugRouteImport.update({
+  id: '/roteiro/$slug',
+  path: '/roteiro/$slug',
   getParentRoute: () => rootRouteImport,
 } as any)
 const RSlugRoute = RSlugRouteImport.update({
@@ -154,6 +167,11 @@ const AppReferralsRoute = AppReferralsRouteImport.update({
 const AppPlannerRoute = AppPlannerRouteImport.update({
   id: '/planner',
   path: '/planner',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppOnboardingRoute = AppOnboardingRouteImport.update({
+  id: '/onboarding',
+  path: '/onboarding',
   getParentRoute: () => AppRoute,
 } as any)
 const AppLiveTranslatorRoute = AppLiveTranslatorRouteImport.update({
@@ -282,6 +300,7 @@ export interface FileRoutesByFullPath {
   '/file-translator': typeof AppFileTranslatorRoute
   '/flights': typeof AppFlightsRoute
   '/live-translator': typeof AppLiveTranslatorRoute
+  '/onboarding': typeof AppOnboardingRoute
   '/planner': typeof AppPlannerRoute
   '/referrals': typeof AppReferralsRoute
   '/shield': typeof AppShieldRoute
@@ -296,6 +315,8 @@ export interface FileRoutesByFullPath {
   '/checkout/return': typeof CheckoutReturnRoute
   '/live-room/$code': typeof LiveRoomCodeRoute
   '/r/$slug': typeof RSlugRoute
+  '/roteiro/$slug': typeof RoteiroSlugRoute
+  '/traducao/$slug': typeof TraducaoSlugRoute
   '/admin/financial': typeof AppAdminFinancialRoute
   '/admin/mystifly': typeof AppAdminMystiflyRoute
   '/admin/mystifly-test': typeof AppAdminMystiflyTestRoute
@@ -325,6 +346,7 @@ export interface FileRoutesByTo {
   '/file-translator': typeof AppFileTranslatorRoute
   '/flights': typeof AppFlightsRoute
   '/live-translator': typeof AppLiveTranslatorRoute
+  '/onboarding': typeof AppOnboardingRoute
   '/planner': typeof AppPlannerRoute
   '/referrals': typeof AppReferralsRoute
   '/shield': typeof AppShieldRoute
@@ -339,6 +361,8 @@ export interface FileRoutesByTo {
   '/checkout/return': typeof CheckoutReturnRoute
   '/live-room/$code': typeof LiveRoomCodeRoute
   '/r/$slug': typeof RSlugRoute
+  '/roteiro/$slug': typeof RoteiroSlugRoute
+  '/traducao/$slug': typeof TraducaoSlugRoute
   '/admin/financial': typeof AppAdminFinancialRoute
   '/admin/mystifly': typeof AppAdminMystiflyRoute
   '/admin/mystifly-test': typeof AppAdminMystiflyTestRoute
@@ -370,6 +394,7 @@ export interface FileRoutesById {
   '/_app/file-translator': typeof AppFileTranslatorRoute
   '/_app/flights': typeof AppFlightsRoute
   '/_app/live-translator': typeof AppLiveTranslatorRoute
+  '/_app/onboarding': typeof AppOnboardingRoute
   '/_app/planner': typeof AppPlannerRoute
   '/_app/referrals': typeof AppReferralsRoute
   '/_app/shield': typeof AppShieldRoute
@@ -384,6 +409,8 @@ export interface FileRoutesById {
   '/checkout/return': typeof CheckoutReturnRoute
   '/live-room/$code': typeof LiveRoomCodeRoute
   '/r/$slug': typeof RSlugRoute
+  '/roteiro/$slug': typeof RoteiroSlugRoute
+  '/traducao/$slug': typeof TraducaoSlugRoute
   '/_app/admin/financial': typeof AppAdminFinancialRoute
   '/_app/admin/mystifly': typeof AppAdminMystiflyRoute
   '/_app/admin/mystifly-test': typeof AppAdminMystiflyTestRoute
@@ -415,6 +442,7 @@ export interface FileRouteTypes {
     | '/file-translator'
     | '/flights'
     | '/live-translator'
+    | '/onboarding'
     | '/planner'
     | '/referrals'
     | '/shield'
@@ -429,6 +457,8 @@ export interface FileRouteTypes {
     | '/checkout/return'
     | '/live-room/$code'
     | '/r/$slug'
+    | '/roteiro/$slug'
+    | '/traducao/$slug'
     | '/admin/financial'
     | '/admin/mystifly'
     | '/admin/mystifly-test'
@@ -458,6 +488,7 @@ export interface FileRouteTypes {
     | '/file-translator'
     | '/flights'
     | '/live-translator'
+    | '/onboarding'
     | '/planner'
     | '/referrals'
     | '/shield'
@@ -472,6 +503,8 @@ export interface FileRouteTypes {
     | '/checkout/return'
     | '/live-room/$code'
     | '/r/$slug'
+    | '/roteiro/$slug'
+    | '/traducao/$slug'
     | '/admin/financial'
     | '/admin/mystifly'
     | '/admin/mystifly-test'
@@ -502,6 +535,7 @@ export interface FileRouteTypes {
     | '/_app/file-translator'
     | '/_app/flights'
     | '/_app/live-translator'
+    | '/_app/onboarding'
     | '/_app/planner'
     | '/_app/referrals'
     | '/_app/shield'
@@ -516,6 +550,8 @@ export interface FileRouteTypes {
     | '/checkout/return'
     | '/live-room/$code'
     | '/r/$slug'
+    | '/roteiro/$slug'
+    | '/traducao/$slug'
     | '/_app/admin/financial'
     | '/_app/admin/mystifly'
     | '/_app/admin/mystifly-test'
@@ -547,6 +583,8 @@ export interface RootRouteChildren {
   CheckoutReturnRoute: typeof CheckoutReturnRoute
   LiveRoomCodeRoute: typeof LiveRoomCodeRoute
   RSlugRoute: typeof RSlugRoute
+  RoteiroSlugRoute: typeof RoteiroSlugRoute
+  TraducaoSlugRoute: typeof TraducaoSlugRoute
   ApiPublicActivationRoute: typeof ApiPublicActivationRoute
   ApiPublicSttRoute: typeof ApiPublicSttRoute
   ApiPublicTranslateBroadcastRoute: typeof ApiPublicTranslateBroadcastRoute
@@ -606,6 +644,20 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/traducao/$slug': {
+      id: '/traducao/$slug'
+      path: '/traducao/$slug'
+      fullPath: '/traducao/$slug'
+      preLoaderRoute: typeof TraducaoSlugRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/roteiro/$slug': {
+      id: '/roteiro/$slug'
+      path: '/roteiro/$slug'
+      fullPath: '/roteiro/$slug'
+      preLoaderRoute: typeof RoteiroSlugRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/r/$slug': {
@@ -704,6 +756,13 @@ declare module '@tanstack/react-router' {
       path: '/planner'
       fullPath: '/planner'
       preLoaderRoute: typeof AppPlannerRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/onboarding': {
+      id: '/_app/onboarding'
+      path: '/onboarding'
+      fullPath: '/onboarding'
+      preLoaderRoute: typeof AppOnboardingRouteImport
       parentRoute: typeof AppRoute
     }
     '/_app/live-translator': {
@@ -865,6 +924,7 @@ interface AppRouteChildren {
   AppFileTranslatorRoute: typeof AppFileTranslatorRoute
   AppFlightsRoute: typeof AppFlightsRoute
   AppLiveTranslatorRoute: typeof AppLiveTranslatorRoute
+  AppOnboardingRoute: typeof AppOnboardingRoute
   AppPlannerRoute: typeof AppPlannerRoute
   AppReferralsRoute: typeof AppReferralsRoute
   AppShieldRoute: typeof AppShieldRoute
@@ -887,6 +947,7 @@ const AppRouteChildren: AppRouteChildren = {
   AppFileTranslatorRoute: AppFileTranslatorRoute,
   AppFlightsRoute: AppFlightsRoute,
   AppLiveTranslatorRoute: AppLiveTranslatorRoute,
+  AppOnboardingRoute: AppOnboardingRoute,
   AppPlannerRoute: AppPlannerRoute,
   AppReferralsRoute: AppReferralsRoute,
   AppShieldRoute: AppShieldRoute,
@@ -918,6 +979,8 @@ const rootRouteChildren: RootRouteChildren = {
   CheckoutReturnRoute: CheckoutReturnRoute,
   LiveRoomCodeRoute: LiveRoomCodeRoute,
   RSlugRoute: RSlugRoute,
+  RoteiroSlugRoute: RoteiroSlugRoute,
+  TraducaoSlugRoute: TraducaoSlugRoute,
   ApiPublicActivationRoute: ApiPublicActivationRoute,
   ApiPublicSttRoute: ApiPublicSttRoute,
   ApiPublicTranslateBroadcastRoute: ApiPublicTranslateBroadcastRoute,
