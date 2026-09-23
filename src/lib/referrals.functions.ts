@@ -61,7 +61,7 @@ export const applyReferralCode = createServerFn({ method: "POST" })
     const { data: result, error } = await context.supabase.rpc("register_viral_referral", {
       _code: data.code,
       _visitor_hash: visitorHash,
-      _share_slug: data.shareSlug ?? undefined,
+      _share_slug: data.shareSlug ?? "",
     });
     if (error) throw new Error(error.message);
     return result as { ok: boolean; reason?: string; referrer_id?: string };

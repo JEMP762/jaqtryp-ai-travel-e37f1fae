@@ -22,7 +22,7 @@ export const Route = createFileRoute("/api/public/activation")({
     if (parsed.data.ref) {
       await supabaseAdmin.rpc("capture_viral_click", {
         _code: parsed.data.ref,
-        _share_slug: parsed.data.slug,
+        _share_slug: parsed.data.slug ?? "",
         _visitor_hash: visitorHash,
         _source: parsed.data.source ?? "shared_result",
       });

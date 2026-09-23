@@ -132,7 +132,8 @@ export const shareUserResult = createServerFn({ method: "POST" })
       public_payload: publicSnapshot(result.kind, result.payload as Record<string, unknown>) as Json,
     }).select("id").single();
     if (insertError) throw new Error(insertError.message);
-    const { error: eventError } = await context.supabase.from("viral_events").insert({
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { error: eventError } = await supabaseAdmin.from("viral_events").insert({
       share_id: shared.id, referrer_id: context.userId, event_name: "share_created", feature: result.kind,
       source: "result", idempotency_key: `share:${shared.id}`,
     });
