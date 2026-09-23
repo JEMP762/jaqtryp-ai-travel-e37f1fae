@@ -8,6 +8,13 @@
       "when": 1790163349955,
       "tag": "0000_add_contextual_onboarding_and_activation",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1790163811027,
+      "tag": "0001_add_viral_referral_engine",
+      "breakpoints": true
     }
   ]
 }
