@@ -9,75 +9,64 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as SignupRouteImport } from './routes/signup'
-import { Route as ResetPasswordRouteImport } from './routes/reset-password'
-import { Route as LoginRouteImport } from './routes/login'
-import { Route as ForgotPasswordRouteImport } from './routes/forgot-password'
-import { Route as CheapFlightsRouteImport } from './routes/cheap-flights'
-import { Route as AppRouteImport } from './routes/_app'
 import { Route as IndexRouteImport } from './routes/index'
-import { Route as VooSlugRouteImport } from './routes/voo.$slug'
-import { Route as TraducaoSlugRouteImport } from './routes/traducao.$slug'
-import { Route as RoteiroSlugRouteImport } from './routes/roteiro.$slug'
-import { Route as RSlugRouteImport } from './routes/r.$slug'
-import { Route as OrcamentoSlugRouteImport } from './routes/orcamento.$slug'
-import { Route as LiveRoomCodeRouteImport } from './routes/live-room.$code'
-import { Route as DocumentoSlugRouteImport } from './routes/documento.$slug'
-import { Route as CheckoutReturnRouteImport } from './routes/checkout.return'
-import { Route as AuthCallbackRouteImport } from './routes/auth.callback'
-import { Route as ApiTtsRouteImport } from './routes/api.tts'
-import { Route as ApiJaxRouteImport } from './routes/api.jax'
-import { Route as ApiChatRouteImport } from './routes/api.chat'
-import { Route as ApiAiRouteImport } from './routes/api.ai'
-import { Route as AppWalletRouteImport } from './routes/_app.wallet'
-import { Route as AppTranslatorRouteImport } from './routes/_app.translator'
-import { Route as AppStaysRouteImport } from './routes/_app.stays'
-import { Route as AppShieldRouteImport } from './routes/_app.shield'
-import { Route as AppReferralsRouteImport } from './routes/_app.referrals'
-import { Route as AppPlannerRouteImport } from './routes/_app.planner'
-import { Route as AppOnboardingRouteImport } from './routes/_app.onboarding'
-import { Route as AppLiveTranslatorRouteImport } from './routes/_app.live-translator'
-import { Route as AppFlightsRouteImport } from './routes/_app.flights'
-import { Route as AppFileTranslatorRouteImport } from './routes/_app.file-translator'
-import { Route as AppDealsRouteImport } from './routes/_app.deals'
-import { Route as AppDashboardRouteImport } from './routes/_app.dashboard'
-import { Route as AppCreditsRouteImport } from './routes/_app.credits'
-import { Route as AppChatRouteImport } from './routes/_app.chat'
+import { Route as AppRouteImport } from './routes/_app'
+import { Route as CheapFlightsRouteImport } from './routes/cheap-flights'
+import { Route as ForgotPasswordRouteImport } from './routes/forgot-password'
+import { Route as LoginRouteImport } from './routes/login'
+import { Route as ResetPasswordRouteImport } from './routes/reset-password'
+import { Route as SignupRouteImport } from './routes/signup'
 import { Route as AppBillingRouteImport } from './routes/_app.billing'
-import { Route as ApiPublicWidgetItineraryRouteImport } from './routes/api.public.widget-itinerary'
-import { Route as ApiPublicTtsRouteImport } from './routes/api.public.tts'
-import { Route as ApiPublicTranslateBroadcastRouteImport } from './routes/api.public.translate-broadcast'
-import { Route as ApiPublicSttRouteImport } from './routes/api.public.stt'
-import { Route as ApiPublicActivationRouteImport } from './routes/api.public.activation'
-import { Route as AppSettingsAppearanceRouteImport } from './routes/_app.settings.appearance'
-import { Route as AppAdminSettingsRouteImport } from './routes/_app.admin.settings'
-import { Route as AppAdminMystiflyTestRouteImport } from './routes/_app.admin.mystifly-test'
-import { Route as AppAdminMystiflyRouteImport } from './routes/_app.admin.mystifly'
-import { Route as AppAdminFinancialRouteImport } from './routes/_app.admin.financial'
+import { Route as AppChatRouteImport } from './routes/_app.chat'
+import { Route as AppCreditsRouteImport } from './routes/_app.credits'
+import { Route as AppDashboardRouteImport } from './routes/_app.dashboard'
+import { Route as AppDealsRouteImport } from './routes/_app.deals'
+import { Route as AppFileTranslatorRouteImport } from './routes/_app.file-translator'
+import { Route as AppFlightsRouteImport } from './routes/_app.flights'
+import { Route as AppLiveTranslatorRouteImport } from './routes/_app.live-translator'
+import { Route as AppOnboardingRouteImport } from './routes/_app.onboarding'
+import { Route as AppPlannerRouteImport } from './routes/_app.planner'
+import { Route as AppReferralsRouteImport } from './routes/_app.referrals'
+import { Route as AppShieldRouteImport } from './routes/_app.shield'
+import { Route as AppStaysRouteImport } from './routes/_app.stays'
+import { Route as AppTranslatorRouteImport } from './routes/_app.translator'
+import { Route as AppWalletRouteImport } from './routes/_app.wallet'
+import { Route as ApiAiRouteImport } from './routes/api.ai'
+import { Route as ApiChatRouteImport } from './routes/api.chat'
+import { Route as ApiJaxRouteImport } from './routes/api.jax'
+import { Route as ApiTtsRouteImport } from './routes/api.tts'
+import { Route as AuthCallbackRouteImport } from './routes/auth.callback'
+import { Route as CheckoutReturnRouteImport } from './routes/checkout.return'
+import { Route as DocumentoSlugRouteImport } from './routes/documento.$slug'
+import { Route as LiveRoomCodeRouteImport } from './routes/live-room.$code'
+import { Route as OrcamentoSlugRouteImport } from './routes/orcamento.$slug'
+import { Route as RSlugRouteImport } from './routes/r.$slug'
+import { Route as RoteiroSlugRouteImport } from './routes/roteiro.$slug'
+import { Route as TraducaoSlugRouteImport } from './routes/traducao.$slug'
+import { Route as VooSlugRouteImport } from './routes/voo.$slug'
 import { Route as AppAdminActivationRouteImport } from './routes/_app.admin.activation'
-import { Route as ApiPublicSharedResultSlugRouteImport } from './routes/api.public.shared-result.$slug'
-import { Route as ApiPublicPaymentsWebhookRouteImport } from './routes/api.public.payments.webhook'
-import { Route as ApiPublicMercadopagoWebhookRouteImport } from './routes/api.public.mercadopago.webhook'
+import { Route as AppAdminFinancialRouteImport } from './routes/_app.admin.financial'
+import { Route as AppAdminMystiflyRouteImport } from './routes/_app.admin.mystifly'
+import { Route as AppAdminMystiflyTestRouteImport } from './routes/_app.admin.mystifly-test'
+import { Route as AppAdminSettingsRouteImport } from './routes/_app.admin.settings'
+import { Route as AppSettingsAppearanceRouteImport } from './routes/_app.settings.appearance'
+import { Route as ApiPublicActivationRouteImport } from './routes/api.public.activation'
+import { Route as ApiPublicSttRouteImport } from './routes/api.public.stt'
+import { Route as ApiPublicTranslateBroadcastRouteImport } from './routes/api.public.translate-broadcast'
+import { Route as ApiPublicTtsRouteImport } from './routes/api.public.tts'
+import { Route as ApiPublicWidgetItineraryRouteImport } from './routes/api.public.widget-itinerary'
 import { Route as ApiPublicMercadopagoCallbackRouteImport } from './routes/api.public.mercadopago.callback'
+import { Route as ApiPublicMercadopagoWebhookRouteImport } from './routes/api.public.mercadopago.webhook'
+import { Route as ApiPublicPaymentsWebhookRouteImport } from './routes/api.public.payments.webhook'
+import { Route as ApiPublicSharedResultSlugRouteImport } from './routes/api.public.shared-result.$slug'
 
-const SignupRoute = SignupRouteImport.update({
-  id: '/signup',
-  path: '/signup',
+const IndexRoute = IndexRouteImport.update({
+  id: '/',
+  path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
-const ResetPasswordRoute = ResetPasswordRouteImport.update({
-  id: '/reset-password',
-  path: '/reset-password',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const LoginRoute = LoginRouteImport.update({
-  id: '/login',
-  path: '/login',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ForgotPasswordRoute = ForgotPasswordRouteImport.update({
-  id: '/forgot-password',
-  path: '/forgot-password',
+const AppRoute = AppRouteImport.update({
+  id: '/_app',
   getParentRoute: () => rootRouteImport,
 } as any)
 const CheapFlightsRoute = CheapFlightsRouteImport.update({
@@ -85,143 +74,29 @@ const CheapFlightsRoute = CheapFlightsRouteImport.update({
   path: '/cheap-flights',
   getParentRoute: () => rootRouteImport,
 } as any)
-const AppRoute = AppRouteImport.update({
-  id: '/_app',
+const ForgotPasswordRoute = ForgotPasswordRouteImport.update({
+  id: '/forgot-password',
+  path: '/forgot-password',
   getParentRoute: () => rootRouteImport,
 } as any)
-const IndexRoute = IndexRouteImport.update({
-  id: '/',
-  path: '/',
+const LoginRoute = LoginRouteImport.update({
+  id: '/login',
+  path: '/login',
   getParentRoute: () => rootRouteImport,
 } as any)
-const VooSlugRoute = VooSlugRouteImport.update({
-  id: '/voo/$slug',
-  path: '/voo/$slug',
+const ResetPasswordRoute = ResetPasswordRouteImport.update({
+  id: '/reset-password',
+  path: '/reset-password',
   getParentRoute: () => rootRouteImport,
 } as any)
-const TraducaoSlugRoute = TraducaoSlugRouteImport.update({
-  id: '/traducao/$slug',
-  path: '/traducao/$slug',
+const SignupRoute = SignupRouteImport.update({
+  id: '/signup',
+  path: '/signup',
   getParentRoute: () => rootRouteImport,
 } as any)
-const RoteiroSlugRoute = RoteiroSlugRouteImport.update({
-  id: '/roteiro/$slug',
-  path: '/roteiro/$slug',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const RSlugRoute = RSlugRouteImport.update({
-  id: '/r/$slug',
-  path: '/r/$slug',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const OrcamentoSlugRoute = OrcamentoSlugRouteImport.update({
-  id: '/orcamento/$slug',
-  path: '/orcamento/$slug',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const LiveRoomCodeRoute = LiveRoomCodeRouteImport.update({
-  id: '/live-room/$code',
-  path: '/live-room/$code',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const DocumentoSlugRoute = DocumentoSlugRouteImport.update({
-  id: '/documento/$slug',
-  path: '/documento/$slug',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const CheckoutReturnRoute = CheckoutReturnRouteImport.update({
-  id: '/checkout/return',
-  path: '/checkout/return',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const AuthCallbackRoute = AuthCallbackRouteImport.update({
-  id: '/auth/callback',
-  path: '/auth/callback',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ApiTtsRoute = ApiTtsRouteImport.update({
-  id: '/api/tts',
-  path: '/api/tts',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ApiJaxRoute = ApiJaxRouteImport.update({
-  id: '/api/jax',
-  path: '/api/jax',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ApiChatRoute = ApiChatRouteImport.update({
-  id: '/api/chat',
-  path: '/api/chat',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ApiAiRoute = ApiAiRouteImport.update({
-  id: '/api/ai',
-  path: '/api/ai',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const AppWalletRoute = AppWalletRouteImport.update({
-  id: '/wallet',
-  path: '/wallet',
-  getParentRoute: () => AppRoute,
-} as any)
-const AppTranslatorRoute = AppTranslatorRouteImport.update({
-  id: '/translator',
-  path: '/translator',
-  getParentRoute: () => AppRoute,
-} as any)
-const AppStaysRoute = AppStaysRouteImport.update({
-  id: '/stays',
-  path: '/stays',
-  getParentRoute: () => AppRoute,
-} as any)
-const AppShieldRoute = AppShieldRouteImport.update({
-  id: '/shield',
-  path: '/shield',
-  getParentRoute: () => AppRoute,
-} as any)
-const AppReferralsRoute = AppReferralsRouteImport.update({
-  id: '/referrals',
-  path: '/referrals',
-  getParentRoute: () => AppRoute,
-} as any)
-const AppPlannerRoute = AppPlannerRouteImport.update({
-  id: '/planner',
-  path: '/planner',
-  getParentRoute: () => AppRoute,
-} as any)
-const AppOnboardingRoute = AppOnboardingRouteImport.update({
-  id: '/onboarding',
-  path: '/onboarding',
-  getParentRoute: () => AppRoute,
-} as any)
-const AppLiveTranslatorRoute = AppLiveTranslatorRouteImport.update({
-  id: '/live-translator',
-  path: '/live-translator',
-  getParentRoute: () => AppRoute,
-} as any)
-const AppFlightsRoute = AppFlightsRouteImport.update({
-  id: '/flights',
-  path: '/flights',
-  getParentRoute: () => AppRoute,
-} as any)
-const AppFileTranslatorRoute = AppFileTranslatorRouteImport.update({
-  id: '/file-translator',
-  path: '/file-translator',
-  getParentRoute: () => AppRoute,
-} as any)
-const AppDealsRoute = AppDealsRouteImport.update({
-  id: '/deals',
-  path: '/deals',
-  getParentRoute: () => AppRoute,
-} as any)
-const AppDashboardRoute = AppDashboardRouteImport.update({
-  id: '/dashboard',
-  path: '/dashboard',
-  getParentRoute: () => AppRoute,
-} as any)
-const AppCreditsRoute = AppCreditsRouteImport.update({
-  id: '/credits',
-  path: '/credits',
+const AppBillingRoute = AppBillingRouteImport.update({
+  id: '/billing',
+  path: '/billing',
   getParentRoute: () => AppRoute,
 } as any)
 const AppChatRoute = AppChatRouteImport.update({
@@ -229,20 +104,174 @@ const AppChatRoute = AppChatRouteImport.update({
   path: '/chat',
   getParentRoute: () => AppRoute,
 } as any)
-const AppBillingRoute = AppBillingRouteImport.update({
-  id: '/billing',
-  path: '/billing',
+const AppCreditsRoute = AppCreditsRouteImport.update({
+  id: '/credits',
+  path: '/credits',
   getParentRoute: () => AppRoute,
 } as any)
-const ApiPublicWidgetItineraryRoute =
-  ApiPublicWidgetItineraryRouteImport.update({
-    id: '/api/public/widget-itinerary',
-    path: '/api/public/widget-itinerary',
-    getParentRoute: () => rootRouteImport,
-  } as any)
-const ApiPublicTtsRoute = ApiPublicTtsRouteImport.update({
-  id: '/api/public/tts',
-  path: '/api/public/tts',
+const AppDashboardRoute = AppDashboardRouteImport.update({
+  id: '/dashboard',
+  path: '/dashboard',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppDealsRoute = AppDealsRouteImport.update({
+  id: '/deals',
+  path: '/deals',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppFileTranslatorRoute = AppFileTranslatorRouteImport.update({
+  id: '/file-translator',
+  path: '/file-translator',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppFlightsRoute = AppFlightsRouteImport.update({
+  id: '/flights',
+  path: '/flights',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppLiveTranslatorRoute = AppLiveTranslatorRouteImport.update({
+  id: '/live-translator',
+  path: '/live-translator',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppOnboardingRoute = AppOnboardingRouteImport.update({
+  id: '/onboarding',
+  path: '/onboarding',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppPlannerRoute = AppPlannerRouteImport.update({
+  id: '/planner',
+  path: '/planner',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppReferralsRoute = AppReferralsRouteImport.update({
+  id: '/referrals',
+  path: '/referrals',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppShieldRoute = AppShieldRouteImport.update({
+  id: '/shield',
+  path: '/shield',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppStaysRoute = AppStaysRouteImport.update({
+  id: '/stays',
+  path: '/stays',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppTranslatorRoute = AppTranslatorRouteImport.update({
+  id: '/translator',
+  path: '/translator',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppWalletRoute = AppWalletRouteImport.update({
+  id: '/wallet',
+  path: '/wallet',
+  getParentRoute: () => AppRoute,
+} as any)
+const ApiAiRoute = ApiAiRouteImport.update({
+  id: '/api/ai',
+  path: '/api/ai',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiChatRoute = ApiChatRouteImport.update({
+  id: '/api/chat',
+  path: '/api/chat',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiJaxRoute = ApiJaxRouteImport.update({
+  id: '/api/jax',
+  path: '/api/jax',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiTtsRoute = ApiTtsRouteImport.update({
+  id: '/api/tts',
+  path: '/api/tts',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AuthCallbackRoute = AuthCallbackRouteImport.update({
+  id: '/auth/callback',
+  path: '/auth/callback',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CheckoutReturnRoute = CheckoutReturnRouteImport.update({
+  id: '/checkout/return',
+  path: '/checkout/return',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DocumentoSlugRoute = DocumentoSlugRouteImport.update({
+  id: '/documento/$slug',
+  path: '/documento/$slug',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LiveRoomCodeRoute = LiveRoomCodeRouteImport.update({
+  id: '/live-room/$code',
+  path: '/live-room/$code',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const OrcamentoSlugRoute = OrcamentoSlugRouteImport.update({
+  id: '/orcamento/$slug',
+  path: '/orcamento/$slug',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const RSlugRoute = RSlugRouteImport.update({
+  id: '/r/$slug',
+  path: '/r/$slug',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const RoteiroSlugRoute = RoteiroSlugRouteImport.update({
+  id: '/roteiro/$slug',
+  path: '/roteiro/$slug',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const TraducaoSlugRoute = TraducaoSlugRouteImport.update({
+  id: '/traducao/$slug',
+  path: '/traducao/$slug',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const VooSlugRoute = VooSlugRouteImport.update({
+  id: '/voo/$slug',
+  path: '/voo/$slug',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AppAdminActivationRoute = AppAdminActivationRouteImport.update({
+  id: '/admin/activation',
+  path: '/admin/activation',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppAdminFinancialRoute = AppAdminFinancialRouteImport.update({
+  id: '/admin/financial',
+  path: '/admin/financial',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppAdminMystiflyRoute = AppAdminMystiflyRouteImport.update({
+  id: '/admin/mystifly',
+  path: '/admin/mystifly',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppAdminMystiflyTestRoute = AppAdminMystiflyTestRouteImport.update({
+  id: '/admin/mystifly-test',
+  path: '/admin/mystifly-test',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppAdminSettingsRoute = AppAdminSettingsRouteImport.update({
+  id: '/admin/settings',
+  path: '/admin/settings',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppSettingsAppearanceRoute = AppSettingsAppearanceRouteImport.update({
+  id: '/settings/appearance',
+  path: '/settings/appearance',
+  getParentRoute: () => AppRoute,
+} as any)
+const ApiPublicActivationRoute = ApiPublicActivationRouteImport.update({
+  id: '/api/public/activation',
+  path: '/api/public/activation',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiPublicSttRoute = ApiPublicSttRouteImport.update({
+  id: '/api/public/stt',
+  path: '/api/public/stt',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiPublicTranslateBroadcastRoute =
@@ -251,56 +280,21 @@ const ApiPublicTranslateBroadcastRoute =
     path: '/api/public/translate-broadcast',
     getParentRoute: () => rootRouteImport,
   } as any)
-const ApiPublicSttRoute = ApiPublicSttRouteImport.update({
-  id: '/api/public/stt',
-  path: '/api/public/stt',
+const ApiPublicTtsRoute = ApiPublicTtsRouteImport.update({
+  id: '/api/public/tts',
+  path: '/api/public/tts',
   getParentRoute: () => rootRouteImport,
 } as any)
-const ApiPublicActivationRoute = ApiPublicActivationRouteImport.update({
-  id: '/api/public/activation',
-  path: '/api/public/activation',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const AppSettingsAppearanceRoute = AppSettingsAppearanceRouteImport.update({
-  id: '/settings/appearance',
-  path: '/settings/appearance',
-  getParentRoute: () => AppRoute,
-} as any)
-const AppAdminSettingsRoute = AppAdminSettingsRouteImport.update({
-  id: '/admin/settings',
-  path: '/admin/settings',
-  getParentRoute: () => AppRoute,
-} as any)
-const AppAdminMystiflyTestRoute = AppAdminMystiflyTestRouteImport.update({
-  id: '/admin/mystifly-test',
-  path: '/admin/mystifly-test',
-  getParentRoute: () => AppRoute,
-} as any)
-const AppAdminMystiflyRoute = AppAdminMystiflyRouteImport.update({
-  id: '/admin/mystifly',
-  path: '/admin/mystifly',
-  getParentRoute: () => AppRoute,
-} as any)
-const AppAdminFinancialRoute = AppAdminFinancialRouteImport.update({
-  id: '/admin/financial',
-  path: '/admin/financial',
-  getParentRoute: () => AppRoute,
-} as any)
-const AppAdminActivationRoute = AppAdminActivationRouteImport.update({
-  id: '/admin/activation',
-  path: '/admin/activation',
-  getParentRoute: () => AppRoute,
-} as any)
-const ApiPublicSharedResultSlugRoute =
-  ApiPublicSharedResultSlugRouteImport.update({
-    id: '/api/public/shared-result/$slug',
-    path: '/api/public/shared-result/$slug',
+const ApiPublicWidgetItineraryRoute =
+  ApiPublicWidgetItineraryRouteImport.update({
+    id: '/api/public/widget-itinerary',
+    path: '/api/public/widget-itinerary',
     getParentRoute: () => rootRouteImport,
   } as any)
-const ApiPublicPaymentsWebhookRoute =
-  ApiPublicPaymentsWebhookRouteImport.update({
-    id: '/api/public/payments/webhook',
-    path: '/api/public/payments/webhook',
+const ApiPublicMercadopagoCallbackRoute =
+  ApiPublicMercadopagoCallbackRouteImport.update({
+    id: '/api/public/mercadopago/callback',
+    path: '/api/public/mercadopago/callback',
     getParentRoute: () => rootRouteImport,
   } as any)
 const ApiPublicMercadopagoWebhookRoute =
@@ -309,10 +303,16 @@ const ApiPublicMercadopagoWebhookRoute =
     path: '/api/public/mercadopago/webhook',
     getParentRoute: () => rootRouteImport,
   } as any)
-const ApiPublicMercadopagoCallbackRoute =
-  ApiPublicMercadopagoCallbackRouteImport.update({
-    id: '/api/public/mercadopago/callback',
-    path: '/api/public/mercadopago/callback',
+const ApiPublicPaymentsWebhookRoute =
+  ApiPublicPaymentsWebhookRouteImport.update({
+    id: '/api/public/payments/webhook',
+    path: '/api/public/payments/webhook',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const ApiPublicSharedResultSlugRoute =
+  ApiPublicSharedResultSlugRouteImport.update({
+    id: '/api/public/shared-result/$slug',
+    path: '/api/public/shared-result/$slug',
     getParentRoute: () => rootRouteImport,
   } as any)
 
@@ -662,39 +662,11 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/signup': {
-      id: '/signup'
-      path: '/signup'
-      fullPath: '/signup'
-      preLoaderRoute: typeof SignupRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/reset-password': {
-      id: '/reset-password'
-      path: '/reset-password'
-      fullPath: '/reset-password'
-      preLoaderRoute: typeof ResetPasswordRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/login': {
-      id: '/login'
-      path: '/login'
-      fullPath: '/login'
-      preLoaderRoute: typeof LoginRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/forgot-password': {
-      id: '/forgot-password'
-      path: '/forgot-password'
-      fullPath: '/forgot-password'
-      preLoaderRoute: typeof ForgotPasswordRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/cheap-flights': {
-      id: '/cheap-flights'
-      path: '/cheap-flights'
-      fullPath: '/cheap-flights'
-      preLoaderRoute: typeof CheapFlightsRouteImport
+    '/': {
+      id: '/'
+      path: '/'
+      fullPath: '/'
+      preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_app': {
@@ -704,193 +676,46 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/': {
-      id: '/'
-      path: '/'
-      fullPath: '/'
-      preLoaderRoute: typeof IndexRouteImport
+    '/cheap-flights': {
+      id: '/cheap-flights'
+      path: '/cheap-flights'
+      fullPath: '/cheap-flights'
+      preLoaderRoute: typeof CheapFlightsRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/voo/$slug': {
-      id: '/voo/$slug'
-      path: '/voo/$slug'
-      fullPath: '/voo/$slug'
-      preLoaderRoute: typeof VooSlugRouteImport
+    '/forgot-password': {
+      id: '/forgot-password'
+      path: '/forgot-password'
+      fullPath: '/forgot-password'
+      preLoaderRoute: typeof ForgotPasswordRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/traducao/$slug': {
-      id: '/traducao/$slug'
-      path: '/traducao/$slug'
-      fullPath: '/traducao/$slug'
-      preLoaderRoute: typeof TraducaoSlugRouteImport
+    '/login': {
+      id: '/login'
+      path: '/login'
+      fullPath: '/login'
+      preLoaderRoute: typeof LoginRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/roteiro/$slug': {
-      id: '/roteiro/$slug'
-      path: '/roteiro/$slug'
-      fullPath: '/roteiro/$slug'
-      preLoaderRoute: typeof RoteiroSlugRouteImport
+    '/reset-password': {
+      id: '/reset-password'
+      path: '/reset-password'
+      fullPath: '/reset-password'
+      preLoaderRoute: typeof ResetPasswordRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/r/$slug': {
-      id: '/r/$slug'
-      path: '/r/$slug'
-      fullPath: '/r/$slug'
-      preLoaderRoute: typeof RSlugRouteImport
+    '/signup': {
+      id: '/signup'
+      path: '/signup'
+      fullPath: '/signup'
+      preLoaderRoute: typeof SignupRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/orcamento/$slug': {
-      id: '/orcamento/$slug'
-      path: '/orcamento/$slug'
-      fullPath: '/orcamento/$slug'
-      preLoaderRoute: typeof OrcamentoSlugRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/live-room/$code': {
-      id: '/live-room/$code'
-      path: '/live-room/$code'
-      fullPath: '/live-room/$code'
-      preLoaderRoute: typeof LiveRoomCodeRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/documento/$slug': {
-      id: '/documento/$slug'
-      path: '/documento/$slug'
-      fullPath: '/documento/$slug'
-      preLoaderRoute: typeof DocumentoSlugRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/checkout/return': {
-      id: '/checkout/return'
-      path: '/checkout/return'
-      fullPath: '/checkout/return'
-      preLoaderRoute: typeof CheckoutReturnRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/auth/callback': {
-      id: '/auth/callback'
-      path: '/auth/callback'
-      fullPath: '/auth/callback'
-      preLoaderRoute: typeof AuthCallbackRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/tts': {
-      id: '/api/tts'
-      path: '/api/tts'
-      fullPath: '/api/tts'
-      preLoaderRoute: typeof ApiTtsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/jax': {
-      id: '/api/jax'
-      path: '/api/jax'
-      fullPath: '/api/jax'
-      preLoaderRoute: typeof ApiJaxRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/chat': {
-      id: '/api/chat'
-      path: '/api/chat'
-      fullPath: '/api/chat'
-      preLoaderRoute: typeof ApiChatRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/ai': {
-      id: '/api/ai'
-      path: '/api/ai'
-      fullPath: '/api/ai'
-      preLoaderRoute: typeof ApiAiRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/_app/wallet': {
-      id: '/_app/wallet'
-      path: '/wallet'
-      fullPath: '/wallet'
-      preLoaderRoute: typeof AppWalletRouteImport
-      parentRoute: typeof AppRoute
-    }
-    '/_app/translator': {
-      id: '/_app/translator'
-      path: '/translator'
-      fullPath: '/translator'
-      preLoaderRoute: typeof AppTranslatorRouteImport
-      parentRoute: typeof AppRoute
-    }
-    '/_app/stays': {
-      id: '/_app/stays'
-      path: '/stays'
-      fullPath: '/stays'
-      preLoaderRoute: typeof AppStaysRouteImport
-      parentRoute: typeof AppRoute
-    }
-    '/_app/shield': {
-      id: '/_app/shield'
-      path: '/shield'
-      fullPath: '/shield'
-      preLoaderRoute: typeof AppShieldRouteImport
-      parentRoute: typeof AppRoute
-    }
-    '/_app/referrals': {
-      id: '/_app/referrals'
-      path: '/referrals'
-      fullPath: '/referrals'
-      preLoaderRoute: typeof AppReferralsRouteImport
-      parentRoute: typeof AppRoute
-    }
-    '/_app/planner': {
-      id: '/_app/planner'
-      path: '/planner'
-      fullPath: '/planner'
-      preLoaderRoute: typeof AppPlannerRouteImport
-      parentRoute: typeof AppRoute
-    }
-    '/_app/onboarding': {
-      id: '/_app/onboarding'
-      path: '/onboarding'
-      fullPath: '/onboarding'
-      preLoaderRoute: typeof AppOnboardingRouteImport
-      parentRoute: typeof AppRoute
-    }
-    '/_app/live-translator': {
-      id: '/_app/live-translator'
-      path: '/live-translator'
-      fullPath: '/live-translator'
-      preLoaderRoute: typeof AppLiveTranslatorRouteImport
-      parentRoute: typeof AppRoute
-    }
-    '/_app/flights': {
-      id: '/_app/flights'
-      path: '/flights'
-      fullPath: '/flights'
-      preLoaderRoute: typeof AppFlightsRouteImport
-      parentRoute: typeof AppRoute
-    }
-    '/_app/file-translator': {
-      id: '/_app/file-translator'
-      path: '/file-translator'
-      fullPath: '/file-translator'
-      preLoaderRoute: typeof AppFileTranslatorRouteImport
-      parentRoute: typeof AppRoute
-    }
-    '/_app/deals': {
-      id: '/_app/deals'
-      path: '/deals'
-      fullPath: '/deals'
-      preLoaderRoute: typeof AppDealsRouteImport
-      parentRoute: typeof AppRoute
-    }
-    '/_app/dashboard': {
-      id: '/_app/dashboard'
-      path: '/dashboard'
-      fullPath: '/dashboard'
-      preLoaderRoute: typeof AppDashboardRouteImport
-      parentRoute: typeof AppRoute
-    }
-    '/_app/credits': {
-      id: '/_app/credits'
-      path: '/credits'
-      fullPath: '/credits'
-      preLoaderRoute: typeof AppCreditsRouteImport
+    '/_app/billing': {
+      id: '/_app/billing'
+      path: '/billing'
+      fullPath: '/billing'
+      preLoaderRoute: typeof AppBillingRouteImport
       parentRoute: typeof AppRoute
     }
     '/_app/chat': {
@@ -900,74 +725,193 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppChatRouteImport
       parentRoute: typeof AppRoute
     }
-    '/_app/billing': {
-      id: '/_app/billing'
-      path: '/billing'
-      fullPath: '/billing'
-      preLoaderRoute: typeof AppBillingRouteImport
+    '/_app/credits': {
+      id: '/_app/credits'
+      path: '/credits'
+      fullPath: '/credits'
+      preLoaderRoute: typeof AppCreditsRouteImport
       parentRoute: typeof AppRoute
     }
-    '/api/public/widget-itinerary': {
-      id: '/api/public/widget-itinerary'
-      path: '/api/public/widget-itinerary'
-      fullPath: '/api/public/widget-itinerary'
-      preLoaderRoute: typeof ApiPublicWidgetItineraryRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/public/tts': {
-      id: '/api/public/tts'
-      path: '/api/public/tts'
-      fullPath: '/api/public/tts'
-      preLoaderRoute: typeof ApiPublicTtsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/public/translate-broadcast': {
-      id: '/api/public/translate-broadcast'
-      path: '/api/public/translate-broadcast'
-      fullPath: '/api/public/translate-broadcast'
-      preLoaderRoute: typeof ApiPublicTranslateBroadcastRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/public/stt': {
-      id: '/api/public/stt'
-      path: '/api/public/stt'
-      fullPath: '/api/public/stt'
-      preLoaderRoute: typeof ApiPublicSttRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/public/activation': {
-      id: '/api/public/activation'
-      path: '/api/public/activation'
-      fullPath: '/api/public/activation'
-      preLoaderRoute: typeof ApiPublicActivationRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/_app/settings/appearance': {
-      id: '/_app/settings/appearance'
-      path: '/settings/appearance'
-      fullPath: '/settings/appearance'
-      preLoaderRoute: typeof AppSettingsAppearanceRouteImport
+    '/_app/dashboard': {
+      id: '/_app/dashboard'
+      path: '/dashboard'
+      fullPath: '/dashboard'
+      preLoaderRoute: typeof AppDashboardRouteImport
       parentRoute: typeof AppRoute
     }
-    '/_app/admin/settings': {
-      id: '/_app/admin/settings'
-      path: '/admin/settings'
-      fullPath: '/admin/settings'
-      preLoaderRoute: typeof AppAdminSettingsRouteImport
+    '/_app/deals': {
+      id: '/_app/deals'
+      path: '/deals'
+      fullPath: '/deals'
+      preLoaderRoute: typeof AppDealsRouteImport
       parentRoute: typeof AppRoute
     }
-    '/_app/admin/mystifly-test': {
-      id: '/_app/admin/mystifly-test'
-      path: '/admin/mystifly-test'
-      fullPath: '/admin/mystifly-test'
-      preLoaderRoute: typeof AppAdminMystiflyTestRouteImport
+    '/_app/file-translator': {
+      id: '/_app/file-translator'
+      path: '/file-translator'
+      fullPath: '/file-translator'
+      preLoaderRoute: typeof AppFileTranslatorRouteImport
       parentRoute: typeof AppRoute
     }
-    '/_app/admin/mystifly': {
-      id: '/_app/admin/mystifly'
-      path: '/admin/mystifly'
-      fullPath: '/admin/mystifly'
-      preLoaderRoute: typeof AppAdminMystiflyRouteImport
+    '/_app/flights': {
+      id: '/_app/flights'
+      path: '/flights'
+      fullPath: '/flights'
+      preLoaderRoute: typeof AppFlightsRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/live-translator': {
+      id: '/_app/live-translator'
+      path: '/live-translator'
+      fullPath: '/live-translator'
+      preLoaderRoute: typeof AppLiveTranslatorRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/onboarding': {
+      id: '/_app/onboarding'
+      path: '/onboarding'
+      fullPath: '/onboarding'
+      preLoaderRoute: typeof AppOnboardingRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/planner': {
+      id: '/_app/planner'
+      path: '/planner'
+      fullPath: '/planner'
+      preLoaderRoute: typeof AppPlannerRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/referrals': {
+      id: '/_app/referrals'
+      path: '/referrals'
+      fullPath: '/referrals'
+      preLoaderRoute: typeof AppReferralsRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/shield': {
+      id: '/_app/shield'
+      path: '/shield'
+      fullPath: '/shield'
+      preLoaderRoute: typeof AppShieldRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/stays': {
+      id: '/_app/stays'
+      path: '/stays'
+      fullPath: '/stays'
+      preLoaderRoute: typeof AppStaysRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/translator': {
+      id: '/_app/translator'
+      path: '/translator'
+      fullPath: '/translator'
+      preLoaderRoute: typeof AppTranslatorRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/wallet': {
+      id: '/_app/wallet'
+      path: '/wallet'
+      fullPath: '/wallet'
+      preLoaderRoute: typeof AppWalletRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/api/ai': {
+      id: '/api/ai'
+      path: '/api/ai'
+      fullPath: '/api/ai'
+      preLoaderRoute: typeof ApiAiRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/chat': {
+      id: '/api/chat'
+      path: '/api/chat'
+      fullPath: '/api/chat'
+      preLoaderRoute: typeof ApiChatRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/jax': {
+      id: '/api/jax'
+      path: '/api/jax'
+      fullPath: '/api/jax'
+      preLoaderRoute: typeof ApiJaxRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/tts': {
+      id: '/api/tts'
+      path: '/api/tts'
+      fullPath: '/api/tts'
+      preLoaderRoute: typeof ApiTtsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/auth/callback': {
+      id: '/auth/callback'
+      path: '/auth/callback'
+      fullPath: '/auth/callback'
+      preLoaderRoute: typeof AuthCallbackRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/checkout/return': {
+      id: '/checkout/return'
+      path: '/checkout/return'
+      fullPath: '/checkout/return'
+      preLoaderRoute: typeof CheckoutReturnRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/documento/$slug': {
+      id: '/documento/$slug'
+      path: '/documento/$slug'
+      fullPath: '/documento/$slug'
+      preLoaderRoute: typeof DocumentoSlugRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/live-room/$code': {
+      id: '/live-room/$code'
+      path: '/live-room/$code'
+      fullPath: '/live-room/$code'
+      preLoaderRoute: typeof LiveRoomCodeRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/orcamento/$slug': {
+      id: '/orcamento/$slug'
+      path: '/orcamento/$slug'
+      fullPath: '/orcamento/$slug'
+      preLoaderRoute: typeof OrcamentoSlugRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/r/$slug': {
+      id: '/r/$slug'
+      path: '/r/$slug'
+      fullPath: '/r/$slug'
+      preLoaderRoute: typeof RSlugRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/roteiro/$slug': {
+      id: '/roteiro/$slug'
+      path: '/roteiro/$slug'
+      fullPath: '/roteiro/$slug'
+      preLoaderRoute: typeof RoteiroSlugRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/traducao/$slug': {
+      id: '/traducao/$slug'
+      path: '/traducao/$slug'
+      fullPath: '/traducao/$slug'
+      preLoaderRoute: typeof TraducaoSlugRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/voo/$slug': {
+      id: '/voo/$slug'
+      path: '/voo/$slug'
+      fullPath: '/voo/$slug'
+      preLoaderRoute: typeof VooSlugRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/_app/admin/activation': {
+      id: '/_app/admin/activation'
+      path: '/admin/activation'
+      fullPath: '/admin/activation'
+      preLoaderRoute: typeof AppAdminActivationRouteImport
       parentRoute: typeof AppRoute
     }
     '/_app/admin/financial': {
@@ -977,25 +921,74 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppAdminFinancialRouteImport
       parentRoute: typeof AppRoute
     }
-    '/_app/admin/activation': {
-      id: '/_app/admin/activation'
-      path: '/admin/activation'
-      fullPath: '/admin/activation'
-      preLoaderRoute: typeof AppAdminActivationRouteImport
+    '/_app/admin/mystifly': {
+      id: '/_app/admin/mystifly'
+      path: '/admin/mystifly'
+      fullPath: '/admin/mystifly'
+      preLoaderRoute: typeof AppAdminMystiflyRouteImport
       parentRoute: typeof AppRoute
     }
-    '/api/public/shared-result/$slug': {
-      id: '/api/public/shared-result/$slug'
-      path: '/api/public/shared-result/$slug'
-      fullPath: '/api/public/shared-result/$slug'
-      preLoaderRoute: typeof ApiPublicSharedResultSlugRouteImport
+    '/_app/admin/mystifly-test': {
+      id: '/_app/admin/mystifly-test'
+      path: '/admin/mystifly-test'
+      fullPath: '/admin/mystifly-test'
+      preLoaderRoute: typeof AppAdminMystiflyTestRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/admin/settings': {
+      id: '/_app/admin/settings'
+      path: '/admin/settings'
+      fullPath: '/admin/settings'
+      preLoaderRoute: typeof AppAdminSettingsRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/settings/appearance': {
+      id: '/_app/settings/appearance'
+      path: '/settings/appearance'
+      fullPath: '/settings/appearance'
+      preLoaderRoute: typeof AppSettingsAppearanceRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/api/public/activation': {
+      id: '/api/public/activation'
+      path: '/api/public/activation'
+      fullPath: '/api/public/activation'
+      preLoaderRoute: typeof ApiPublicActivationRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/api/public/payments/webhook': {
-      id: '/api/public/payments/webhook'
-      path: '/api/public/payments/webhook'
-      fullPath: '/api/public/payments/webhook'
-      preLoaderRoute: typeof ApiPublicPaymentsWebhookRouteImport
+    '/api/public/stt': {
+      id: '/api/public/stt'
+      path: '/api/public/stt'
+      fullPath: '/api/public/stt'
+      preLoaderRoute: typeof ApiPublicSttRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/translate-broadcast': {
+      id: '/api/public/translate-broadcast'
+      path: '/api/public/translate-broadcast'
+      fullPath: '/api/public/translate-broadcast'
+      preLoaderRoute: typeof ApiPublicTranslateBroadcastRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/tts': {
+      id: '/api/public/tts'
+      path: '/api/public/tts'
+      fullPath: '/api/public/tts'
+      preLoaderRoute: typeof ApiPublicTtsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/widget-itinerary': {
+      id: '/api/public/widget-itinerary'
+      path: '/api/public/widget-itinerary'
+      fullPath: '/api/public/widget-itinerary'
+      preLoaderRoute: typeof ApiPublicWidgetItineraryRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/mercadopago/callback': {
+      id: '/api/public/mercadopago/callback'
+      path: '/api/public/mercadopago/callback'
+      fullPath: '/api/public/mercadopago/callback'
+      preLoaderRoute: typeof ApiPublicMercadopagoCallbackRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/public/mercadopago/webhook': {
@@ -1005,11 +998,18 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicMercadopagoWebhookRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/api/public/mercadopago/callback': {
-      id: '/api/public/mercadopago/callback'
-      path: '/api/public/mercadopago/callback'
-      fullPath: '/api/public/mercadopago/callback'
-      preLoaderRoute: typeof ApiPublicMercadopagoCallbackRouteImport
+    '/api/public/payments/webhook': {
+      id: '/api/public/payments/webhook'
+      path: '/api/public/payments/webhook'
+      fullPath: '/api/public/payments/webhook'
+      preLoaderRoute: typeof ApiPublicPaymentsWebhookRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/shared-result/$slug': {
+      id: '/api/public/shared-result/$slug'
+      path: '/api/public/shared-result/$slug'
+      fullPath: '/api/public/shared-result/$slug'
+      preLoaderRoute: typeof ApiPublicSharedResultSlugRouteImport
       parentRoute: typeof rootRouteImport
     }
   }
