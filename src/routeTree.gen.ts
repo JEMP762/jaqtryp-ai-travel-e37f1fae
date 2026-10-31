@@ -23,6 +23,7 @@ import { Route as AppDashboardRouteImport } from './routes/_app.dashboard'
 import { Route as AppDealsRouteImport } from './routes/_app.deals'
 import { Route as AppFileTranslatorRouteImport } from './routes/_app.file-translator'
 import { Route as AppFlightsRouteImport } from './routes/_app.flights'
+import { Route as AppImmigrationRouteImport } from './routes/_app.immigration'
 import { Route as AppLiveTranslatorRouteImport } from './routes/_app.live-translator'
 import { Route as AppOnboardingRouteImport } from './routes/_app.onboarding'
 import { Route as AppPlannerRouteImport } from './routes/_app.planner'
@@ -128,6 +129,11 @@ const AppFileTranslatorRoute = AppFileTranslatorRouteImport.update({
 const AppFlightsRoute = AppFlightsRouteImport.update({
   id: '/flights',
   path: '/flights',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppImmigrationRoute = AppImmigrationRouteImport.update({
+  id: '/immigration',
+  path: '/immigration',
   getParentRoute: () => AppRoute,
 } as any)
 const AppLiveTranslatorRoute = AppLiveTranslatorRouteImport.update({
@@ -336,6 +342,7 @@ export interface FileRoutesByFullPath {
   '/deals': typeof AppDealsRoute
   '/file-translator': typeof AppFileTranslatorRoute
   '/flights': typeof AppFlightsRoute
+  '/immigration': typeof AppImmigrationRoute
   '/live-translator': typeof AppLiveTranslatorRoute
   '/onboarding': typeof AppOnboardingRoute
   '/planner': typeof AppPlannerRoute
@@ -388,6 +395,7 @@ export interface FileRoutesByTo {
   '/deals': typeof AppDealsRoute
   '/file-translator': typeof AppFileTranslatorRoute
   '/flights': typeof AppFlightsRoute
+  '/immigration': typeof AppImmigrationRoute
   '/live-translator': typeof AppLiveTranslatorRoute
   '/onboarding': typeof AppOnboardingRoute
   '/planner': typeof AppPlannerRoute
@@ -442,6 +450,7 @@ export interface FileRoutesById {
   '/_app/deals': typeof AppDealsRoute
   '/_app/file-translator': typeof AppFileTranslatorRoute
   '/_app/flights': typeof AppFlightsRoute
+  '/_app/immigration': typeof AppImmigrationRoute
   '/_app/live-translator': typeof AppLiveTranslatorRoute
   '/_app/onboarding': typeof AppOnboardingRoute
   '/_app/planner': typeof AppPlannerRoute
@@ -496,6 +505,7 @@ export interface FileRouteTypes {
     | '/deals'
     | '/file-translator'
     | '/flights'
+    | '/immigration'
     | '/live-translator'
     | '/onboarding'
     | '/planner'
@@ -548,6 +558,7 @@ export interface FileRouteTypes {
     | '/deals'
     | '/file-translator'
     | '/flights'
+    | '/immigration'
     | '/live-translator'
     | '/onboarding'
     | '/planner'
@@ -601,6 +612,7 @@ export interface FileRouteTypes {
     | '/_app/deals'
     | '/_app/file-translator'
     | '/_app/flights'
+    | '/_app/immigration'
     | '/_app/live-translator'
     | '/_app/onboarding'
     | '/_app/planner'
@@ -771,6 +783,13 @@ declare module '@tanstack/react-router' {
       path: '/flights'
       fullPath: '/flights'
       preLoaderRoute: typeof AppFlightsRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/immigration': {
+      id: '/_app/immigration'
+      path: '/immigration'
+      fullPath: '/immigration'
+      preLoaderRoute: typeof AppImmigrationRouteImport
       parentRoute: typeof AppRoute
     }
     '/_app/live-translator': {
@@ -1043,6 +1062,7 @@ interface AppRouteChildren {
   AppDealsRoute: typeof AppDealsRoute
   AppFileTranslatorRoute: typeof AppFileTranslatorRoute
   AppFlightsRoute: typeof AppFlightsRoute
+  AppImmigrationRoute: typeof AppImmigrationRoute
   AppLiveTranslatorRoute: typeof AppLiveTranslatorRoute
   AppOnboardingRoute: typeof AppOnboardingRoute
   AppPlannerRoute: typeof AppPlannerRoute
@@ -1067,6 +1087,7 @@ const AppRouteChildren: AppRouteChildren = {
   AppDealsRoute: AppDealsRoute,
   AppFileTranslatorRoute: AppFileTranslatorRoute,
   AppFlightsRoute: AppFlightsRoute,
+  AppImmigrationRoute: AppImmigrationRoute,
   AppLiveTranslatorRoute: AppLiveTranslatorRoute,
   AppOnboardingRoute: AppOnboardingRoute,
   AppPlannerRoute: AppPlannerRoute,
