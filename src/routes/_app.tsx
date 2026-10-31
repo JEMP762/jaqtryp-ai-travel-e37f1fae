@@ -23,7 +23,7 @@ import {
   Coins,
   FileText,
   Palette,
-  Gift,
+  Gift, PlaneLanding
 } from "lucide-react";
 
 
@@ -122,6 +122,7 @@ function AppShell() {
     { to: "/translator", icon: Languages, label: t("dash.translator") },
     { to: "/file-translator", icon: FileText, label: "Tradutor de Arquivos IA" },
     { to: "/live-translator", icon: Mic, label: "Live Translator" },
+    { to: "/immigration", icon: PlaneLanding, label: "Treino de Imigração" },
 
     { to: "/flights", icon: Plane, label: "Voos" },
 

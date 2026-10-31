@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { ArrowRight, Sparkles, MessageSquare, Languages, Plane, Mic, Clock3 } from "lucide-react";
+import { ArrowRight, Sparkles, MessageSquare, Languages, Plane, Mic, Clock3, PlaneLanding } from "lucide-react";
 import * as React from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { useI18n } from "@/lib/i18n/I18nProvider";
@@ -65,6 +65,12 @@ function DashboardHome() {
       icon: Mic,
       title: "Live Translator",
       desc: "Tradução simultânea por voz, texto e foto. Modo conversa, guia e cruzeiro.",
+    },
+    {
+      to: "/immigration",
+      icon: PlaneLanding,
+      title: "Treino de Imigração",
+      desc: "Simule a entrevista do aeroporto em inglês com áudio e avaliação da IA.",
     },
     {
       to: "/flights",

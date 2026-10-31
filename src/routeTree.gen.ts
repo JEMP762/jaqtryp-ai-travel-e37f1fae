@@ -23,6 +23,7 @@ import { Route as AppDashboardRouteImport } from './routes/_app.dashboard'
 import { Route as AppDealsRouteImport } from './routes/_app.deals'
 import { Route as AppFileTranslatorRouteImport } from './routes/_app.file-translator'
 import { Route as AppFlightsRouteImport } from './routes/_app.flights'
+import { Route as AppImmigrationRouteImport } from './routes/_app.immigration'
 import { Route as AppLiveTranslatorRouteImport } from './routes/_app.live-translator'
 import { Route as AppOnboardingRouteImport } from './routes/_app.onboarding'
 import { Route as AppPlannerRouteImport } from './routes/_app.planner'
@@ -33,6 +34,7 @@ import { Route as AppTranslatorRouteImport } from './routes/_app.translator'
 import { Route as AppWalletRouteImport } from './routes/_app.wallet'
 import { Route as ApiAiRouteImport } from './routes/api.ai'
 import { Route as ApiChatRouteImport } from './routes/api.chat'
+import { Route as ApiImmigrationFeedbackRouteImport } from './routes/api.immigration-feedback'
 import { Route as ApiJaxRouteImport } from './routes/api.jax'
 import { Route as ApiTtsRouteImport } from './routes/api.tts'
 import { Route as AuthCallbackRouteImport } from './routes/auth.callback'
@@ -129,6 +131,11 @@ const AppFlightsRoute = AppFlightsRouteImport.update({
   path: '/flights',
   getParentRoute: () => AppRoute,
 } as any)
+const AppImmigrationRoute = AppImmigrationRouteImport.update({
+  id: '/immigration',
+  path: '/immigration',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppLiveTranslatorRoute = AppLiveTranslatorRouteImport.update({
   id: '/live-translator',
   path: '/live-translator',
@@ -177,6 +184,11 @@ const ApiAiRoute = ApiAiRouteImport.update({
 const ApiChatRoute = ApiChatRouteImport.update({
   id: '/api/chat',
   path: '/api/chat',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiImmigrationFeedbackRoute = ApiImmigrationFeedbackRouteImport.update({
+  id: '/api/immigration-feedback',
+  path: '/api/immigration-feedback',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiJaxRoute = ApiJaxRouteImport.update({
@@ -330,6 +342,7 @@ export interface FileRoutesByFullPath {
   '/deals': typeof AppDealsRoute
   '/file-translator': typeof AppFileTranslatorRoute
   '/flights': typeof AppFlightsRoute
+  '/immigration': typeof AppImmigrationRoute
   '/live-translator': typeof AppLiveTranslatorRoute
   '/onboarding': typeof AppOnboardingRoute
   '/planner': typeof AppPlannerRoute
@@ -340,6 +353,7 @@ export interface FileRoutesByFullPath {
   '/wallet': typeof AppWalletRoute
   '/api/ai': typeof ApiAiRoute
   '/api/chat': typeof ApiChatRoute
+  '/api/immigration-feedback': typeof ApiImmigrationFeedbackRoute
   '/api/jax': typeof ApiJaxRoute
   '/api/tts': typeof ApiTtsRoute
   '/auth/callback': typeof AuthCallbackRoute
@@ -381,6 +395,7 @@ export interface FileRoutesByTo {
   '/deals': typeof AppDealsRoute
   '/file-translator': typeof AppFileTranslatorRoute
   '/flights': typeof AppFlightsRoute
+  '/immigration': typeof AppImmigrationRoute
   '/live-translator': typeof AppLiveTranslatorRoute
   '/onboarding': typeof AppOnboardingRoute
   '/planner': typeof AppPlannerRoute
@@ -391,6 +406,7 @@ export interface FileRoutesByTo {
   '/wallet': typeof AppWalletRoute
   '/api/ai': typeof ApiAiRoute
   '/api/chat': typeof ApiChatRoute
+  '/api/immigration-feedback': typeof ApiImmigrationFeedbackRoute
   '/api/jax': typeof ApiJaxRoute
   '/api/tts': typeof ApiTtsRoute
   '/auth/callback': typeof AuthCallbackRoute
@@ -434,6 +450,7 @@ export interface FileRoutesById {
   '/_app/deals': typeof AppDealsRoute
   '/_app/file-translator': typeof AppFileTranslatorRoute
   '/_app/flights': typeof AppFlightsRoute
+  '/_app/immigration': typeof AppImmigrationRoute
   '/_app/live-translator': typeof AppLiveTranslatorRoute
   '/_app/onboarding': typeof AppOnboardingRoute
   '/_app/planner': typeof AppPlannerRoute
@@ -444,6 +461,7 @@ export interface FileRoutesById {
   '/_app/wallet': typeof AppWalletRoute
   '/api/ai': typeof ApiAiRoute
   '/api/chat': typeof ApiChatRoute
+  '/api/immigration-feedback': typeof ApiImmigrationFeedbackRoute
   '/api/jax': typeof ApiJaxRoute
   '/api/tts': typeof ApiTtsRoute
   '/auth/callback': typeof AuthCallbackRoute
@@ -487,6 +505,7 @@ export interface FileRouteTypes {
     | '/deals'
     | '/file-translator'
     | '/flights'
+    | '/immigration'
     | '/live-translator'
     | '/onboarding'
     | '/planner'
@@ -497,6 +516,7 @@ export interface FileRouteTypes {
     | '/wallet'
     | '/api/ai'
     | '/api/chat'
+    | '/api/immigration-feedback'
     | '/api/jax'
     | '/api/tts'
     | '/auth/callback'
@@ -538,6 +558,7 @@ export interface FileRouteTypes {
     | '/deals'
     | '/file-translator'
     | '/flights'
+    | '/immigration'
     | '/live-translator'
     | '/onboarding'
     | '/planner'
@@ -548,6 +569,7 @@ export interface FileRouteTypes {
     | '/wallet'
     | '/api/ai'
     | '/api/chat'
+    | '/api/immigration-feedback'
     | '/api/jax'
     | '/api/tts'
     | '/auth/callback'
@@ -590,6 +612,7 @@ export interface FileRouteTypes {
     | '/_app/deals'
     | '/_app/file-translator'
     | '/_app/flights'
+    | '/_app/immigration'
     | '/_app/live-translator'
     | '/_app/onboarding'
     | '/_app/planner'
@@ -600,6 +623,7 @@ export interface FileRouteTypes {
     | '/_app/wallet'
     | '/api/ai'
     | '/api/chat'
+    | '/api/immigration-feedback'
     | '/api/jax'
     | '/api/tts'
     | '/auth/callback'
@@ -638,6 +662,7 @@ export interface RootRouteChildren {
   SignupRoute: typeof SignupRoute
   ApiAiRoute: typeof ApiAiRoute
   ApiChatRoute: typeof ApiChatRoute
+  ApiImmigrationFeedbackRoute: typeof ApiImmigrationFeedbackRoute
   ApiJaxRoute: typeof ApiJaxRoute
   ApiTtsRoute: typeof ApiTtsRoute
   AuthCallbackRoute: typeof AuthCallbackRoute
@@ -760,6 +785,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppFlightsRouteImport
       parentRoute: typeof AppRoute
     }
+    '/_app/immigration': {
+      id: '/_app/immigration'
+      path: '/immigration'
+      fullPath: '/immigration'
+      preLoaderRoute: typeof AppImmigrationRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/_app/live-translator': {
       id: '/_app/live-translator'
       path: '/live-translator'
@@ -828,6 +860,13 @@ declare module '@tanstack/react-router' {
       path: '/api/chat'
       fullPath: '/api/chat'
       preLoaderRoute: typeof ApiChatRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/immigration-feedback': {
+      id: '/api/immigration-feedback'
+      path: '/api/immigration-feedback'
+      fullPath: '/api/immigration-feedback'
+      preLoaderRoute: typeof ApiImmigrationFeedbackRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/jax': {
@@ -1023,6 +1062,7 @@ interface AppRouteChildren {
   AppDealsRoute: typeof AppDealsRoute
   AppFileTranslatorRoute: typeof AppFileTranslatorRoute
   AppFlightsRoute: typeof AppFlightsRoute
+  AppImmigrationRoute: typeof AppImmigrationRoute
   AppLiveTranslatorRoute: typeof AppLiveTranslatorRoute
   AppOnboardingRoute: typeof AppOnboardingRoute
   AppPlannerRoute: typeof AppPlannerRoute
@@ -1047,6 +1087,7 @@ const AppRouteChildren: AppRouteChildren = {
   AppDealsRoute: AppDealsRoute,
   AppFileTranslatorRoute: AppFileTranslatorRoute,
   AppFlightsRoute: AppFlightsRoute,
+  AppImmigrationRoute: AppImmigrationRoute,
   AppLiveTranslatorRoute: AppLiveTranslatorRoute,
   AppOnboardingRoute: AppOnboardingRoute,
   AppPlannerRoute: AppPlannerRoute,
@@ -1075,6 +1116,7 @@ const rootRouteChildren: RootRouteChildren = {
   SignupRoute: SignupRoute,
   ApiAiRoute: ApiAiRoute,
   ApiChatRoute: ApiChatRoute,
+  ApiImmigrationFeedbackRoute: ApiImmigrationFeedbackRoute,
   ApiJaxRoute: ApiJaxRoute,
   ApiTtsRoute: ApiTtsRoute,
   AuthCallbackRoute: AuthCallbackRoute,
