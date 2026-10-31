@@ -33,6 +33,7 @@ import { Route as AppTranslatorRouteImport } from './routes/_app.translator'
 import { Route as AppWalletRouteImport } from './routes/_app.wallet'
 import { Route as ApiAiRouteImport } from './routes/api.ai'
 import { Route as ApiChatRouteImport } from './routes/api.chat'
+import { Route as ApiImmigrationFeedbackRouteImport } from './routes/api.immigration-feedback'
 import { Route as ApiJaxRouteImport } from './routes/api.jax'
 import { Route as ApiTtsRouteImport } from './routes/api.tts'
 import { Route as AuthCallbackRouteImport } from './routes/auth.callback'
@@ -177,6 +178,11 @@ const ApiAiRoute = ApiAiRouteImport.update({
 const ApiChatRoute = ApiChatRouteImport.update({
   id: '/api/chat',
   path: '/api/chat',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiImmigrationFeedbackRoute = ApiImmigrationFeedbackRouteImport.update({
+  id: '/api/immigration-feedback',
+  path: '/api/immigration-feedback',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiJaxRoute = ApiJaxRouteImport.update({
@@ -340,6 +346,7 @@ export interface FileRoutesByFullPath {
   '/wallet': typeof AppWalletRoute
   '/api/ai': typeof ApiAiRoute
   '/api/chat': typeof ApiChatRoute
+  '/api/immigration-feedback': typeof ApiImmigrationFeedbackRoute
   '/api/jax': typeof ApiJaxRoute
   '/api/tts': typeof ApiTtsRoute
   '/auth/callback': typeof AuthCallbackRoute
@@ -391,6 +398,7 @@ export interface FileRoutesByTo {
   '/wallet': typeof AppWalletRoute
   '/api/ai': typeof ApiAiRoute
   '/api/chat': typeof ApiChatRoute
+  '/api/immigration-feedback': typeof ApiImmigrationFeedbackRoute
   '/api/jax': typeof ApiJaxRoute
   '/api/tts': typeof ApiTtsRoute
   '/auth/callback': typeof AuthCallbackRoute
@@ -444,6 +452,7 @@ export interface FileRoutesById {
   '/_app/wallet': typeof AppWalletRoute
   '/api/ai': typeof ApiAiRoute
   '/api/chat': typeof ApiChatRoute
+  '/api/immigration-feedback': typeof ApiImmigrationFeedbackRoute
   '/api/jax': typeof ApiJaxRoute
   '/api/tts': typeof ApiTtsRoute
   '/auth/callback': typeof AuthCallbackRoute
@@ -497,6 +506,7 @@ export interface FileRouteTypes {
     | '/wallet'
     | '/api/ai'
     | '/api/chat'
+    | '/api/immigration-feedback'
     | '/api/jax'
     | '/api/tts'
     | '/auth/callback'
@@ -548,6 +558,7 @@ export interface FileRouteTypes {
     | '/wallet'
     | '/api/ai'
     | '/api/chat'
+    | '/api/immigration-feedback'
     | '/api/jax'
     | '/api/tts'
     | '/auth/callback'
@@ -600,6 +611,7 @@ export interface FileRouteTypes {
     | '/_app/wallet'
     | '/api/ai'
     | '/api/chat'
+    | '/api/immigration-feedback'
     | '/api/jax'
     | '/api/tts'
     | '/auth/callback'
@@ -638,6 +650,7 @@ export interface RootRouteChildren {
   SignupRoute: typeof SignupRoute
   ApiAiRoute: typeof ApiAiRoute
   ApiChatRoute: typeof ApiChatRoute
+  ApiImmigrationFeedbackRoute: typeof ApiImmigrationFeedbackRoute
   ApiJaxRoute: typeof ApiJaxRoute
   ApiTtsRoute: typeof ApiTtsRoute
   AuthCallbackRoute: typeof AuthCallbackRoute
@@ -828,6 +841,13 @@ declare module '@tanstack/react-router' {
       path: '/api/chat'
       fullPath: '/api/chat'
       preLoaderRoute: typeof ApiChatRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/immigration-feedback': {
+      id: '/api/immigration-feedback'
+      path: '/api/immigration-feedback'
+      fullPath: '/api/immigration-feedback'
+      preLoaderRoute: typeof ApiImmigrationFeedbackRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/jax': {
@@ -1075,6 +1095,7 @@ const rootRouteChildren: RootRouteChildren = {
   SignupRoute: SignupRoute,
   ApiAiRoute: ApiAiRoute,
   ApiChatRoute: ApiChatRoute,
+  ApiImmigrationFeedbackRoute: ApiImmigrationFeedbackRoute,
   ApiJaxRoute: ApiJaxRoute,
   ApiTtsRoute: ApiTtsRoute,
   AuthCallbackRoute: AuthCallbackRoute,

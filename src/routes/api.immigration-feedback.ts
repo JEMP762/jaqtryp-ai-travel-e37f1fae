@@ -44,8 +44,28 @@ export const Route = createFileRoute("/api/immigration-feedback")({
           method: "POST",
           headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
           body: JSON.stringify({
-            model: "google/gemini-3.5-flash",
-            response_format: { type: "json_object" },
+            model: "openai/gpt-6-astra",
+            reasoning_effort: "low",
+            response_format: {
+              type: "json_schema",
+              json_schema: {
+                name: "immigration_feedback",
+                strict: true,
+                schema: {
+                  type: "object",
+                  additionalProperties: false,
+                  required: ["score", "verdict", "feedback", "risk_words", "improved", "improved_pt"],
+                  properties: {
+                    score: { type: "number" },
+                    verdict: { type: "string", enum: ["ok", "attention", "risk"] },
+                    feedback: { type: "string" },
+                    risk_words: { type: "array", items: { type: "string" } },
+                    improved: { type: "string" },
+                    improved_pt: { type: "string" },
+                  },
+                },
+              },
+            },
             messages: [
               { role: "system", content: SYSTEM },
               {
