@@ -1,0 +1,10 @@
+import { describe, expect, test } from "bun:test";
+import { coordinateSchema, mapsJourneyUrl, parseJourney, splitItineraryDays, withinArrival } from "./model";
+describe("SMART ROUTE isolation and navigation", () => {
+  test("invalid geographic inputs cannot reach routing", () => { expect(coordinateSchema.safeParse({ latitude: 91, longitude: 0 }).success).toBe(false); expect(coordinateSchema.safeParse({ latitude: 0, longitude: -181 }).success).toBe(false); });
+  test("low accuracy cannot confirm arrival", () => { expect(withinArrival({ latitude: 0, longitude: 0 }, { latitude: 0, longitude: 0 }, 100)).toBe(false); expect(withinArrival({ latitude: 0, longitude: 0 }, { latitude: 0, longitude: 0 }, 10)).toBe(true); });
+  test("days preserve original text without generating locations", () => { expect(splitItineraryDays("## Day 1\nMuseum\n## Dia 2\nPark").map(d => d.text)).toEqual(["## Day 1\nMuseum\n", "## Dia 2\nPark\n"]); expect(splitItineraryDays("unknown")[0]?.text).toBe("unknown"); });
+  test("unavailable routes remain distinct from zero-distance routes", () => { expect(parseJourney({ routes: [] })).toBe(null); expect(parseJourney({ routes: [{ duration: "12.5s", polyline: { encodedPolyline: "abc" } }] })?.seconds).toBe(12.5); expect(parseJourney({ routes: [{ duration: "12.5s", polyline: { encodedPolyline: "abc" } }] })?.distance).toBe(0); });
+  test("incomplete geometry or duration must not fabricate a journey", () => { expect(() => parseJourney({ routes: [{ duration: "oops", polyline: { encodedPolyline: "abc" } }] })).toThrow(); expect(() => parseJourney({ routes: [{ duration: "12s" }] })).toThrow(); });
+  test("transit continuation preserves travel mode and destination", () => { const url = new URL(mapsJourneyUrl(null, { id: "place", name: "n", address: "a", latitude: 1, longitude: 2 }, "TRANSIT")); expect(url.searchParams.get("travelmode")).toBe("transit"); expect(url.searchParams.get("destination_place_id")).toBe("place"); });
+});
