@@ -23,3 +23,5 @@
 - [x] Adicionar preferências combináveis aos geradores principal e público
 - [ ] Conectar cada proprietário ao Mercado Pago e validar o Pix real com credenciais de marketplace
 - [x] Garantir que usuários conectem o Mercado Pago sem informar credenciais técnicas
+- [x] Criar página dedicada de Treinamento de Imigração em inglês (simulador por voz, guia, documentos)
+- [x] Assistente de viagem: escolha de idioma, perguntas por áudio e respostas em áudio

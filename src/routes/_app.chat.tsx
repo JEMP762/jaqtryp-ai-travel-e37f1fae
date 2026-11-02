@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { Send, Sparkles, User2 } from "lucide-react";
+import { Loader2, Mic, MicOff, Send, Sparkles, Square, User2, Volume2 } from "lucide-react";
+import { speak, stopSpeaking, useVoiceRecorder } from "@/lib/voice";
 import * as React from "react";
 import ReactMarkdown from "react-markdown";
 import { toast } from "sonner";
@@ -15,6 +16,23 @@ export const Route = createFileRoute("/_app/chat")({
 });
 
 type Msg = { role: "user" | "assistant"; content: string };
+const CHAT_LANGS = [
+  { code: "pt-BR", label: "🇧🇷 Português", name: "Brazilian Portuguese" },
+  { code: "en-US", label: "🇺🇸 English", name: "English" },
+  { code: "es-ES", label: "🇪🇸 Español", name: "Spanish" },
+  { code: "fr-FR", label: "🇫🇷 Français", name: "French" },
+  { code: "it-IT", label: "🇮🇹 Italiano", name: "Italian" },
+  { code: "de-DE", label: "🇩🇪 Deutsch", name: "German" },
+  { code: "ja-JP", label: "🇯🇵 日本語", name: "Japanese" },
+  { code: "zh-CN", label: "🇨🇳 中文", name: "Simplified Chinese" },
+  { code: "ko-KR", label: "🇰🇷 한국어", name: "Korean" },
+  { code: "ar-SA", label: "🇸🇦 العربية", name: "Arabic" },
+  { code: "ru-RU", label: "🇷🇺 Русский", name: "Russian" },
+  { code: "nl-NL", label: "🇳🇱 Nederlands", name: "Dutch" },
+  { code: "tr-TR", label: "🇹🇷 Türkçe", name: "Turkish" },
+  { code: "hi-IN", label: "🇮🇳 हिन्दी", name: "Hindi" },
+];
+
 type Profile = "economico" | "mochileiro" | "conforto" | "premium" | "luxo";
 
 function ChatPage() {
@@ -24,13 +42,31 @@ function ChatPage() {
   const [streaming, setStreaming] = React.useState(false);
   const [profile, setProfile] = React.useState<Profile>("conforto");
   const scrollRef = React.useRef<HTMLDivElement>(null);
+  const [chatLang, setChatLang] = React.useState(lang === "en" ? "en-US" : "pt-BR");
+  const [autoSpeak, setAutoSpeak] = React.useState(false);
+  const [speakingIdx, setSpeakingIdx] = React.useState<number | null>(null);
+  const langName = CHAT_LANGS.find((l) => l.code === chatLang)?.name ?? "Brazilian Portuguese";
+  const sendRef = React.useRef<(override?: string) => void>(() => {});
+  const voice = useVoiceRecorder(chatLang, (text) => sendRef.current(text));
+
+  const playMsg = async (i: number, text: string) => {
+    if (speakingIdx === i) {
+      stopSpeaking();
+      setSpeakingIdx(null);
+      return;
+    }
+    setSpeakingIdx(i);
+    await speak(text, chatLang);
+    setSpeakingIdx((cur) => (cur === i ? null : cur));
+  };
+  React.useEffect(() => () => stopSpeaking(), []);
 
   React.useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
   }, [messages]);
 
-  const send = async () => {
-    const text = input.trim();
+  const send = async (override?: string) => {
+    const text = (override ?? input).trim();
     if (!text || streaming) return;
     const userMsg: Msg = { role: "user", content: text };
     const next = [...messages, userMsg];
@@ -44,7 +80,7 @@ function ChatPage() {
 
     const profileHint: Msg = {
       role: "user",
-      content: `[Contexto JAQ Price] Perfil de viagem do usuário: ${profile}. Adapte recomendações de preço, hospedagem e gastos a esse perfil. Responda em tom natural, humano e amigável, como um amigo viajante experiente — evite soar robótico.`,
+      content: `[Contexto JAQ Price] Perfil de viagem do usuário: ${profile}. Adapte recomendações de preço, hospedagem e gastos a esse perfil. IMPORTANTE: responda SEMPRE em ${langName}, independentemente do idioma da pergunta. Responda em tom natural, humano e amigável, como um amigo viajante experiente — evite soar robótico.`,
     };
     const payloadMessages = [profileHint, ...next];
 
@@ -112,8 +148,14 @@ function ChatPage() {
       if (!handleCreditError(e)) toast.error(t("common.error"));
     } finally {
       setStreaming(false);
+      if (autoSpeak && assistantSoFar.trim()) {
+        const idx = next.length;
+        setSpeakingIdx(idx);
+        speak(assistantSoFar, chatLang).then(() => setSpeakingIdx((c) => (c === idx ? null : c)));
+      }
     }
   };
+  sendRef.current = (t) => void send(t);
 
   const suggestions =
     lang === "pt"
@@ -159,7 +201,36 @@ function ChatPage() {
           {t("hero.badge")} · <span className="text-primary">JAQ Price</span>{" "}
           {lang === "pt" ? "ativo" : "active"}
         </p>
-        <div className="mt-3 flex flex-wrap gap-1.5">
+        <div className="mt-3 flex flex-wrap items-center gap-2">
+          <select
+            aria-label="Idioma do assistente"
+            value={chatLang}
+            onChange={(e) => setChatLang(e.target.value)}
+            className="rounded-full border border-border bg-card px-3 py-1 text-xs text-foreground"
+          >
+            {CHAT_LANGS.map((l) => (
+              <option key={l.code} value={l.code}>
+                {l.label}
+              </option>
+            ))}
+          </select>
+          <button
+            onClick={() => {
+              if (autoSpeak) stopSpeaking();
+              setAutoSpeak((v) => !v);
+            }}
+            className={cn(
+              "flex items-center gap-1 rounded-full border px-2.5 py-1 text-xs transition-colors",
+              autoSpeak
+                ? "border-primary bg-primary/15 text-primary"
+                : "border-border bg-card/50 text-muted-foreground hover:text-foreground",
+            )}
+          >
+            <Volume2 className="h-3.5 w-3.5" />
+            {lang === "pt" ? (autoSpeak ? "Respostas em áudio: ligado" : "Respostas em áudio") : autoSpeak ? "Voice replies: on" : "Voice replies"}
+          </button>
+        </div>
+        <div className="mt-2 flex flex-wrap gap-1.5">
           {profiles.map((p) => (
             <button
               key={p.id}
@@ -215,6 +286,16 @@ function ChatPage() {
               {m.role === "assistant" ? (
                 <div className="prose prose-sm prose-invert max-w-none [&_a]:text-primary [&_code]:rounded [&_code]:bg-muted [&_code]:px-1">
                   <ReactMarkdown>{m.content || "..."}</ReactMarkdown>
+                  {m.content && !(streaming && i === messages.length - 1) && (
+                    <button
+                      onClick={() => playMsg(i, m.content)}
+                      className="mt-2 flex items-center gap-1 text-xs text-muted-foreground hover:text-primary"
+                      aria-label={speakingIdx === i ? "Parar áudio" : "Ouvir resposta"}
+                    >
+                      {speakingIdx === i ? <Square className="h-3.5 w-3.5" /> : <Volume2 className="h-3.5 w-3.5" />}
+                      {speakingIdx === i ? (lang === "pt" ? "Parar" : "Stop") : lang === "pt" ? "Ouvir" : "Listen"}
+                    </button>
+                  )}
                 </div>
               ) : (
                 <p className="whitespace-pre-wrap">{m.content}</p>
@@ -254,7 +335,27 @@ function ChatPage() {
             className="min-h-[40px] resize-none border-0 bg-transparent focus-visible:ring-0"
           />
           <Button
-            onClick={send}
+            size="icon"
+            variant={voice.recording ? "destructive" : "ghost"}
+            disabled={streaming || voice.transcribing}
+            aria-label={voice.recording ? "Parar e enviar" : "Perguntar por áudio"}
+            onClick={async () => {
+              if (voice.recording) return voice.stop();
+              stopSpeaking();
+              const err = await voice.start();
+              if (err) toast.error(lang === "pt" ? "Permita o acesso ao microfone." : "Allow microphone access.");
+            }}
+          >
+            {voice.transcribing ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : voice.recording ? (
+              <MicOff className="h-4 w-4" />
+            ) : (
+              <Mic className="h-4 w-4" />
+            )}
+          </Button>
+          <Button
+            onClick={() => send()}
             disabled={streaming || !input.trim()}
             size="icon"
             className="bg-gradient-primary shadow-glow"
