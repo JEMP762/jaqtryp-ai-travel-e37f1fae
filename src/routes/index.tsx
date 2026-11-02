@@ -30,6 +30,14 @@ import { useAuth } from "@/hooks/useAuth";
 import { useSubscriptionCheckout } from "@/hooks/useSubscriptionCheckout";
 
 export const Route = createFileRoute("/")({
+  head: () => ({ meta: [
+    { title: "JAQTRYP AI — Planeje sua viagem" },
+    { name: "description", content: "Planeje roteiros personalizados e viaje com o assistente e as ferramentas de viagem do JAQTRYP AI." },
+    { property: "og:title", content: "JAQTRYP AI — Planeje sua viagem" },
+    { property: "og:description", content: "Roteiros personalizados, assistente de viagem e ferramentas para sua próxima viagem no JAQTRYP AI." },
+    { property: "og:type", content: "website" },
+    { name: "twitter:card", content: "summary" },
+  ] }),
   component: Landing,
 });
 
