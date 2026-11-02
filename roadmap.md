@@ -1,6 +1,7 @@
 # Roadmap
 
-- [ ] Analisar integração isolada do SMART ROUTE e definir escopo funcional com o usuário
+- [x] Analisar integração isolada do SMART ROUTE e definir navegação por atrações e busca livre
+- [ ] Implementar SMART ROUTE — aguarda aprovação do plano e configuração de mapas para o domínio próprio
 
 - [x] Criar contexto de entrada, configuração de onboarding e serviços de ativação/resultados
 - [x] Integrar cadastro, login e callback preservando referral, intenção e campanha
