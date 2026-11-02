@@ -1,5 +1,7 @@
 # Roadmap
 
+- [ ] Analisar integração isolada do SMART ROUTE e definir escopo funcional com o usuário
+
 - [x] Criar contexto de entrada, configuração de onboarding e serviços de ativação/resultados
 - [x] Integrar cadastro, login e callback preservando referral, intenção e campanha
 - [x] Criar onboarding contextual e retomável
