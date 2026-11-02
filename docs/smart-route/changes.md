@@ -9,3 +9,7 @@ Rollback: remove the SMART ROUTE menu entry/import and its new route/module file
 Provider content stays in active page memory, without persistent Google content cache or GPS history. Google attribution and terms links are visible. Integration uses authenticated bounded searches (5 results), one journey per explicit request, no background polling or batch fan-out. No Google data is fed into AI. Geographic service remains unavailable in prohibited territories per Google provider enforcement.
 
 Release blockers: managed browser key does not authorize jaqtryp.com; custom-domain credentials and real-device Maps/GPS/audio/notification/transit validation required. Agent sandbox live Maps testing is intentionally excluded. Foreground browser GPS does not guarantee locked-screen navigation.
+
+Available verification: six domain tests passed; current preview checks report build OK. Authenticated browser opened SMART ROUTE, read two existing saved itineraries and expanded the original day text, confirmed denied-GPS manual fallback, no mobile horizontal overflow at 390×844, and signed-out redirect to login. Existing dashboard/planner/translator/chat/immigration pages opened without page errors; generation, credit debits and payment flows were deliberately not executed. No live Google Maps, real-device GPS, audio playback or push delivery verified. Managed Google Maps connection is linked for authorized Lovable origins, not for the custom domain.
+
+Index route received missing app-specific head metadata only; no visual landing-page change.

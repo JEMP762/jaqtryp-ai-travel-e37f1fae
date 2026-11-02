@@ -1,7 +1,10 @@
 # Roadmap
 
 - [x] Analisar integração isolada do SMART ROUTE e definir navegação por atrações e busca livre
-- [ ] Implementar SMART ROUTE — aguarda aprovação do plano e configuração de mapas para o domínio próprio
+- [x] Implementar painel isolado SMART ROUTE com busca livre e atrações de roteiros salvos
+- [x] Validar testes de trajetos, leitura autenticada de roteiros, GPS negado e layout mobile sem chamadas Google Maps
+- [ ] Validar Maps, rotas/ônibus/metrô, GPS real, áudio e notificações em aparelho — depende de origem autorizada e validação do usuário
+- [ ] Autorizar Google Maps para jaqtryp.com e aprovar publicação — depende de credenciais próprias e validação real
 
 - [x] Criar contexto de entrada, configuração de onboarding e serviços de ativação/resultados
 - [x] Integrar cadastro, login e callback preservando referral, intenção e campanha
