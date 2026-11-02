@@ -23,7 +23,7 @@ import {
   Coins,
   FileText,
   Palette,
-  Gift, PlaneLanding
+  Gift, PlaneLanding, Navigation
 } from "lucide-react";
 
 
@@ -118,6 +118,7 @@ function AppShell() {
   const items = [
     { to: "/dashboard", icon: LayoutDashboard, label: t("dash.welcome") },
     { to: "/planner", icon: Sparkles, label: t("dash.planner") },
+    { to: "/smart-route", icon: Navigation, label: "SMART ROUTE" },
     { to: "/chat", icon: MessageSquare, label: t("dash.chat") },
     { to: "/translator", icon: Languages, label: t("dash.translator") },
     { to: "/file-translator", icon: FileText, label: "Tradutor de Arquivos IA" },
