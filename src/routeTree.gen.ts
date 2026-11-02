@@ -29,6 +29,7 @@ import { Route as AppOnboardingRouteImport } from './routes/_app.onboarding'
 import { Route as AppPlannerRouteImport } from './routes/_app.planner'
 import { Route as AppReferralsRouteImport } from './routes/_app.referrals'
 import { Route as AppShieldRouteImport } from './routes/_app.shield'
+import { Route as AppSmartRouteRouteImport } from './routes/_app.smart-route'
 import { Route as AppStaysRouteImport } from './routes/_app.stays'
 import { Route as AppTranslatorRouteImport } from './routes/_app.translator'
 import { Route as AppWalletRouteImport } from './routes/_app.wallet'
@@ -159,6 +160,11 @@ const AppReferralsRoute = AppReferralsRouteImport.update({
 const AppShieldRoute = AppShieldRouteImport.update({
   id: '/shield',
   path: '/shield',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppSmartRouteRoute = AppSmartRouteRouteImport.update({
+  id: '/smart-route',
+  path: '/smart-route',
   getParentRoute: () => AppRoute,
 } as any)
 const AppStaysRoute = AppStaysRouteImport.update({
@@ -348,6 +354,7 @@ export interface FileRoutesByFullPath {
   '/planner': typeof AppPlannerRoute
   '/referrals': typeof AppReferralsRoute
   '/shield': typeof AppShieldRoute
+  '/smart-route': typeof AppSmartRouteRoute
   '/stays': typeof AppStaysRoute
   '/translator': typeof AppTranslatorRoute
   '/wallet': typeof AppWalletRoute
@@ -401,6 +408,7 @@ export interface FileRoutesByTo {
   '/planner': typeof AppPlannerRoute
   '/referrals': typeof AppReferralsRoute
   '/shield': typeof AppShieldRoute
+  '/smart-route': typeof AppSmartRouteRoute
   '/stays': typeof AppStaysRoute
   '/translator': typeof AppTranslatorRoute
   '/wallet': typeof AppWalletRoute
@@ -456,6 +464,7 @@ export interface FileRoutesById {
   '/_app/planner': typeof AppPlannerRoute
   '/_app/referrals': typeof AppReferralsRoute
   '/_app/shield': typeof AppShieldRoute
+  '/_app/smart-route': typeof AppSmartRouteRoute
   '/_app/stays': typeof AppStaysRoute
   '/_app/translator': typeof AppTranslatorRoute
   '/_app/wallet': typeof AppWalletRoute
@@ -511,6 +520,7 @@ export interface FileRouteTypes {
     | '/planner'
     | '/referrals'
     | '/shield'
+    | '/smart-route'
     | '/stays'
     | '/translator'
     | '/wallet'
@@ -564,6 +574,7 @@ export interface FileRouteTypes {
     | '/planner'
     | '/referrals'
     | '/shield'
+    | '/smart-route'
     | '/stays'
     | '/translator'
     | '/wallet'
@@ -618,6 +629,7 @@ export interface FileRouteTypes {
     | '/_app/planner'
     | '/_app/referrals'
     | '/_app/shield'
+    | '/_app/smart-route'
     | '/_app/stays'
     | '/_app/translator'
     | '/_app/wallet'
@@ -825,6 +837,13 @@ declare module '@tanstack/react-router' {
       path: '/shield'
       fullPath: '/shield'
       preLoaderRoute: typeof AppShieldRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/smart-route': {
+      id: '/_app/smart-route'
+      path: '/smart-route'
+      fullPath: '/smart-route'
+      preLoaderRoute: typeof AppSmartRouteRouteImport
       parentRoute: typeof AppRoute
     }
     '/_app/stays': {
@@ -1068,6 +1087,7 @@ interface AppRouteChildren {
   AppPlannerRoute: typeof AppPlannerRoute
   AppReferralsRoute: typeof AppReferralsRoute
   AppShieldRoute: typeof AppShieldRoute
+  AppSmartRouteRoute: typeof AppSmartRouteRoute
   AppStaysRoute: typeof AppStaysRoute
   AppTranslatorRoute: typeof AppTranslatorRoute
   AppWalletRoute: typeof AppWalletRoute
@@ -1093,6 +1113,7 @@ const AppRouteChildren: AppRouteChildren = {
   AppPlannerRoute: AppPlannerRoute,
   AppReferralsRoute: AppReferralsRoute,
   AppShieldRoute: AppShieldRoute,
+  AppSmartRouteRoute: AppSmartRouteRoute,
   AppStaysRoute: AppStaysRoute,
   AppTranslatorRoute: AppTranslatorRoute,
   AppWalletRoute: AppWalletRoute,
