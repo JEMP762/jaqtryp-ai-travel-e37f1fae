@@ -44,7 +44,7 @@ export const Route = createFileRoute("/api/immigration-feedback")({
           method: "POST",
           headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
           body: JSON.stringify({
-            model: "openai/gpt-6-astra",
+            model: "google/gemini-2.5-flash",
             reasoning_effort: "low",
             response_format: {
               type: "json_schema",

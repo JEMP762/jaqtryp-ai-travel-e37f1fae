@@ -94,7 +94,7 @@ export const Route = createFileRoute("/api/chat")({
         } catch {
           return new Response(JSON.stringify({ error: "Invalid JSON" }), { status: 400 });
         }
-        const messages = Array.isArray(body.messages) ? body.messages.slice(-30) : [];
+        const messages = Array.isArray(body.messages) ? body.messages.slice(-10) : [];
         const lang = body.lang === "en" ? "en" : "pt";
         const system = lang === "en" ? SYSTEM_PROMPT_EN : SYSTEM_PROMPT_PT;
 
