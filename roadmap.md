@@ -1,5 +1,7 @@
 # Roadmap
 
+- [x] Corrigir captura automática e entrega de tradução/áudio ao anfitrião; fala do convidado validada com tradução real e reprodução completa em computador/celular simulado, sem alterar preços.
+
 - [x] Analisar integração isolada do SMART ROUTE e definir navegação por atrações e busca livre
 - [x] Implementar painel isolado SMART ROUTE com busca livre e atrações de roteiros salvos
 - [x] Validar testes de trajetos, leitura autenticada de roteiros, GPS negado e layout mobile sem chamadas Google Maps

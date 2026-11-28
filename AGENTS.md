@@ -1,5 +1,7 @@
 # Architecture rules
 
+- Live-room recording snapshots VAD evidence before microphone cleanup and reconciles persisted messages without re-running translation, so automatic speech and missed broadcasts do not lose results.
+
 - SMART ROUTE lives in its own components and library directory under the existing `/_app` shell; only an additive menu entry touches the shell, to preserve existing flows.
 - SMART ROUTE geographic queries use authenticated server functions with the Google Maps connector and no AI or credit/payment mutations, to keep provider data and existing billing isolated.
 - SMART ROUTE reads existing owner-scoped itinerary results but holds confirmed stops and live GPS only in session memory, to avoid changing saved planner data or retaining location history.

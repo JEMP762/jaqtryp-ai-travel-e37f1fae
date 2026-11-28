@@ -15,8 +15,17 @@ import {
 import { cn } from "@/lib/utils";
 import { CallPanel, CallModeSelector, type CallMode } from "@/components/live-room/CallPanel";
 import { authedJsonHeaders } from "@/lib/authed-fetch";
+import { acceptsRecording } from "@/lib/live-room-recording";
 
 export const Route = createFileRoute("/live-room/$code")({
+  head: () => ({ meta: [
+    { title: "Sala de tradução ao vivo | JAQTRYP" },
+    { name: "description", content: "Converse e ouça traduções no seu idioma na sala ao vivo do JAQTRYP." },
+    { property: "og:title", content: "Sala de tradução ao vivo | JAQTRYP" },
+    { property: "og:description", content: "Tradução de conversas por voz e texto no JAQTRYP." },
+    { property: "og:type", content: "website" },
+    { name: "twitter:card", content: "summary" },
+  ] }),
   component: LiveRoomPage,
 });
 
@@ -159,6 +168,10 @@ function LiveRoomPage() {
   const vadSpeechMsRef = React.useRef(0);
   const vadPeakRef = React.useRef(0);
   const lastTranscriptRef = React.useRef<{ text: string; at: number }>({ text: "", at: 0 });
+  const processingRef = React.useRef(false);
+  const startingRecordingRef = React.useRef(false);
+  const stopRequestedRef = React.useRef(false);
+  const joinedAtRef = React.useRef(new Date().toISOString());
 
   React.useEffect(() => {
     participantsRef.current = participants;
@@ -355,6 +368,31 @@ function LiveRoomPage() {
     setTimeout(() => playBase64(b64), 50);
   }, [playBase64, playTranslatedText, unlockAudio]);
 
+  const incomingRowRef = React.useRef(handleIncomingRow);
+  incomingRowRef.current = handleIncomingRow;
+
+  // Reconcile persisted messages too: a missed broadcast must not lose a paid translation.
+  React.useEffect(() => {
+    if (!joined) return;
+    let disposed = false;
+    let inFlight = false;
+    const reconcile = async () => {
+      if (inFlight || document.hidden) return;
+      inFlight = true;
+      try {
+        const { data, error } = await supabase.from("live_room_messages")
+          .select("*").eq("room_code", code)
+          .gte("created_at", joinedAtRef.current).order("created_at", { ascending: true });
+        if (!disposed && !error) {
+          for (const row of data ?? []) incomingRowRef.current(row as unknown as MessageRow);
+        }
+      } finally { inFlight = false; }
+    };
+    void reconcile();
+    const timer = window.setInterval(() => void reconcile(), 2500);
+    return () => { disposed = true; window.clearInterval(timer); };
+  }, [joined, code]);
+
   // Join the realtime channel
   React.useEffect(() => {
     if (!joined) return;
@@ -382,7 +420,7 @@ function LiveRoomPage() {
         toast.info(`Anfitrião iniciou ${p.mode === "video" ? "vídeo" : "áudio ao vivo"}`, {
           action: {
             label: "Entrar",
-            onClick: () => setCallMode(p.mode!),
+            onClick: () => { if (p.mode) setCallMode(p.mode); },
           },
         });
       }
@@ -395,7 +433,7 @@ function LiveRoomPage() {
       }
     });
     channel.on("broadcast", { event: "translated-message" }, ({ payload }) => {
-      handleIncomingRow(payload as MessageRow);
+      incomingRowRef.current(payload as MessageRow);
     });
     channel.on("broadcast", { event: "nudge-live" }, ({ payload }) => {
       const p = payload as { from?: string; fromName?: string; to?: string };
@@ -418,7 +456,7 @@ function LiveRoomPage() {
       { event: "INSERT", schema: "public", table: "live_room_messages", filter: `room_code=eq.${code}` },
       (payload) => {
         const row = payload.new as MessageRow;
-        handleIncomingRow(row);
+        incomingRowRef.current(row);
       },
     );
 
@@ -441,7 +479,7 @@ function LiveRoomPage() {
       channelRef.current = null;
       seenIdsRef.current.clear();
     };
-  }, [joined, code, myId, myLang, myName, applyRoomState, handleIncomingRow]);
+  }, [joined, code, myId, myLang, myName, applyRoomState]);
 
   // Update presence when language/name/liveOn/micMode changes
   React.useEffect(() => {
@@ -531,7 +569,7 @@ function LiveRoomPage() {
     restartTimerRef.current = setTimeout(() => {
       restartTimerRef.current = null;
       if (!liveTranslateOnRef.current) return;
-      if (audioPlayingRef.current) {
+      if (audioPlayingRef.current || processingRef.current || startingRecordingRef.current) {
         scheduleNextListening(500);
         return;
       }
@@ -541,11 +579,13 @@ function LiveRoomPage() {
   }
 
   const startRecording = async () => {
-    unlockAudio();
+    if (processingRef.current || startingRecordingRef.current || recRef.current?.state === "recording") return;
     if (!canRecord) {
       toast.info("Aguardando alguém entrar com o link…");
       return;
     }
+    startingRecordingRef.current = true;
+    stopRequestedRef.current = false;
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
         audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true },
@@ -575,6 +615,12 @@ function LiveRoomPage() {
         setListening(false);
       };
       rec.onstop = async () => {
+        const sample = {
+          automatic: micModeRef.current === "auto",
+          elapsedMs: performance.now() - recordingStartedAtRef.current,
+          speechMs: vadSpeechMsRef.current,
+          peak: vadPeakRef.current,
+        };
         setListening(false);
         setPttActive(false);
         setMicLevel(0);
@@ -584,8 +630,8 @@ function LiveRoomPage() {
         const blob = new Blob(chunksRef.current, { type: blobType });
         chunksRef.current = [];
         recRef.current = null;
-        const isAuto = micModeRef.current === "auto";
-        const elapsed = performance.now() - recordingStartedAtRef.current;
+        const isAuto = sample.automatic;
+        const elapsed = sample.elapsedMs;
         if (discardNextRecordingRef.current) {
           discardNextRecordingRef.current = false;
           setStatus(isAuto && liveTranslateOnRef.current ? "Ouvindo tradução recebida…" : "");
@@ -602,7 +648,7 @@ function LiveRoomPage() {
           if (isAuto) scheduleNextListening();
           return;
         }
-        if (isAuto && (elapsed < 900 || vadSpeechMsRef.current < 280 || vadPeakRef.current < 0.032)) {
+        if (!acceptsRecording({ ...sample, bytes: blob.size })) {
           setStatus(liveTranslateOnRef.current ? "Aguardando fala clara…" : "");
           scheduleNextListening(700);
           return;
@@ -612,6 +658,10 @@ function LiveRoomPage() {
 
       recRef.current = rec;
       rec.start();
+      if (stopRequestedRef.current) {
+        rec.stop();
+        return;
+      }
       setListening(true);
       const modeNow = micModeRef.current;
       setStatus(
@@ -695,10 +745,15 @@ function LiveRoomPage() {
       const err = e as DOMException;
       if (err.name === "NotAllowedError") toast.error("Permissão de microfone negada");
       else toast.error(`Microfone indisponível: ${err.message}`);
+      liveTranslateOnRef.current = false;
+      setLiveTranslateOn(false);
+    } finally {
+      startingRecordingRef.current = false;
     }
   };
 
   const stopRecording = () => {
+    if (startingRecordingRef.current) stopRequestedRef.current = true;
     if (recRef.current && recRef.current.state !== "inactive") {
       setStatus("Finalizando…");
       try {
@@ -729,7 +784,7 @@ function LiveRoomPage() {
   const releasePTT = () => {
     if (micModeRef.current !== "hold") return;
     setPttActive(false);
-    if (recRef.current && recRef.current.state !== "inactive") stopRecording();
+    stopRecording();
   };
 
   const toggleTapMic = () => {
@@ -813,6 +868,8 @@ function LiveRoomPage() {
   }, [liveTranslateOn, canRecord, listening, busy]);
 
   const processAudio = async (blob: Blob, blobType: string) => {
+    if (processingRef.current) return;
+    processingRef.current = true;
     setBusy(true);
     setStatus("Transcrevendo…");
     try {
@@ -890,8 +947,13 @@ function LiveRoomPage() {
       setStatus("");
     } catch (e) {
       toast.error((e as Error).message);
+      // Do not keep submitting paid requests after a failed translation.
+      liveTranslateOnRef.current = false;
+      setLiveTranslateOn(false);
+      clearRestartTimer();
       setStatus("");
     } finally {
+      processingRef.current = false;
       setBusy(false);
       scheduleNextListening();
     }
@@ -1186,7 +1248,7 @@ function LiveRoomPage() {
             type="button"
             variant={voicePlaybackOn ? "default" : "outline"}
             size="sm"
-            onClick={() => setVoicePlaybackOn((v) => !v)}
+            onClick={() => { unlockAudio(); setVoicePlaybackOn((v) => !v); }}
             className="h-9 shrink-0"
             title="Ativa ou silencia a voz traduzida recebida"
           >
