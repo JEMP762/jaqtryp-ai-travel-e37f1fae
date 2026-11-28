@@ -57,6 +57,13 @@
       "when": 1790170910635,
       "tag": "0007_harden_mercadopago_connections",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1795866976469,
+      "tag": "0008_restrict_viral_reward_settings_reads",
+      "breakpoints": true
     }
   ]
 }

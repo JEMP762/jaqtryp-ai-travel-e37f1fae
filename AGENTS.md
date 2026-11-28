@@ -1,5 +1,7 @@
 # Architecture rules
 
+- Referral reward settings expose only the two user-facing reward types and their display columns to identified non-guest users; audit fields and management stay server-only to preserve referrals without exposing internal configuration.
+
 - Live-room recording snapshots VAD evidence before microphone cleanup and reconciles persisted messages without re-running translation, so automatic speech and missed broadcasts do not lose results.
 
 - SMART ROUTE lives in its own components and library directory under the existing `/_app` shell; only an additive menu entry touches the shell, to preserve existing flows.
